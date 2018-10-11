@@ -92,15 +92,18 @@ case $ARCH in
 aarch64)
 	KERNELARCH=arm64
 	QEMUARCH=aarch64
+	KERNELTARGET=Image.gz
 	;;
 arm*)
 	KERNELARCH=arm
 	QEMUARCH=arm
 	TRIPLET="${TRIPLET}eabihf"
+	KERNELTARGET=zImage
 	;;
 *)
 	KERNELARCH=$ARCH
 	QEMUARCH=$ARCH
+	KERNELTARGET=vmlinuz
 	;;
 esac
 
@@ -142,8 +145,8 @@ if [ -n "$KERNEL" ]; then
 	[ -d kernel ] || git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel
 	cd kernel
 	make $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- $KERNEL_CONFIG
-	make $SMPFLAGS Image.gz dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET-
-	ls -l arch/$KERNELARCH/boot/Image.gz arch/$KERNELARCH/boot/dts/$DTB.dtb
+	make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET-
+	ls -l arch/$KERNELARCH/boot/$KERNELTARGET arch/$KERNELARCH/boot/dts/$DTB.dtb
 	KERNELVERSION="$(cat include/config/kernel.release)"
 	cd ..
 else
@@ -218,3 +221,4 @@ fi
 if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
 	run generate-initrd
 fi
+run generate-bootimg
