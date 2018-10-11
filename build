@@ -1,0 +1,220 @@
+#!/bin/sh
+
+set -e
+
+listTargets() {
+	find device -name config |while read r; do
+		dirname $r |cut -d/ -f2-
+	done
+}
+usage() {
+	echo "Usage: $0 [ -v VERSION ] target"
+	echo "	-v: Use OpenMandriva VERSION (default: cooker)"
+	echo "Available targets:"
+	listTargets
+}
+run() {
+	local SCRIPT="$1"
+	shift
+	if [ -e $OURDIR/device/$TARGET/$SCRIPT ]; then
+		. $OURDIR/device/$TARGET/$SCRIPT "$@"
+	else
+		local T="$TARGET"
+		local DONE=false
+		while [ "$T" != "." ]; do
+			T="$(dirname $T)"
+			if [ -e $OURDIR/device/$T/generic/$SCRIPT ]; then
+				. $OURDIR/device/$T/generic/$SCRIPT "$@"
+				break
+			fi
+		done
+	fi
+}
+
+if [ "$(id -u)" != "0" ]; then
+	echo "Need root privileges to set ownership of extracted files."
+	exec sudo $0 "$@"
+	exit 1
+fi
+
+OURDIR="$(realpath $(dirname $0))"
+cd "$OURDIR"
+
+OMV_VERSION=cooker
+while getopts "v:" opt; do
+	case $opt in
+	v)
+		OMV_VERSION=$OPTARG
+		;;
+	*)
+		echo "Unknown option $opt" >&2
+		usage
+		exit 1
+		;;
+	esac
+done
+shift $((OPTIND-1))
+
+if [ -z "$1" ]; then
+	usage
+	exit 1
+fi
+
+TARGET="$1"
+if ! [ -e device/$TARGET/config ]; then
+	# Allow abbreviations, e.g. db410c instead of qualcomm/db410c
+	for i in $(find device -name config); do
+		if echo $i |grep -q "$TARGET/config\$"; then
+			TARGET="$(dirname $i |cut -d/ -f2-)"
+			break
+		fi
+	done
+fi
+if ! [ -e device/$TARGET/config ]; then
+	echo "Invalid target $TARGET"
+	usage
+	exit 1
+fi
+
+echo "Building OpenMandriva $OMV_VERSION image for $TARGET"
+run config
+
+# ===================================================================
+# Prepare host system
+# ===================================================================
+if [ -z "$ARCH" ]; then
+	echo "$TARGET doesn't specify ARCH, assuming aarch64" >&2
+	ARCH=aarch64
+fi
+
+TRIPLET=$ARCH-openmandriva-linux-gnu
+case $ARCH in
+aarch64)
+	KERNELARCH=arm64
+	QEMUARCH=aarch64
+	;;
+arm*)
+	KERNELARCH=arm
+	QEMUARCH=arm
+	TRIPLET="${TRIPLET}eabihf"
+	;;
+*)
+	KERNELARCH=$ARCH
+	QEMUARCH=$ARCH
+	;;
+esac
+
+NATIVEBUILD=false
+[ "$ARCH" = "`uname -m`" ] && NATIVEBUILD=true
+
+if [ -n "$KERNEL" ]; then
+	# We aren't using a packaged kernel, so we need the right toolchain...
+	HOSTDEPS="$HOSTDEPS cross-$TRIPLET-gcc-bootstrap"
+fi
+$NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
+HOSTDEPS="$HOSTDEPS curl"
+
+if [ -n "$HOSTDEPS" ]; then
+	if ! dnf --refresh install $HOSTDEPS; then
+		for i in $HOSTDEPS; do
+			if ! rpm -q $i &>/dev/null; then
+				echo "Couldn't install needed HOST tools. Make sure you're running current OpenMandriva"
+				echo "or install $i manually"
+				exit 1
+			fi
+		done
+	fi
+fi
+
+# ===================================================================
+# Build kernel if necessary
+# ===================================================================
+
+SMPFLAGS="-j$(getconf _NPROCESSORS_ONLN)"
+[ "$SMPFLAGS" = "-j" ] && SMPFLAGS="-j8"
+
+if [ -n "$KERNEL" ]; then
+	echo "Building $TARGET kernel"
+	KERNELREPO="$(echo $KERNEL |cut -d'#' -f1)"
+	KERNELBRANCH="$(echo $KERNEL |cut -d'#' -f2-)"
+	[ -n "$KERNELBRANCH" ] && KERNELBRANCH="-b $KERNELBRANCH"
+	[ -z "$KERNEL_CONFIG" ] && KERNEL_CONFIG="defconfig"
+	[ -d kernel ] || git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel
+	cd kernel
+	make $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- $KERNEL_CONFIG
+	make $SMPFLAGS Image.gz dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET-
+	ls -l arch/$KERNELARCH/boot/Image.gz arch/$KERNELARCH/boot/dts/$DTB.dtb
+	KERNELVERSION="$(cat include/config/kernel.release)"
+	cd ..
+else
+	echo "KERNEL not specified in $TARGET config - assuming packaged kernel"
+fi
+
+# ===================================================================
+# Generate root filesystem
+# ===================================================================
+
+# First of all let's find the right repo list...
+
+ROOTDIR=OpenMandriva-$OMV_VERSION-$ARCH-root
+rm -rf $ROOTDIR
+mkdir -p $ROOTDIR
+
+# setup-rootfs can do things like create a filesystem and
+# loopback mount it on $ROOTDIR -- useful for boards that
+# need to generate a FS image file rather than a rootfs
+# tarball or so.
+[ -e $OURDIR/device/$TARGET/setup-rootfs ] && . $OURDIR/device/$TARGET/setup-rootfs
+
+# Poor man's version of "dnf install --installroot=" --
+# need to get the repository configs from rpm packages
+# without having the repositories configured...
+PKGS=http://abf-downloads.openmandriva.org/$OMV_VERSION/repository/$ARCH/main/release/
+echo $PKGS
+curl -s -L $PKGS |grep '^<a' |cut -d'"' -f2 >PACKAGES
+PRE_PACKAGES="openmandriva-repos"
+[ "$OMV_VERSION" = "cooker" ] && PRE_PACKAGES="$PRE_PACKAGES openmandriva-repos-cooker"
+for i in $PRE_PACKAGES; do
+	P=`grep "^$i-[0-9].*" PACKAGES`
+	if [ "$?" != "0" ]; then
+		echo "Can't find $i package for target" >&2
+		exit 1
+	fi
+	curl -O $PKGS/$P
+	rpm -r $OURDIR/$ROOTDIR -Uvh --ignorearch --nodeps $P
+done
+
+if ! $NATIVEBUILD; then
+	# Make sure we can run %post scripts in the chroot
+	mkdir -p $OURDIR/$ROOTDIR/usr/bin
+	cp /usr/bin/qemu-static-$QEMUARCH $OURDIR/$ROOTDIR/usr/bin/
+fi
+
+# FIXME allow better package selection
+PACKAGES="task-lxqt"
+if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
+	PACKAGES="$PACKAGES dracut"
+fi
+PACKAGES="$PACKAGES $HWPACKAGES"
+
+dnf -y install --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $PACKAGES
+
+if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
+	# Create omv user (password omv)
+	echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
+	echo 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
+	echo 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
+	sed -i -e 's,wheel:x:10:$,wheel:x:10:omv,' $OURDIR/$ROOTDIR/etc/group
+
+	# Unlock root account (also password omv)
+	sed -i -e 's,^root:.:,root:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:,' $OURDIR/$ROOTDIR/etc/shadow
+fi
+if [ -n "$KERNEL" ]; then
+	# Install kernel modules, if any
+	cd kernel
+	make $SMPFLAGS modules_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR
+	cd ..
+fi
+if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
+	run generate-initrd
+fi

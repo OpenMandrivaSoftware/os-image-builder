@@ -1,0 +1,7 @@
+ARCH="aarch64"
+HOSTDEPS="android-tools db-boot-tools"
+KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/DB410c/4.14"
+KERNEL_CONFIG="defconfig distro.config"
+DTB=qcom/apq8016-sbc
+# (this is the default anyway)
+# NEED_INITRD=yes

@@ -1,0 +1,1 @@
+chroot $OURDIR/$ROOTDIR /sbin/dracut --xz -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
