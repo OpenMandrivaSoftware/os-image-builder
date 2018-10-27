@@ -144,8 +144,8 @@ if [ -n "$KERNEL" ]; then
 	[ -z "$KERNEL_CONFIG" ] && KERNEL_CONFIG="defconfig"
 	[ -d kernel ] || git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel
 	cd kernel
-	make $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- $KERNEL_CONFIG
-	make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET-
+	make $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG
+	make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- LD=/usr/bin/$TRIPLET-ld.bfd
 	ls -l arch/$KERNELARCH/boot/$KERNELTARGET arch/$KERNELARCH/boot/dts/$DTB.dtb
 	KERNELVERSION="$(cat include/config/kernel.release)"
 	cd ..
@@ -194,7 +194,7 @@ if ! $NATIVEBUILD; then
 fi
 
 # FIXME allow better package selection
-PACKAGES="task-lxqt"
+PACKAGES="task-lxqt sddm NetworkManager"
 if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
 	PACKAGES="$PACKAGES dracut"
 fi
@@ -222,3 +222,18 @@ if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
 	run generate-initrd
 fi
 run generate-bootimg
+
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable dbus
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-udevd
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-udev-trigger
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable NetworkManager
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-ask-password-wall
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-logind
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-networkd
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-resolved
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-update-utmp-runlevel
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-user-sessions
+run generate-rootfs

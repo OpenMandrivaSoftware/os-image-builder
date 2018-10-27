@@ -1,1 +1,1 @@
-abootimg --create boot.img -f device/nxp/imx6/onyx08/bootimg.cfg -k kernel/arch/arm/boot/zImage -r $ROOTDIR/boot/initrd-${KERNELVERSION}.img -s kernel/arch/arm/boot/dts/onyx08.dtb
+abootimg --create boot.img -f device/nxp/imx6/onyx08/bootimg.cfg -k kernel/arch/arm/boot/zImage -r $ROOTDIR/boot/initrd-${KERNELVERSION}.img -s kernel/arch/arm/boot/dts/imx6q-onyx08.dtb
