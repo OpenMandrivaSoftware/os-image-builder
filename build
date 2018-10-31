@@ -194,7 +194,7 @@ if ! $NATIVEBUILD; then
 fi
 
 # FIXME allow better package selection
-PACKAGES="task-lxqt sddm NetworkManager"
+PACKAGES="task-lxqt sddm NetworkManager less vim-enhanced systemd-console systemd-coredump systemd-locale systemd-cryptsetup systemd-analyze systemd-hwdb systemd-polkit systemd-boot psmisc"
 if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
 	PACKAGES="$PACKAGES dracut"
 fi
@@ -218,13 +218,20 @@ if [ -n "$KERNEL" ]; then
 	make $SMPFLAGS modules_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR
 	cd ..
 fi
+run setup-system-files
 if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
+	for mp in /proc /sys /dev /dev/pts; do
+		mount --bind $mp $OURDIR/$ROOTDIR$mp
+	done
 	run generate-initrd
+	for mp in /proc /sys /dev/pts /dev; do
+		umount $OURDIR/$ROOTDIR$mp || :
+	done
 fi
 run generate-bootimg
 
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty0.service
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable dbus
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-udevd
