@@ -1,0 +1,3 @@
+pushd $OURDIR/$ROOTDIR
+tar cJf ../rootfs.tar.xz .
+popd

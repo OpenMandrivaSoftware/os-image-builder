@@ -1,0 +1,6 @@
+ARCH="armv7hnl"
+HOSTDEPS="android-tools"
+HWPACKAGES="libdri-drivers-etnaviv"
+KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/iMX6/onyx08-4.9"
+KERNEL_CONFIG="imx6_onyx08_linux_defconfig"
+DTB=imx6q-onyx08
