@@ -1,0 +1,3 @@
+cat >$OURDIR/$ROOTDIR/etc/fstab <<EOF
+/dev/sda	/	ext4	defaults,noatime,discard	0	0
+EOF
