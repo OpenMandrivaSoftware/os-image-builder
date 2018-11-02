@@ -1,0 +1,4 @@
+ARCH="armv7hnl"
+KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#3.14.x-buildable"
+KERNEL_CONFIG="vexpress_defconfig"
+DTB=vexpress-v2p-ca9
