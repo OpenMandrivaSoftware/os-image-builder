@@ -4,6 +4,6 @@ KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/DB410c/4.14"
 KERNEL_CONFIG="defconfig distro.config"
 KERNEL_EXTRACONFIG="--disable ARCH_SUNXI --disable ARCH_ALPINE --disable ARCH_BCM2835 --disable ARCH_BCM_IPROC --disable ARCH_BERLIN --disable ARCH_BRCMSTB --disable ARCH_EXYNOS --disable ARCH_LAYERSCAPE --disable ARCH_LG1K --disable ARCH_HISI --disable ARCH_MEDIATEK --disable ARCH_MESON --disable ARCH_MVEBU --disable ARCH_ROCKCHIP --disable ARCH_SEATTLE --disable ARCH_SHMOBILE --disable ARCH_RENESAS --disable ARCH_R8A7795 --disable ARCH_R8A7796 --disable ARCH_STRATIX10 --disable ARCH_TEGRA --disable ARCH_SPRD --disable ARCH_THUNDER --disable ARCH_THUNDER2 --disable ARCH_UNIPHIER --disable ARCH_VEXPRESS --disable ARCH_XGENE --disable ARCH_ZX --disable ARCH_ZYNQMP --disable DRM_NOUVEAU --disable NVME --disable BTRFS_FS"
 DTB=qcom/apq8016-sbc
-CMDLINE="root=/dev/mmcblk0p10 ro rootwait console=ttyMSM0,115200n8 earlycon=msm_serial_dm,0x78b0000 androidboot.emmc=true androidboot.baseband=apq mdss_mdp.panel=0:dsi:0:"
+CMDLINE="root=/dev/mmcblk0p10 rw rootwait console=ttyMSM0,115200n8 earlycon=msm_serial_dm,0x78b0000 androidboot.emmc=true androidboot.baseband=apq mdss_mdp.panel=0:dsi:0:"
 # (this is the default anyway)
 # NEED_INITRD=yes
