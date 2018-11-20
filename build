@@ -145,8 +145,11 @@ if [ -n "$KERNEL" ]; then
 	[ -d kernel ] || git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel
 	cd kernel
 	make $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG
+	if [ -n "$KERNEL_EXTRACONFIG" ]; then
+		set -x
+		scripts/config $KERNEL_EXTRACONFIG
+	fi
 	make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- LD=/usr/bin/$TRIPLET-ld.bfd
-	ls -l arch/$KERNELARCH/boot/$KERNELTARGET arch/$KERNELARCH/boot/dts/$DTB.dtb
 	KERNELVERSION="$(cat include/config/kernel.release)"
 	cd ..
 else
@@ -215,7 +218,7 @@ fi
 if [ -n "$KERNEL" ]; then
 	# Install kernel modules, if any
 	cd kernel
-	make $SMPFLAGS modules_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR
+	make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR
 	cd ..
 fi
 run setup-system-files
