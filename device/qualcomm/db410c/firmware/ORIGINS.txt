@@ -1,0 +1,2 @@
+linux-board-support-package and linux-bootloader-and-firmware are from:
+https://developer.qualcomm.com/hardware/dragonboard-410c/software

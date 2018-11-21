@@ -1,0 +1,2 @@
+cp -a ${OURDIR}/device/qualcomm/db410c/firmware/linux-board-support-package-r1034.2.1/proprietary-linux/* ${OURDIR}/${ROOTDIR}/lib/firmware/
+cp -a ${OURDIR}/device/qualcomm/db410c/firmware/linux-bootloader-and-firmware-v1030.4-psci/proprietary-linux/{modem,wcnss}.* ${OURDIR}/${ROOTDIR}/lib/firmware/
