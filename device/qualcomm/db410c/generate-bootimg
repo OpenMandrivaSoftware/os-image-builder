@@ -1,0 +1,2 @@
+dtbTool -o $OURDIR/dt.img -s 2048 $OURDIR/kernel/arch/arm64/boot/dts/qcom/
+mkbootimg --kernel $OURDIR/kernel/arch/arm64/boot/Image.gz --ramdisk $OURDIR/OpenMandriva-cooker-aarch64-root/boot/initrd-${KERNELVERSION}.img --output $OURDIR/boot.img --dt $OURDIR/dt.img --pagesize 2048 --base 0x80000000 --cmdline "${CMDLINE}"
