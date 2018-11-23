@@ -1,7 +1,7 @@
 ARCH="aarch64"
 HOSTDEPS="android-tools db-boot-tools"
 HWPACKAGES="adreno-firmware"
-KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/DB410c/4.14"
+KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/DB410c/4.20"
 KERNEL_CONFIG="defconfig distro.config"
 KERNEL_EXTRACONFIG="--disable ARCH_SUNXI --disable ARCH_ALPINE --disable ARCH_BCM2835 --disable ARCH_BCM_IPROC --disable ARCH_BERLIN --disable ARCH_BRCMSTB --disable ARCH_EXYNOS --disable ARCH_LAYERSCAPE --disable ARCH_LG1K --disable ARCH_HISI --disable ARCH_MEDIATEK --disable ARCH_MESON --disable ARCH_MVEBU --disable ARCH_ROCKCHIP --disable ARCH_SEATTLE --disable ARCH_SHMOBILE --disable ARCH_RENESAS --disable ARCH_R8A7795 --disable ARCH_R8A7796 --disable ARCH_STRATIX10 --disable ARCH_TEGRA --disable ARCH_SPRD --disable ARCH_THUNDER --disable ARCH_THUNDER2 --disable ARCH_UNIPHIER --disable ARCH_VEXPRESS --disable ARCH_XGENE --disable ARCH_ZX --disable ARCH_ZYNQMP --disable DRM_NOUVEAU --disable NVME --disable BTRFS_FS"
 DTB=qcom/apq8016-sbc
