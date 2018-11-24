@@ -1,0 +1,3 @@
+cat >$OURDIR/$ROOTDIR/etc/modprobe.d/nouveau.conf <<EOF
+options nouveau config=NvClkMode=15
+EOF

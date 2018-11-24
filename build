@@ -197,7 +197,7 @@ if ! $NATIVEBUILD; then
 fi
 
 # FIXME allow better package selection
-PACKAGES="task-x11 task-lxqt sddm NetworkManager less vim-enhanced systemd-console systemd-coredump systemd-locale systemd-cryptsetup systemd-analyze systemd-hwdb systemd-polkit systemd-boot psmisc"
+PACKAGES="NetworkManager less vim-enhanced systemd-console systemd-coredump systemd-locale systemd-cryptsetup systemd-analyze systemd-hwdb systemd-polkit systemd-boot psmisc gptfdisk dnf sudo usbutils task-x11 sddm task-plasma"
 if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
 	PACKAGES="$PACKAGES dracut"
 fi
