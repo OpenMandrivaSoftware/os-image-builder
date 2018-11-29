@@ -1,0 +1,21 @@
+# See
+# https://www.raspberrypi.org/documentation/configuration/config-txt
+arm_64bit=1
+kernel=kernel8.img
+# Force the monitor to HDMI mode so that sound will be sent over HDMI cable
+hdmi_drive=2
+# Set monitor mode to DMT
+hdmi_group=2
+# Set monitor resolution to 1024x768 XGA 60Hz (HDMI_DMT_XGA_60)
+hdmi_mode=16
+# Make display smaller to stop text spilling off the screen
+overscan_left=20
+overscan_right=12
+overscan_top=10
+overscan_bottom=10
+# For i2c & spi
+dtparam=i2c_arm=on
+dtparam=spi=on
+
+# Enable audio (loads snd_bcm2835)
+dtparam=audio=on

@@ -244,8 +244,8 @@ chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-udev-trigger
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable NetworkManager
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-ask-password-wall
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-logind
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-networkd
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-resolved
+#chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-networkd
+#chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-resolved
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-update-utmp-runlevel
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-user-sessions
 run generate-rootfs
