@@ -2,6 +2,7 @@
 # https://www.raspberrypi.org/documentation/configuration/config-txt
 arm_64bit=1
 kernel=kernel8.img
+dtoverlay=vc4-kms-v3d-overlay
 # Force the monitor to HDMI mode so that sound will be sent over HDMI cable
 hdmi_drive=2
 # Set monitor mode to DMT

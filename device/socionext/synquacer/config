@@ -1,7 +1,7 @@
 ARCH="aarch64"
 # Let's support what people might drop into those PCI-E slots...
-HWPACKAGES="lib64dri-drivers-nouveau lib64dri-drivers-radeon pciutils"
-KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/SynQuacer/4.20"
+HWPACKAGES="lib64dri-drivers-nouveau lib64dri-drivers-radeon pciutils kernel-firmware kernel-firmware-extra"
+KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/SynQuacer/4.19"
 KERNEL_CONFIG="defconfig"
 KERNEL_EXTRACONFIG="--enable ARCH_SYNQUACER --enable SNI_NETSEC --enable GPIO_MB86S7X --enable MMC_SDHCI_F_SDH30"
 DTB=""

@@ -1,8 +1,7 @@
 ARCH="aarch64"
 HWPACKAGES="lib64dri-drivers-vc4 kernel-firmware kernel-firmware-extra"
-KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/RaspberryPi/4.14"
+KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/RaspberryPi/4.20"
 KERNEL_CONFIG="bcmrpi3_defconfig"
 DTB="broadcom/bcm2710-rpi-3-b-plus"
 CMDLINE="dwc_otg.lpm_enable=0 console=ttyS0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline fsck.repair=yes rootwait"
-# (this is the default anyway)
-# NEED_INITRD=yes
+NEED_INITRD=no
