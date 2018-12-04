@@ -118,7 +118,7 @@ $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
 HOSTDEPS="$HOSTDEPS curl"
 
 if [ -n "$HOSTDEPS" ]; then
-	if ! dnf --refresh install $HOSTDEPS; then
+	if ! dnf -y --refresh install $HOSTDEPS; then
 		for i in $HOSTDEPS; do
 			if ! rpm -q $i &>/dev/null; then
 				echo "Couldn't install needed HOST tools. Make sure you're running current OpenMandriva"
