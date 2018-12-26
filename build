@@ -1,6 +1,7 @@
 #!/bin/sh
 
 set -e
+set -x
 
 listTargets() {
 	find device -name config |while read r; do
@@ -144,12 +145,20 @@ if [ -n "$KERNEL" ]; then
 	[ -z "$KERNEL_CONFIG" ] && KERNEL_CONFIG="defconfig"
 	[ -d kernel ] || git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel
 	cd kernel
-	make $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG
+	if [ "$KERNEL_CLANG" = "yes" ]; then
+		make $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CC=clang LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG
+	else
+		make $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG
+	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
 		set -x
 		scripts/config $KERNEL_EXTRACONFIG
 	fi
-	make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- LD=/usr/bin/$TRIPLET-ld.bfd
+	if [ "$KERNEL_CLANG" = "yes" ]; then
+		make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CC=clang LD=/usr/bin/$TRIPLET-ld.bfd
+	else
+		make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- LD=/usr/bin/$TRIPLET-ld.bfd
+	fi
 	KERNELVERSION="$(cat include/config/kernel.release)"
 	cd ..
 else
