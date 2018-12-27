@@ -1,5 +1,4 @@
 sed -i -e '/^add_drivers/d' $OURDIR/$ROOTDIR/etc/dracut.conf.d/50-dracut-distro.conf
 sed -i -e 's,zstd,gzip,g' $OURDIR/$ROOTDIR/etc/dracut.conf.d/50-dracut-distro.conf
-chroot $OURDIR/$ROOTDIR /bin/rpm -e --nodeps plymouth lib64ply-splash-core4 lib64ply-boot-client4 lib64ply-splash-graphics4 plymouth-plugin-label plymouth-plugin-script lib64ply4
 chroot $OURDIR/$ROOTDIR /sbin/dracut --gzip -o ifcfg -o lvm -o mdraid -o aufs-mount -o network -o dm -o crypt -o dmraid -o multipath -o multipath-hostonly --fstab --add-fstab /etc/fstab -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
 chmod 0644 $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img

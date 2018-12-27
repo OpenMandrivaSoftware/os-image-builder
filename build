@@ -227,6 +227,23 @@ if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
 	done
 	cp -a $OURDIR/$ROOTDIR/etc/skel $OURDIR/$ROOTDIR/home/omv
 	chown -R 1001:1001 $OURDIR/$ROOTDIR/home/omv
+	# Set some reasonable defaults...
+	cat >$OURDIR/$ROOTDIR/etc/locale.conf <<'EOF'
+LANG=en_US.utf8
+LC_ADDRESS=en_US.utf8
+LC_IDENTIFICATION=en_US.utf8
+LC_MEASUREMENT=en_US.utf8
+LC_MONETARY=en_US.utf8
+LC_NAME=en_US.utf8
+LC_NUMERIC=en_US.utf8
+LC_PAPER=en_US.utf8
+LC_TELEPHONE=en_US.utf8
+LC_TIME=en_US.utf8
+EOF
+	cat >$OURDIR/$ROOTDIR/etc/vconsole.conf <<'EOF'
+KEYMAP=us
+FONT=latarcyrheb-sun16
+EOF
 
 	# Unlock root account (also password omv)
 	sed -i -e 's,^root:.:,root:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:,' $OURDIR/$ROOTDIR/etc/shadow
