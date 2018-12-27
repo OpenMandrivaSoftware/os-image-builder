@@ -206,7 +206,7 @@ if ! $NATIVEBUILD; then
 fi
 
 # FIXME allow better package selection
-PACKAGES="NetworkManager less vim-enhanced systemd-console systemd-coredump systemd-locale systemd-cryptsetup systemd-analyze systemd-hwdb systemd-polkit systemd-boot psmisc gptfdisk timezone dnf sudo usbutils task-x11 sddm task-plasma"
+PACKAGES="NetworkManager less vim-enhanced systemd-console systemd-coredump systemd-locale systemd-cryptsetup systemd-analyze systemd-hwdb systemd-polkit systemd-boot psmisc gptfdisk timezone locales-en dnf sudo usbutils task-x11 sddm task-plasma"
 # At least while we're mostly dealing with headless boards
 PACKAGES="$PACKAGES openssh-server"
 if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
