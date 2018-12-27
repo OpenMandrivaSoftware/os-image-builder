@@ -221,7 +221,10 @@ if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
 	echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
 	echo 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
 	echo 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
-	sed -i -e 's,wheel:x:10:$,wheel:x:10:omv,' $OURDIR/$ROOTDIR/etc/group
+	# Add the omv user to important groups...
+	for group in wheel lp audio video dialout screen users; do
+		sed -i -e "s,$group:.*\$,&omv," $OURDIR/$ROOTDIR/etc/group
+	done
 	cp -a $OURDIR/$ROOTDIR/etc/skel $OURDIR/$ROOTDIR/home/omv
 	chown -R 1001:1001 $OURDIR/$ROOTDIR/home/omv
 
