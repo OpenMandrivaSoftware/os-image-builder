@@ -1,8 +1,7 @@
-mkdir -p $OURDIR/OpenMandriva-cooker-aarch64-root/boot/efi
-cp $OURDIR/OpenMandriva-cooker-aarch64-root/boot/initrd-${KERNELVERSION}.img $OURDIR/OpenMandriva-cooker-aarch64-root/boot/efi/initrd.img
-cp $OURDIR/kernel/arch/arm64/boot/Image $OURDIR/OpenMandriva-cooker-aarch64-root/boot/efi/linux.efi
-cp $OURDIR/device/socionext/synquacer/startup.nsh $OURDIR/OpenMandriva-cooker-aarch64-root/boot/efi/
-pushd $OURDIR/OpenMandriva-cooker-aarch64-root/boot/efi
-mkdir -p EFI/openmandriva
+mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva
+cp $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva/initrd.img
+cp $OURDIR/kernel/arch/arm64/boot/Image $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva/linux.efi
+cp $OURDIR/device/socionext/synquacer/startup.nsh $OURDIR/$ROOTDIR/boot/efi/
+pushd $OURDIR/$ROOTDIR/boot/efi
 tar cJf $OURDIR/synquacer-boot.tar.xz *
 popd
