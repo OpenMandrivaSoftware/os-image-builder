@@ -198,14 +198,18 @@ if [ -n "$HOME" ]; then
 	mount $HOME /mnt/destination/home
 fi
 
+echo "Copying OS..."
+tar c --one-file-system -f - / | (cd /mnt/destination && tar x $VERBOSE -f -)
+
 echo "Setting up system files..."
 echo "$ROOT / ext4 defaults,noatime 0 1" >/mnt/destination/etc/fstab
 [ -n "$SWAP" ] && echo "$SWAP swap swap defaults 0 1" >>/mnt/destination/etc/fstab
 [ -n "$UEFI" ] && echo "$UEFI /boot/efi vfat defaults,noatime 0 2" >>/mnt/destination/etc/fstab
 [ -n "$HOME" ] && echo "$HOME /home ext4 defaults,noatime 0 2" >>/mnt/destination/etc/fstab
 
-echo "Copying OS..."
-tar c --one-file-system -f - / | (cd /mnt/destination && tar x $VERBOSE -f -)
+if [ -n "$HOME" ]; then
+	cp -a /home/* /mnt/destination/home
+fi
 
 if [ -n "$UEFI" ]; then
 	echo "Copying bootup files..."
@@ -225,6 +229,7 @@ if [ -n "$UEFI" ]; then
 fi
 
 echo "Cleaning up..."
+rm -f /mnt/destination/home/omv/install-openmandriva
 [ -n "$HOME" ] && umount /mnt/destination/home
 [ -n "$UEFI" ] && umount /mnt/destination/boot/efi
 umount /mnt/destination
