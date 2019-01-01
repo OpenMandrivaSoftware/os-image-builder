@@ -117,7 +117,7 @@ if [ -n "$KERNEL" ]; then
 	HOSTDEPS="$HOSTDEPS cross-$TRIPLET-gcc-bootstrap"
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
-HOSTDEPS="$HOSTDEPS curl make gcc dtc glibc-devel"
+HOSTDEPS="$HOSTDEPS curl make gcc dtc glibc-devel bison flex"
 
 if [ -n "$HOSTDEPS" ]; then
 	if ! dnf -y --refresh install $HOSTDEPS; then
