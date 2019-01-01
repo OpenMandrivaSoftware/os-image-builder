@@ -3,5 +3,5 @@ cp $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img $OURDIR/$ROOTDIR/boot/efi/E
 cp $OURDIR/kernel/arch/arm64/boot/Image $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva/linux.efi
 cp $OURDIR/device/socionext/synquacer/startup.nsh $OURDIR/$ROOTDIR/boot/efi/
 pushd $OURDIR/$ROOTDIR/boot/efi
-tar cJf $OURDIR/synquacer-boot.tar.xz *
+tar cJf $OURDIR/boot-${SHORTTARGET}.tar.xz *
 popd

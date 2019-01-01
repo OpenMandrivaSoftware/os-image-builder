@@ -76,6 +76,7 @@ if ! [ -e device/$TARGET/config ]; then
 	usage
 	exit 1
 fi
+SHORTTARGET="$(basename $TARGET)"
 
 echo "Building OpenMandriva $OMV_VERSION image for $TARGET"
 run config
@@ -116,7 +117,7 @@ if [ -n "$KERNEL" ]; then
 	HOSTDEPS="$HOSTDEPS cross-$TRIPLET-gcc-bootstrap"
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
-HOSTDEPS="$HOSTDEPS curl make gcc dtc"
+HOSTDEPS="$HOSTDEPS curl make gcc dtc glibc-devel"
 
 if [ -n "$HOSTDEPS" ]; then
 	if ! dnf -y --refresh install $HOSTDEPS; then
@@ -285,7 +286,9 @@ run generate-rootfs
 
 if [ "$ABF" = "1" ]; then
 	# ABF will package anything left in $OURDIR -- so let's
-	# get rid of everything we don't want to ship
+	# get rid of everything we don't want to ship and pull
+	# in the README file
+	[ -e device/${TARGET}/README.md ] && mv device/${TARGET}/README.md .
 	cd "$OURDIR"
 	rm -rf "$ROOTDIR" kernel device LICENSE PACKAGES *.rpm
 	rm -f build

@@ -1,7 +1,7 @@
 pushd $OURDIR/$ROOTDIR/boot
 cp -f $OURDIR/device/raspberry/pi3b+/firmware/*.{bin,txt,dat,elf} .
-tar cJf ../../bootfs.tar.xz .
+tar cJf ../../bootfs-${SHORTTARGET}.tar.xz .
 cd ..
 rm -rf boot
-tar cJf ../rootfs.tar.xz .
+tar cJf ../rootfs-${SHORTTARGET}.tar.xz .
 popd
