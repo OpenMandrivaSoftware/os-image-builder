@@ -117,7 +117,7 @@ if [ -n "$KERNEL" ]; then
 	HOSTDEPS="$HOSTDEPS cross-$TRIPLET-gcc-bootstrap"
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
-HOSTDEPS="$HOSTDEPS curl make gcc dtc glibc-devel bison flex openssl-devel"
+HOSTDEPS="$HOSTDEPS curl make gcc dtc glibc-devel bison flex openssl-devel hostname"
 
 if [ -n "$HOSTDEPS" ]; then
 	if ! dnf -y --refresh install $HOSTDEPS; then
@@ -131,7 +131,7 @@ if [ -n "$HOSTDEPS" ]; then
 	fi
 
 	# Make sure the binfmt handler knows about any qemu-static bits we may have installed...
-	systemctl restart systemd-binfmt
+	echo ':aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-static-aarch64:' >/proc/sys/fs/binfmt_misc/register || :
 fi
 
 # ===================================================================
