@@ -216,7 +216,7 @@ if [ -n "$UEFI" ]; then
 	cp -ax /boot/efi/* /mnt/destination/boot/efi/
 	echo "Registering with UEFI bootloader"
 	mv /mnt/destination/boot/efi/startup.nsh /mnt/destination/boot/efi/openmandriva.nsh
-	sed -i -e "s,/dev/sda2,$ROOT,g" /mnt/destination/boot/efi/openmandriva.nsh
+	sed -i -e "s,/dev/sdb2,$ROOT,g" /mnt/destination/boot/efi/openmandriva.nsh
 	efibootmgr --create -L 'OpenMandriva Lx 4' -l '\EFI\openmandriva\linux.efi' --unicode "root=$ROOT earlycon=pl011,0x2a400000,115200 rw rootwait initrd=\\EFI\\openmandriva\\initrd.img console=ttyAMA0,115200n8" -d "$DESTINATION" -p $(echo $UEFI |sed -e "s,$DESTINATION,,")
 	echo "Rebuilding initrd"
 	for i in proc sys dev; do
