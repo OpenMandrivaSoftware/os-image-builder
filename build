@@ -129,6 +129,9 @@ if [ -n "$HOSTDEPS" ]; then
 			fi
 		done
 	fi
+
+	# Make sure the binfmt handler knows about any qemu-static bits we may have installed...
+	systemctl restart systemd-binfmt
 fi
 
 # ===================================================================
