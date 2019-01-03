@@ -251,6 +251,19 @@ EOF
 
 	# Unlock root account (also password omv)
 	sed -i -e 's,^root:.:,root:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:,' $OURDIR/$ROOTDIR/etc/shadow
+
+	# If sddm is installed, set it up to autologin as omv
+	if [ -z "$SDDMSESSION" ]; then
+		for desktop in plasma lxqt openbox failsafe; do
+			if [ -e $OURDIR/$ROOTDIR/usr/share/xsessions/$desktop.desktop ]; then
+				SDDMSESSION=$desktop
+				break
+			fi
+		done
+	fi
+	if [ -z "$NO_AUTOLOGIN" -a -n "$SDDMSESSION" -a -e $OURDIR/$ROOTDIR/etc/sddm.conf ]; then
+		sed -i -e "s,^User=,User=omv,;s,^Session=,Session=$SDDMSESSION," $OURDIR/$ROOTDIR/etc/sddm.conf
+	fi
 fi
 if [ -n "$KERNEL" ]; then
 	# Install kernel modules, if any
