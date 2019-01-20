@@ -108,6 +108,11 @@ arm*)
 	KERNELTARGET=vmlinuz
 	;;
 esac
+if echo $ARCH |grep -q 64; then
+	LIB=lib64
+else
+	LIB=lib
+fi
 
 NATIVEBUILD=false
 [ "$ARCH" = "`uname -m`" ] && NATIVEBUILD=true
@@ -211,6 +216,14 @@ fi
 
 # FIXME allow better package selection
 PACKAGES="NetworkManager less vim-enhanced systemd-console systemd-coredump systemd-locale systemd-cryptsetup systemd-analyze systemd-hwdb systemd-polkit systemd-boot psmisc gptfdisk timezone locales-en dnf sudo usbutils passwd task-x11 sddm task-plasma task-pulseaudio"
+# FIXME why aren't those pulled in by task-plasma? Their absence seems to break ksmserver...
+if echo $PACKAGES |grep -q plasma; then
+	PACKAGES="$PACKAGES ${LIB}GLESv1_CM1 ${LIB}GLESv2_2 ${LIB}OpenGL0 ${LIB}OpenVG0 ${LIB}kms1 phonon4qt5-gstreamer gstreamer-tools"
+	if echo $PACKAGES |grep -q pulseaudio; then
+		# Very useful if both task-plasma and task-pulseaudio are there...
+		PACKAGES="$PACKAGES pavucontrol-qt"
+	fi
+fi
 # At least while we're mostly dealing with headless boards
 PACKAGES="$PACKAGES openssh-server"
 if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
@@ -226,7 +239,7 @@ if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
 	echo 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
 	echo 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
 	# Add the omv user to important groups...
-	for group in wheel lp audio video dialout screen users; do
+	for group in wheel lp lpadmin audio video render network storage dialout screen users sambashare; do
 		sed -i -e "s,$group:.*\$,&omv," $OURDIR/$ROOTDIR/etc/group
 	done
 	cp -a $OURDIR/$ROOTDIR/etc/skel $OURDIR/$ROOTDIR/home/omv
