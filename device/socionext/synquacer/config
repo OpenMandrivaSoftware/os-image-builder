@@ -1,6 +1,6 @@
 ARCH="aarch64"
 # Let's support what people might drop into those PCI-E slots...
-HWPACKAGES="lib64dri-drivers-nouveau lib64dri-drivers-radeon pciutils kernel-firmware kernel-firmware-extra efibootmgr"
+HWPACKAGES="lib64dri-drivers-nouveau lib64dri-drivers-radeon pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr"
 KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/SynQuacer/5.0"
 KERNEL_CONFIG="defconfig"
 # Enable what's needed for SynQuacer, disable some options that
@@ -10,6 +10,8 @@ KERNEL_EXTRACONFIG="--enable ARCH_SYNQUACER --enable SNI_NETSEC --enable GPIO_MB
 KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --module SND_HDA --module SND_HDA_INTEL --module SND_HDA_CODEC_CMEDIA --module SND_HDA_GENERIC --enable SND_HDA_HWDEP --enable SND_HDA_RECONFIG --enable SND_HDA_INPUT_BEEP --set-val SND_HDA_INPUT_BEEP_MODE 1 --enable SND_HDA_PATCH_LOADER --module SND_HDA_CODEC_REALTEK --module SND_HDA_CODEC_ANALOG --module SND_HDA_CODEC_SIGMATEL --module SND_HDA_CODEC_VIA --module SND_HDA_CODEC_HDMI --module SND_HDA_CODEC_CIRRUS --module SND_HDA_CODEC_CONEXANT --module SND_HDA_CODEC_CA0110 --module SND_HDA_CODEC_CA0132 --enable SND_HDA_CODEC_CA0132_DSP --module SND_HDA_CODEC_SI3054 --set-val SND_HDA_POWER_SAVE_DEFAULT 60 --set-val SND_MAX_CARDS 32"
 # PCI-E graphics cards are useful...
 KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --module DRM_RADEON --disable DRM_RADEON_USERPTR --module DRM_AMDGPU --enable DRM_AMDGPU_SI --enable DRM_AMDGPU_CIK --disable DRM_AMDGPU_USERPTR --disable DRM_AMDGPU_GART_DEBUGFS --enable DRM_AMD_ACP --enable DRM_AMD_DC --disable DEBUG_KERNEL_DC --disable CHASH_STATS --disable CHASH_SELFTEST --module DRM_NOUVEAU --enable HSA_AMD"
+# PCI-E WiFi modules
+KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --module IWLWIFI --module IWLDVM --module IWLMVM --enable IWLWIFI_BCAST_FILTERING --disable IWLWIFI_DEBUG"
 # Enable stuff docker likes...
 # 	docker cgroups...
 KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable CGROUP_FREEZER --module NETFILTER_XT_MATCH_IPVS"
