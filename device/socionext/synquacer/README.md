@@ -83,6 +83,7 @@ $ sudo umount /mnt
 $ sudo mount /dev/sdb2 /mnt
 $ cd /mnt
 $ sudo tar xf ~/Downloads/rootfs-synquacer.tar.xz
+$ cd
 $ sudo umount /mnt
 $ sudo eject /dev/sdb
 $ sudo sync
