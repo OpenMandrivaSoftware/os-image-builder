@@ -125,7 +125,7 @@ $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
 HOSTDEPS="$HOSTDEPS curl make gcc dtc glibc-devel bison flex openssl-devel hostname"
 
 if [ -n "$HOSTDEPS" ]; then
-	if ! dnf -y --refresh install $HOSTDEPS; then
+	if ! dnf -y --refresh --nogpgcheck install $HOSTDEPS; then
 		for i in $HOSTDEPS; do
 			if ! rpm -q $i &>/dev/null; then
 				echo "Couldn't install needed HOST tools. Make sure you're running current OpenMandriva"
@@ -197,7 +197,6 @@ PKGS=http://abf-downloads.openmandriva.org/$OMV_VERSION/repository/$ARCH/main/re
 echo $PKGS
 curl -s -L $PKGS |grep '^<a' |cut -d'"' -f2 >PACKAGES
 PRE_PACKAGES="openmandriva-repos"
-[ "$OMV_VERSION" = "cooker" ] && PRE_PACKAGES="$PRE_PACKAGES openmandriva-repos-cooker"
 for i in $PRE_PACKAGES; do
 	P=`grep "^$i-[0-9].*" PACKAGES`
 	if [ "$?" != "0" ]; then
@@ -215,10 +214,11 @@ if ! $NATIVEBUILD; then
 fi
 
 # FIXME allow better package selection
-PACKAGES="NetworkManager less vim-enhanced systemd-console systemd-coredump systemd-locale systemd-cryptsetup systemd-analyze systemd-hwdb systemd-polkit systemd-boot psmisc gptfdisk timezone locales-en dnf sudo usbutils passwd task-x11 sddm task-plasma distro-theme-common distro-theme-OpenMandriva task-pulseaudio alsa-utils alsa-tools sound-scripts ${LIB}alsa-plugins ${LIB}alsa-plugins-pulseaudio"
+PACKAGES="NetworkManager less vim-enhanced systemd-console systemd-coredump systemd-locale systemd-cryptsetup systemd-analyze systemd-hwdb systemd-polkit systemd-boot psmisc gptfdisk timezone locales-en dnf sudo usbutils passwd task-x11 sddm task-plasma-minimal distro-theme-common distro-theme-OpenMandriva task-pulseaudio alsa-utils alsa-tools sound-scripts ${LIB}alsa-plugins ${LIB}alsa-plugins-pulseaudio"
 # FIXME why aren't those pulled in by task-plasma? Their absence seems to break ksmserver...
 if echo $PACKAGES |grep -q plasma; then
-	PACKAGES="$PACKAGES ${LIB}GLESv1_CM1 ${LIB}GLESv2_2 ${LIB}OpenGL0 ${LIB}OpenVG0 ${LIB}kms1 phonon4qt5-gstreamer gstreamer-tools"
+	PACKAGES="$PACKAGES ${LIB}GLESv1_CM1 ${LIB}GLESv2_2 ${LIB}OpenGL0 ${LIB}OpenVG0 ${LIB}kms1"
+	# phonon4qt5-gstreamer and gstreamer-tools drag in gst-plugins-bad, which currently doesn't build on aarch64
 	if echo $PACKAGES |grep -q pulseaudio; then
 		# Very useful if both task-plasma and task-pulseaudio are there...
 		PACKAGES="$PACKAGES pavucontrol-qt"
@@ -231,7 +231,7 @@ if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
 fi
 PACKAGES="$PACKAGES $HWPACKAGES"
 
-dnf -y install --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $PACKAGES
+dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $PACKAGES
 
 if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
 	# Create omv user (password omv)
@@ -281,7 +281,10 @@ fi
 if [ -n "$KERNEL" ]; then
 	# Install kernel modules, if any
 	cd kernel
-	make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install dtbs_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR INSTALL_DTBS_PATH=$OURDIR/$ROOTDIR/boot
+	make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR INSTALL_DTBS_PATH=$OURDIR/$ROOTDIR/boot
+	# And DTBs -- allow failure here because old kernels (onyx08 and friends)
+	# don't have the dtbs_install target
+	make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR INSTALL_DTBS_PATH=$OURDIR/$ROOTDIR/boot || :
 	cd ..
 fi
 run setup-system-files
@@ -297,7 +300,7 @@ fi
 run generate-bootimg
 
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty0.service
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable dbus
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-udevd
