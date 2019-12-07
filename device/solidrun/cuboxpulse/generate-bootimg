@@ -1,0 +1,22 @@
+# https://developer.solid-run.com/knowledge-base/i-mx8m-atf-u-boot-and-linux-kernel/
+# says you have to use 7.9; newer versions up to 8.5 exist
+# FIXME once everything is working, check if the newer firmware works
+IMX_FIRMWARE_VERSION=7.9
+
+[ -d arm-trusted-firmware ] || git clone --depth 1 https://source.codeaurora.org/external/imx/imx-atf.git -b imx_4.19.35_1.0.0 arm-trusted-firmware
+[ -d u-boot ] || git clone --depth 1 https://github.com/SolidRun/u-boot.git -b v2018.11-solidrun
+[ -e firmware-imx-${IMX_FIRMWARE_VERSION}.bin ] || wget https://www.nxp.com/lgfiles/NMG/MAD/YOCTO/firmware-imx-${IMX_FIRMWARE_VERSION}.bin
+
+cd arm-trusted-firmware
+make PLAT=imx8mq bl31 CROSS_COMPILE=aarch64-linux-gnu-
+cp build/imx8mq/release/bl31.bin ../u-boot/
+cd ..
+
+sh firmware-imx-${IMX_FIRMWARE_VERSION}.bin --auto-accept
+cp firmware-imx-${IMX_FIRMWARE_VERSION}/firmware/hdmi/cadence/signed_hdmi_imx8m.bin u-boot/
+cp firmware-imx-${IMX_FIRMWARE_VERSION}/firmware/ddr/synopsys/lpddr4*.bin u-boot/
+
+cd u-boot
+make imx8mq_hb_defconfig CROSS_COMPILE=aarch64-linux-gnu-
+make flash.bin CROSS_COMPILE=aarch64-linux-gnu-
+cp flash.bin $OURDIR/

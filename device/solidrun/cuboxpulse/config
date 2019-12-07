@@ -1,0 +1,7 @@
+ARCH="aarch64"
+HWPACKAGES="lib64dri-drivers-etnaviv kernel-firmware kernel-firmware-extra"
+KERNEL="https://github.com/SolidRun/linux-fslc.git#solidrun-imx_4.9.x_imx8m_ga"
+KERNEL_CONFIG="defconfig"
+DTB="freescale/fsl-imx8mq-hummingboard-pulse"
+CMDLINE=""
+NEED_INITRD=no
