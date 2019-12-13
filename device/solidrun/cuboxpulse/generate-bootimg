@@ -1,7 +1,7 @@
 # https://developer.solid-run.com/knowledge-base/i-mx8m-atf-u-boot-and-linux-kernel/
 # says you have to use 7.9; newer versions up to 8.5 exist
 # FIXME once everything is working, check if the newer firmware works
-IMX_FIRMWARE_VERSION=7.9
+IMX_FIRMWARE_VERSION=8.5
 
 [ -d arm-trusted-firmware ] || git clone --depth 1 https://source.codeaurora.org/external/imx/imx-atf.git -b imx_4.19.35_1.0.0 arm-trusted-firmware
 [ -d u-boot ] || git clone --depth 1 https://github.com/SolidRun/u-boot.git -b v2018.11-solidrun
