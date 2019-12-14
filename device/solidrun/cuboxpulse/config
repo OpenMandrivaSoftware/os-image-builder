@@ -2,8 +2,11 @@ ARCH="aarch64"
 HWPACKAGES="lib64dri-drivers-etnaviv kernel-firmware kernel-firmware-extra"
 #KERNEL="https://github.com/SolidRun/linux-fslc.git#solidrun-imx_4.9.x_imx8m_ga"
 #KERNEL_CONFIG=cubox_defconfig
-KERNEL="https://github.com/SolidRun/linux-stable#linux-4.19.y-nxp"
+#KERNEL="https://github.com/SolidRun/linux-stable#linux-4.19.y-nxp"
+#KERNEL_CONFIG=defconfig
+KERNEL="https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#linux-5.4.y"
 KERNEL_CONFIG=defconfig
-DTB="freescale/fsl-imx8mq-hummingboard-pulse"
+KERNEL_EXTRACONFIG="--module DRM_ETNAVIV --enable DRM_ETNAVIV_THERMAL"
+DTB="freescale/imx8mq-hummingboard-pulse"
 CMDLINE="console=ttymxc0,115200 earlycon=ec_imx6q,0x30860000,115200 log_level=7 net.ifnames=0 rw root=/dev/mmcblk1p1"
 NEED_INITRD=yes
