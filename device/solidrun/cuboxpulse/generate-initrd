@@ -5,4 +5,3 @@ chmod 0644 $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img
 cp $OURDIR/kernel/arch/arm64/boot/Image $OURDIR/$ROOTDIR/boot/Image-${KERNELVERSION}.img
 ln -s Image-${KERNELVERSION}.img $OURDIR/$ROOTDIR/boot/Image
 ln -s initrd-${KERNELVERSION}.img $OURDIR/$ROOTDIR/boot/initrd.img
-$OURDIR/u-boot/tools/mkimage -A arm64 -O linux -T script -d $OURDIR/device/${TARGET}/boot.script $OURDIR/$ROOTDIR/boot/boot.scr

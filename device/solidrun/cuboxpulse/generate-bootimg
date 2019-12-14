@@ -20,3 +20,6 @@ cd u-boot
 make imx8mq_hb_defconfig CROSS_COMPILE=aarch64-linux-gnu-
 make flash.bin CROSS_COMPILE=aarch64-linux-gnu-
 cp flash.bin $OURDIR/
+cd ..
+
+u-boot/tools/mkimage -A arm64 -O linux -T script -d $OURDIR/device/${TARGET}/boot.script $OURDIR/$ROOTDIR/boot/boot.scr
