@@ -135,7 +135,7 @@ if [ -n "$KERNEL" ]; then
 	HOSTDEPS="$HOSTDEPS cross-$TRIPLET-gcc"
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
-HOSTDEPS="$HOSTDEPS curl make gcc dtc glibc-devel bison flex openssl-devel hostname"
+HOSTDEPS="$HOSTDEPS curl make gcc dtc glibc-devel bison flex lib64openssl-devel hostname"
 
 if [ -n "$HOSTDEPS" ]; then
 	if ! dnf -y --refresh --nogpgcheck install $HOSTDEPS; then
@@ -149,7 +149,7 @@ if [ -n "$HOSTDEPS" ]; then
 	fi
 
 	# Make sure the binfmt handler knows about any qemu-static bits we may have installed...
-	echo ':aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-static-aarch64:' >/proc/sys/fs/binfmt_misc/register || :
+	echo ':aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-aarch64-static:' >/proc/sys/fs/binfmt_misc/register || :
 fi
 
 # ===================================================================
@@ -167,19 +167,21 @@ if [ -n "$KERNEL" ]; then
 	[ -z "$KERNEL_CONFIG" ] && KERNEL_CONFIG="defconfig"
 	[ -d kernel ] || git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel
 	cd kernel
+	run download_kernel_extras
 	[ -e ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} ] && cp -f ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} arch/${KERNELARCH}/configs/
+	# CROSS_COMPILE_ARM32 is a Sony-ism, but doesn't hurt anywhere else, so we can specify it unconditionally
 	if [ "$KERNEL_CLANG" = "yes" ]; then
-		make $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CC=clang LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG
+		make $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG
 	else
-		make $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG
+		make $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
 		scripts/config $KERNEL_EXTRACONFIG
 	fi
 	if [ "$KERNEL_CLANG" = "yes" ]; then
-		make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CC=clang LD=/usr/bin/$TRIPLET-ld.bfd
+		make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LD=/usr/bin/$TRIPLET-ld.bfd
 	else
-		make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- LD=/usr/bin/$TRIPLET-ld.bfd
+		make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd
 	fi
 	KERNELVERSION="$(cat include/config/kernel.release)"
 	cd ..
@@ -194,71 +196,76 @@ fi
 # First of all let's find the right repo list...
 
 ROOTDIR=OpenMandriva-$OMV_VERSION-$ARCH-root
-rm -rf $ROOTDIR
-mkdir -p $ROOTDIR
 
-# setup-rootfs can do things like create a filesystem and
-# loopback mount it on $ROOTDIR -- useful for boards that
-# need to generate a FS image file rather than a rootfs
-# tarball or so.
-[ -e $OURDIR/device/$TARGET/setup-rootfs ] && . $OURDIR/device/$TARGET/setup-rootfs
-
-# Poor man's version of "dnf install --installroot=" --
-# need to get the repository configs from rpm packages
-# without having the repositories configured...
-PKGS=http://abf-downloads.openmandriva.org/$OMV_VERSION/repository/$ARCH/main/release/
-echo $PKGS
-curl -s -L $PKGS |grep '^<a' |cut -d'"' -f2 >PACKAGES
-PRE_PACKAGES="openmandriva-repos"
-for i in $PRE_PACKAGES; do
-	P=`grep "^$i-[0-9].*" PACKAGES`
-	if [ "$?" != "0" ]; then
-		echo "Can't find $i package for target" >&2
-		exit 1
-	fi
-	curl -O $PKGS/$P
-	rpm -r $OURDIR/$ROOTDIR -Uvh --ignorearch --nodeps $P
-done
-
-if ! $NATIVEBUILD; then
-	# Make sure we can run %post scripts in the chroot
-	mkdir -p $OURDIR/$ROOTDIR/usr/bin
-	cp /usr/bin/qemu-static-$QEMUARCH $OURDIR/$ROOTDIR/usr/bin/
+if [ -z "$KEEP_OLD_ROOT" ]; then
+	rm -rf $ROOTDIR
 fi
 
-# FIXME allow better package selection
-PACKAGES="NetworkManager less vim-enhanced systemd-console systemd-coredump systemd-locale systemd-cryptsetup systemd-analyze systemd-hwdb systemd-polkit systemd-boot psmisc gptfdisk timezone locales-en dnf openmandriva-repos-keys sudo usbutils passwd task-pulseaudio alsa-utils alsa-tools sound-scripts ${LIB}alsa-plugins ${LIB}alsa-plugins-pulseaudio openmandriva-repos-keys $EXTRAPACKAGES"
-# FIXME why aren't those pulled in by task-plasma? Their absence seems to break ksmserver...
-if echo $PACKAGES |grep -q plasma; then
-	PACKAGES="$PACKAGES ${LIB}GLESv1_CM1 ${LIB}GLESv2_2 ${LIB}OpenGL0 ${LIB}OpenVG0 ${LIB}kms1"
-	# phonon4qt5-gstreamer and gstreamer-tools drag in gst-plugins-bad, which currently doesn't build on aarch64
-	if echo $PACKAGES |grep -q pulseaudio; then
-		# Very useful if both task-plasma and task-pulseaudio are there...
-		PACKAGES="$PACKAGES pavucontrol-qt"
-	fi
-fi
-# At least while we're mostly dealing with headless boards
-PACKAGES="$PACKAGES openssh-server"
-if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
-	PACKAGES="$PACKAGES dracut"
-fi
-PACKAGES="$PACKAGES $HWPACKAGES"
+if ! [ -d "$ROOTDIR" ]; then
+	mkdir -p $ROOTDIR
 
-dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $PACKAGES
+	# setup-rootfs can do things like create a filesystem and
+	# loopback mount it on $ROOTDIR -- useful for boards that
+	# need to generate a FS image file rather than a rootfs
+	# tarball or so.
+	[ -e $OURDIR/device/$TARGET/setup-rootfs ] && . $OURDIR/device/$TARGET/setup-rootfs
 
-if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
-	# Create omv user (password omv)
-	echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
-	echo 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
-	echo 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
-	# Add the omv user to important groups...
-	for group in wheel lp lpadmin audio video render network storage dialout screen users sambashare; do
-		sed -i -e "s,$group:.*\$,&omv," $OURDIR/$ROOTDIR/etc/group
+	# Poor man's version of "dnf install --installroot=" --
+	# need to get the repository configs from rpm packages
+	# without having the repositories configured...
+	PKGS=http://abf-downloads.openmandriva.org/$OMV_VERSION/repository/$ARCH/main/release/
+	echo $PKGS
+	curl -s -L $PKGS |grep '^<a' |cut -d'"' -f2 >PACKAGES
+	PRE_PACKAGES="openmandriva-repos"
+	for i in $PRE_PACKAGES; do
+		P=`grep "^$i-[0-9].*" PACKAGES`
+		if [ "$?" != "0" ]; then
+			echo "Can't find $i package for target" >&2
+			exit 1
+		fi
+		curl -O $PKGS/$P
+		rpm -r $OURDIR/$ROOTDIR -Uvh --ignorearch --nodeps $P
 	done
-	cp -a $OURDIR/$ROOTDIR/etc/skel $OURDIR/$ROOTDIR/home/omv
-	chown -R 1001:1001 $OURDIR/$ROOTDIR/home/omv
-	# Set some reasonable defaults...
-	cat >$OURDIR/$ROOTDIR/etc/locale.conf <<'EOF'
+
+	if ! $NATIVEBUILD; then
+		# Make sure we can run %post scripts in the chroot
+		mkdir -p $OURDIR/$ROOTDIR/usr/bin
+		cp /usr/bin/qemu-$QEMUARCH-static $OURDIR/$ROOTDIR/usr/bin/
+	fi
+
+	# FIXME allow better package selection
+	PACKAGES="NetworkManager less vim-enhanced systemd-console systemd-coredump systemd-locale systemd-cryptsetup systemd-analyze systemd-hwdb systemd-polkit systemd-boot psmisc gptfdisk timezone locales-en dnf openmandriva-repos-keys sudo usbutils passwd task-pulseaudio alsa-utils alsa-tools sound-scripts ${LIB}alsa-plugins ${LIB}alsa-plugins-pulseaudio openmandriva-repos-keys $EXTRAPACKAGES"
+	# FIXME why aren't those pulled in by task-plasma? Their absence seems to break ksmserver...
+	if echo $PACKAGES |grep -q plasma; then
+		PACKAGES="$PACKAGES ${LIB}GLESv1_CM1 ${LIB}GLESv2_2 ${LIB}OpenGL0 ${LIB}OpenVG0 ${LIB}kms1"
+		# phonon4qt5-gstreamer and gstreamer-tools drag in gst-plugins-bad, which currently doesn't build on aarch64
+		if echo $PACKAGES |grep -q pulseaudio; then
+			# Very useful if both task-plasma and task-pulseaudio are there...
+			PACKAGES="$PACKAGES pavucontrol-qt"
+		fi
+	fi
+	# At least while we're mostly dealing with headless boards
+	PACKAGES="$PACKAGES openssh-server"
+	if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
+		PACKAGES="$PACKAGES dracut"
+	fi
+	PACKAGES="$PACKAGES $HWPACKAGES"
+
+	dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $PACKAGES
+
+	if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
+		# Create omv user (password omv)
+		echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
+		echo 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
+		echo 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
+		# Add the omv user to important groups...
+		for group in wheel lp lpadmin audio video render network storage dialout screen users sambashare; do
+			sed -i -e "s,$group:.*\$,&omv," $OURDIR/$ROOTDIR/etc/group
+		done
+		cp -a $OURDIR/$ROOTDIR/etc/skel $OURDIR/$ROOTDIR/home/omv
+		chown -R 1001:1001 $OURDIR/$ROOTDIR/home/omv
+		# Set some reasonable defaults...
+		cat >$OURDIR/$ROOTDIR/etc/locale.conf <<'EOF'
 LANG=en_US.utf8
 LC_ADDRESS=en_US.utf8
 LC_IDENTIFICATION=en_US.utf8
@@ -270,63 +277,72 @@ LC_PAPER=en_US.utf8
 LC_TELEPHONE=en_US.utf8
 LC_TIME=en_US.utf8
 EOF
-	cat >$OURDIR/$ROOTDIR/etc/vconsole.conf <<'EOF'
+		cat >$OURDIR/$ROOTDIR/etc/vconsole.conf <<'EOF'
 KEYMAP=us
 FONT=latarcyrheb-sun16
 EOF
 
-	# Unlock root account (also password omv)
-	sed -i -e 's,^root:.:,root:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:,' $OURDIR/$ROOTDIR/etc/shadow
+		# Unlock root account (also password omv)
+		sed -i -e 's,^root:.:,root:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:,' $OURDIR/$ROOTDIR/etc/shadow
 
-	# If sddm is installed, set it up to autologin as omv
-	if [ -z "$SDDMSESSION" ]; then
-		for desktop in plasma lxqt openbox failsafe; do
-			if [ -e $OURDIR/$ROOTDIR/usr/share/xsessions/$desktop.desktop ]; then
-				SDDMSESSION=$desktop
-				break
-			fi
+		# If sddm is installed, set it up to autologin as omv
+		if [ -z "$SDDMSESSION" ]; then
+			for desktop in plasma lxqt openbox failsafe; do
+				if [ -e $OURDIR/$ROOTDIR/usr/share/xsessions/$desktop.desktop ]; then
+					SDDMSESSION=$desktop
+					break
+				fi
+			done
+		fi
+		if [ -z "$NO_AUTOLOGIN" -a -n "$SDDMSESSION" -a -e $OURDIR/$ROOTDIR/etc/sddm.conf ]; then
+			sed -i -e "s,^User=,User=omv,;s,^Session=,Session=$SDDMSESSION," $OURDIR/$ROOTDIR/etc/sddm.conf
+		fi
+	fi
+	if [ -n "$KERNEL" ]; then
+		# Install kernel modules, if any
+		cd kernel
+		make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR INSTALL_DTBS_PATH=$OURDIR/$ROOTDIR/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf-
+		# And DTBs -- allow failure here because old kernels (onyx08 and friends)
+		# don't have the dtbs_install target
+		make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR INSTALL_DTBS_PATH=$OURDIR/$ROOTDIR/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- || :
+		cd ..
+	fi
+	run setup-system-files
+	if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
+		for mp in /proc /sys /dev /dev/pts; do
+			mount --bind $mp $OURDIR/$ROOTDIR$mp
+		done
+		run generate-initrd
+		for mp in /proc /sys /dev/pts /dev; do
+			umount $OURDIR/$ROOTDIR$mp || :
 		done
 	fi
-	if [ -z "$NO_AUTOLOGIN" -a -n "$SDDMSESSION" -a -e $OURDIR/$ROOTDIR/etc/sddm.conf ]; then
-		sed -i -e "s,^User=,User=omv,;s,^Session=,Session=$SDDMSESSION," $OURDIR/$ROOTDIR/etc/sddm.conf
-	fi
-fi
-if [ -n "$KERNEL" ]; then
-	# Install kernel modules, if any
-	cd kernel
-	make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR INSTALL_DTBS_PATH=$OURDIR/$ROOTDIR/boot
-	# And DTBs -- allow failure here because old kernels (onyx08 and friends)
-	# don't have the dtbs_install target
-	make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR INSTALL_DTBS_PATH=$OURDIR/$ROOTDIR/boot || :
-	cd ..
-fi
-run setup-system-files
-if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
-	for mp in /proc /sys /dev /dev/pts; do
-		mount --bind $mp $OURDIR/$ROOTDIR$mp
-	done
-	run generate-initrd
-	for mp in /proc /sys /dev/pts /dev; do
-		umount $OURDIR/$ROOTDIR$mp || :
-	done
-fi
-run generate-bootimg
+	run generate-bootimg
 
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty0.service
-[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable dbus
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-udevd
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-udev-trigger
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable NetworkManager
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-ask-password-wall
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-logind
-#chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-networkd
-#chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-resolved
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-update-utmp-runlevel
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-user-sessions
-# At least while we're mostly dealing with headless boards
-[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sshd.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sshd
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty0.service
+	[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable dbus-broker
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-udevd
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-udev-trigger
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable NetworkManager
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-ask-password-wall
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-logind
+	#chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-networkd
+	#chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-resolved
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-update-utmp-runlevel
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-user-sessions
+	# At least while we're mostly dealing with headless boards
+	[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sshd.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sshd
+	# There shouldn't be any files in the root filesystem. If there are any,
+	# they're probably core dump files generated by qemu while running systemctl
+	# and friends.
+	pushd $OURDIR/$ROOTDIR
+	for i in *; do
+		[ -f "$i" ] && rm -f "$i"
+	done
+	popd
+fi
 run generate-rootfs
 
 if [ "$ABF" = "1" ]; then
