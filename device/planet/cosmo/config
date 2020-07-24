@@ -1,0 +1,8 @@
+ARCH="aarch64"
+HWPACKAGES="lib64dri-drivers-panfrost kernel-firmware kernel-firmware-extra"
+KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/Cosmo/5.7"
+KERNEL_CONFIG="cosmocom_defconfig"
+DTB="mediatek/mt6771-cosmocom"
+CMDLINE=""
+# (this is the default anyway)
+# NEED_INITRD=yes

@@ -1,0 +1,1 @@
+abootimg --create boot.img -f device/planet/cosmo/bootimg.cfg -k kernel/arch/arm64/boot/Image.gz -r $ROOTDIR/boot/initrd-${KERNELVERSION}.img -s kernel/arch/arm64/boot/dts/mediatek/mt6771-cosmocom.dtb
