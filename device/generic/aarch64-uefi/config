@@ -1,0 +1,14 @@
+# Generic aarch64 board with UEFI support
+ARCH="aarch64"
+# Let's use a current kernel, it usually has more hardware support
+HWPACKAGES="kernel-rc"
+# Most boards have a PCIE-slot that may take a graphics card (so we
+# need radeon and nouveau), others have onboard graphics (typically
+# mali or adreno...)
+HWPACKAGES="$HWPACKAGES lib64dri-drivers-radeon lib64dri-drivers-nouveau lib64dri-drivers-lima lib64dri-drivers-panfrost lib64dri-drivers-freedreno"
+# Let's support what people might drop into those PCI-E slots...
+HWPACKAGES="$HWPACKAGES pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr grub2-efi"
+CMDLINE="console=tty1 nouveau.config=NvClkMode=auto"
+# (this is the default anyway)
+# NEED_INITRD=yes
+USE_UEFI=yes

@@ -108,17 +108,38 @@ aarch64)
 	KERNELARCH=arm64
 	QEMUARCH=aarch64
 	KERNELTARGET=Image.gz
+	BOOTEFI=bootaa64.efi
+	EFIARCH=arm64-efi
 	;;
 arm*)
 	KERNELARCH=arm
 	QEMUARCH=arm
 	TRIPLET="${TRIPLET}eabihf"
 	KERNELTARGET=zImage
+	BOOTEFI=bootarm.efi
+	EFIARCH=arm-efi
+	;;
+x86_64|znver1)
+	KERNELARCH=x86
+	QEMUARCH=x86_64
+	KERNELTARGET=vmlinuz
+	BOOTEFI=bootx64.efi
+	EFIARCH=x86_64-efi
+	;;
+i686)
+	KERNELARCH=x86
+	QEMUARCH=i386
+	KERNELTARGET=vmlinuz
+	BOOTEFI=bootia32.efi
+	EFIARCH=i386-efi
 	;;
 *)
+	# Anything here is possibly wrong...
 	KERNELARCH=$ARCH
 	QEMUARCH=$ARCH
 	KERNELTARGET=vmlinuz
+	BOOTEFI=boot${ARCH}.efi
+	EFIARCH=${ARCH}-efi
 	;;
 esac
 if echo $ARCH |grep -q 64; then
@@ -235,6 +256,11 @@ if ! [ -d "$ROOTDIR" ]; then
 
 	# FIXME allow better package selection
 	PACKAGES="NetworkManager less vim-enhanced systemd-console systemd-coredump systemd-locale systemd-cryptsetup systemd-analyze systemd-hwdb systemd-polkit systemd-boot psmisc gptfdisk timezone locales-en dnf openmandriva-repos-keys sudo usbutils passwd task-pulseaudio alsa-utils alsa-tools sound-scripts ${LIB}alsa-plugins ${LIB}alsa-plugins-pulseaudio openmandriva-repos-keys $EXTRAPACKAGES"
+	# FIXME workaround for ldd being broken on aarch64 (at least in qemu)
+	# (causes dracut to miss bash's dependencies)
+	if [ "$ARCH" = "aarch64" ]; then
+		PACKAGES="$PACKAGES xldd"
+	fi
 	# FIXME why aren't those pulled in by task-plasma? Their absence seems to break ksmserver...
 	if echo $PACKAGES |grep -q plasma; then
 		PACKAGES="$PACKAGES ${LIB}GLESv1_CM1 ${LIB}GLESv2_2 ${LIB}OpenGL0 ${LIB}OpenVG0 ${LIB}kms1"
@@ -246,12 +272,20 @@ if ! [ -d "$ROOTDIR" ]; then
 	fi
 	# At least while we're mostly dealing with headless boards
 	PACKAGES="$PACKAGES openssh-server"
-	if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
+	if [ "$NEED_INITRD" != "no" ]; then
 		PACKAGES="$PACKAGES dracut"
 	fi
 	PACKAGES="$PACKAGES $HWPACKAGES"
 
 	dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $PACKAGES
+
+	# FIXME (continued) workaround for ldd being
+	# broken on aarch64 (at least in qemu)
+	# (causes dracut to miss bash's dependencies)
+	if [ "$ARCH" = "aarch64" ]; then
+		mv $OURDIR/$ROOTDIR/usr/bin/ldd $OURDIR/$ROOTDIR/usr/bin/ldd.glibc
+		ln -sf xldd $OURDIR/$ROOTDIR/usr/bin/ldd
+	fi
 
 	if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
 		# Create omv user (password omv)
@@ -306,13 +340,24 @@ EOF
 		# don't have the dtbs_install target
 		make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR INSTALL_DTBS_PATH=$OURDIR/$ROOTDIR/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- || :
 		cd ..
+	else
+		# Using packaged kernel -- let's determine KERNELVERSION
+		# nevertheless so we can run dracut and possibly configure
+		# bootloaders
+		KERNELVERSION=$(ls --sort=time $OURDIR/$ROOTDIR/boot/vmlinuz-* |head -n1 |sed -e 's,.*vmlinuz-,,')
 	fi
 	run setup-system-files
-	if [ "$NEED_INITRD" != "no" -a -n "$KERNELVERSION" ]; then
+	if [ "$NEED_INITRD" != "no" -o "$USE_UEFI" = "yes" -a -n "$KERNELVERSION" ]; then
 		for mp in /proc /sys /dev /dev/pts; do
 			mount --bind $mp $OURDIR/$ROOTDIR$mp
 		done
-		run generate-initrd
+		if [ "$NEED_INITRD" != "no" ]; then
+			run generate-initrd
+		fi
+		if [ "$USE_UEFI" = "yes" ]; then
+			mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
+			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxterm_menu test all_video loadenv exfat ext2
+		fi
 		for mp in /proc /sys /dev/pts /dev; do
 			umount $OURDIR/$ROOTDIR$mp || :
 		done
