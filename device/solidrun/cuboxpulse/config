@@ -1,5 +1,6 @@
 ARCH="aarch64"
-HWPACKAGES="lib64dri-drivers-etnaviv kernel-firmware kernel-firmware-extra"
+HWPACKAGES="kernel-firmware kernel-firmware-extra"
+HWPACKAGES_gui="lib64dri-drivers-etnaviv"
 #KERNEL="https://github.com/SolidRun/linux-fslc.git#solidrun-imx_4.9.x_imx8m_ga"
 #KERNEL_CONFIG=cubox_defconfig
 #KERNEL="https://github.com/SolidRun/linux-stable#linux-4.19.y-nxp"

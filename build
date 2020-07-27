@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -30,6 +30,20 @@ run() {
 		done
 	fi
 }
+addpackageset() {
+	if ! [ -e "$OURDIR/packagesets/$1.ps" ]; then
+		echo "Unknown package set $1" >&2
+		exit 1
+	fi
+	PACKAGESETS="$PACKAGESETS $1"
+	while read p; do
+		if echo $p |grep -qE '^#include '; then
+			addpackageset $(echo $p |awk '{ print $2; }')
+		elif ! echo $p |grep -q '^#'; then
+			EXTRAPACKAGES="$EXTRAPACKAGES $p"
+		fi
+	done < <(cat "$OURDIR/packagesets/$1.ps")
+}
 
 if [ "$(id -u)" != "0" ]; then
 	echo "Need root privileges to set ownership of extracted files."
@@ -41,7 +55,7 @@ OURDIR="$(realpath $(dirname $0))"
 cd "$OURDIR"
 
 EXTRAPACKAGES=""
-EXTRAPACKAGES_kde="task-plasma task-x11 sddm task-plasma distro-theme-common distro-theme-OpenMandriva"
+PACKAGESETS=""
 
 OMV_VERSION=cooker
 while getopts "v:p:P:" opt; do
@@ -53,12 +67,7 @@ while getopts "v:p:P:" opt; do
 		EXTRAPACAKAGES="$EXTRAPACKAGES $OPTARG"
 		;;
 	P)
-		eval "XP=\${EXTRAPACKAGES_${OPTARG}}"
-		if [ -z "$XP" ]; then
-			echo "Unknown package set $OPTARG" >&2
-			exit 1
-		fi
-		EXTRAPACKAGES="$EXTRAPACKAGES $XP"
+		addpackageset ${OPTARG}
 		;;
 	*)
 		echo "Unknown option $opt" >&2
@@ -93,6 +102,18 @@ SHORTTARGET="$(basename $TARGET)"
 
 echo "Building OpenMandriva $OMV_VERSION image for $TARGET"
 run config
+
+# ===================================================================
+# Add target specific packageset extensions (e.g. graphics drivers
+# for the gui package set)
+# ===================================================================
+for i in $PACKAGESETS; do
+	eval "XP=\${HWPACKAGES_${i}}"
+	echo "$i: $XP"
+	if [ -n "$XP" ]; then
+		EXTRAPACKAGES="$EXTRAPACKAGES $XP"
+	fi
+done
 
 # ===================================================================
 # Prepare host system
@@ -340,6 +361,8 @@ EOF
 		# don't have the dtbs_install target
 		make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR INSTALL_DTBS_PATH=$OURDIR/$ROOTDIR/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- || :
 		cd ..
+		# And put the kernel where the kernel package would put it too
+		cp $OURDIR/kernel/arch/$KERNELARCH/boot/$KERNELTARGET $OURDIR/$ROOTDIR/boot/vmlinuz-$KERNELVERSION
 	else
 		# Using packaged kernel -- let's determine KERNELVERSION
 		# nevertheless so we can run dracut and possibly configure

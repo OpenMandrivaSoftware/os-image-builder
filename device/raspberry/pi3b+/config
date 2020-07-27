@@ -1,5 +1,6 @@
 ARCH="aarch64"
-HWPACKAGES="lib64dri-drivers-vc4 kernel-firmware kernel-firmware-extra"
+HWPACKAGES="kernel-firmware kernel-firmware-extra"
+HWPACKAGES_gui="lib64dri-drivers-vc4"
 KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/RaspberryPi/4.20"
 KERNEL_CONFIG="bcmrpi3_defconfig"
 DTB="broadcom/bcm2710-rpi-3-b-plus"
