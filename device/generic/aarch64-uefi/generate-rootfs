@@ -35,4 +35,5 @@ umount mnt
 mount ${LOOPDEV}p2 mnt
 cp -a ${ROOTDIR}/* mnt/
 umount mnt
+losetup -d ${LOOPDEV}
 popd
