@@ -1,0 +1,38 @@
+pushd $OURDIR/$ROOTDIR
+MINSIZE=$(du -s --block-size=1048576 |awk '{ print $1; }')
+cd ..
+dd if=/dev/zero of=${SHORTTARGET}.img bs=1M count=$((MINSIZE+256))
+losetup -fP ${SHORTTARGET}.img
+LOOPDEV=$(losetup -j ${SHORTTARGET}.img |cut -d: -f1)
+# The data fed to gdisk below (blank lines are important! Don't remove them!)
+# create 2 partitions -- a 32 MB UEFI system partition and a root FS spanning
+# the rest of the disk
+gdisk $LOOPDEV <<'EOF'
+o
+y
+n
+
+
++32M
+ef00
+n
+
+
+
+8305
+w
+y
+EOF
+kpartx ${LOOPDEV}
+mkfs.vfat ${LOOPDEV}p1
+mkfs.ext4 -L OMVAA64 ${LOOPDEV}p2
+mkdir mnt
+mount ${LOOPDEV}p1 mnt
+cd mnt
+tar xf ../boot-${SHORTTARGET}.tar.xz
+cd ..
+umount mnt
+mount ${LOOPDEV}p2 mnt
+cp -a ${ROOTDIR}/* mnt/
+umount mnt
+popd

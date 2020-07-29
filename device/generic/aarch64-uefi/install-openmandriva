@@ -26,7 +26,7 @@ WARNING: This script will overwrite the entire disk $1
 Press Ctrl-C if you don't want this to happen. Use $0 /dev/whatever to
 select a different target device.
 
-In a default SynQuacer setup:
+e.g. in a default SynQuacer setup:
 	/dev/sda is the harddisk
 	/dev/mmcblk0 is the onboard MMC storage
 	/dev/sdb is the first USB storage device
@@ -182,6 +182,7 @@ if [ -n "$SWAP" ]; then
 fi
 echo "Formatting / partition..."
 mkfs.ext4 -F -L/ $ROOT &>$TOOLOUTPUT
+ROOTUUID=$(/sbin/blkid $ROOT |sed -e 's,.*UUID=",,;s,".*,,')
 if [ -n "$HOME" ]; then
 	echo "Formatting /home partition..."
 	mkfs.ext4 -F -L/home $HOME &>$TOOLOUTPUT
@@ -192,6 +193,11 @@ mount $ROOT /mnt/destination
 if [ -n "$UEFI" ]; then
 	mkdir -p /mnt/destination/boot/efi
 	mount $UEFI /mnt/destination/boot/efi
+	mount --bind /dev /mnt/destination/dev
+	mount --bind /dev/pts /mnt/destination/dev/pts
+	mount --bind /proc /mnt/destination/proc
+	mount --bind /sys /mnt/destination/sys
+	mount --bind /sys/firmware/efi/efivars /mnt/destination/sys/firmware/efi/efivars
 fi
 if [ -n "$HOME" ]; then
 	mkdir -p /mnt/destination/home
@@ -216,9 +222,18 @@ if [ -n "$UEFI" ]; then
 	cp -ax /boot/efi/* /mnt/destination/boot/efi/
 	echo "Registering with UEFI bootloader"
 	mv /mnt/destination/boot/efi/startup.nsh /mnt/destination/boot/efi/openmandriva.nsh
-	sed -i -e 's,OMVAA64,/,g' /mnt/destination/boot/efi/EFI/BOOT/grub.cfg
+	sed -i -e "s,^search .*,search --no-floppy --fs-uuid --set=root $ROOTUUID," /mnt/destination/boot/EFI/BOOT/grub.cfg
+	sed -i -e "s,LABEL=OMVAA64,UUID=$ROOTUUID,g" /mnt/destination/boot/efi/EFI/BOOT/grub.cfg
+	cp /mnt/destination/boot/efi/EFI/BOOT/grub.cfg /mnt/destination/boot/efi/EFI/openmandriva/
+	cp /mnt/destination/boot/efi/EFI/BOOT/grub.cfg /mnt/destination/boot/grub2/
 	sed -i -e "s,/dev/sdb2,$ROOT,g" /mnt/destination/boot/efi/openmandriva.nsh
-	efibootmgr --create -L 'OpenMandriva Lx 4.2' -l '\EFI\BOOT\bootaa64.efi' -d "$DESTINATION" -p $(echo $UEFI |sed -e "s,$DESTINATION,,")
+	#efibootmgr --create -L 'OpenMandriva Lx 4.2' -l '\EFI\BOOT\bootaa64.efi' -d "$DESTINATION" -p $(echo $UEFI |sed -e "s,$DESTINATION,,")
+	chroot /mnt/destination /usr/sbin/grub2-install 
+	umount /mnt/destination/sys/firmware/efi/efivars
+	umount /mnt/destination/sys
+	umount /mnt/destination/proc
+	umount /mnt/destination/dev/pts
+	umount /mnt/destination/dev
 fi
 
 echo "Cleaning up..."
