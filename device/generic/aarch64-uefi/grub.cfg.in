@@ -11,12 +11,12 @@ set timeout_style=menu
 set timeout=10
 
 menuentry 'OpenMandriva Lx' --class openmandriva --class gnu-linux --class gnu --class os {
-	linux /boot/vmlinuz-@KVERSION@ root=LABEL=OMVAA64 ro rd.timeout=120
+	linux /boot/vmlinuz-@KVERSION@ root=LABEL=OMVAA64 rw rootwait rd.timeout=120
 	initrd /boot/initrd-@KVERSION@.img
 }
 
 menuentry 'OpenMandriva Lx (text mode)' --class openmandriva --class gnu-linux --class gnu --class os {
-	linux /boot/vmlinuz-@KVERSION@ root=LABEL=OMVAA64 ro rd.timeout=120 systemd.unit=multi-user.target
+	linux /boot/vmlinuz-@KVERSION@ root=LABEL=OMVAA64 rw rootwait rd.timeout=120 systemd.unit=multi-user.target
 	initrd /boot/initrd-@KVERSION@.img
 }
 

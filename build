@@ -31,7 +31,7 @@ run() {
 	fi
 }
 addpackageset() {
-	if ! [ -e "$OURDIR/packagesets/$1.ps" ]; then
+	if ! [ -e "$OURDIR/packagesets/$1.pks" ]; then
 		echo "Unknown package set $1" >&2
 		exit 1
 	fi
@@ -40,9 +40,9 @@ addpackageset() {
 		if echo $p |grep -qE '^#include '; then
 			addpackageset $(echo $p |awk '{ print $2; }')
 		elif ! echo $p |grep -q '^#'; then
-			EXTRAPACKAGES="$EXTRAPACKAGES $p"
+			PACKAGES="$PACKAGES $p"
 		fi
-	done < <(cat "$OURDIR/packagesets/$1.ps")
+	done < <(cat "$OURDIR/packagesets/$1.pks")
 }
 
 if [ "$(id -u)" != "0" ]; then
@@ -54,8 +54,9 @@ fi
 OURDIR="$(realpath $(dirname $0))"
 cd "$OURDIR"
 
-EXTRAPACKAGES=""
+PACKAGES=""
 PACKAGESETS=""
+addpackageset core
 
 OMV_VERSION=cooker
 while getopts "v:p:P:" opt; do
@@ -64,7 +65,7 @@ while getopts "v:p:P:" opt; do
 		OMV_VERSION=$OPTARG
 		;;
 	p)
-		EXTRAPACAKAGES="$EXTRAPACKAGES $OPTARG"
+		PACAKAGES="$PACKAGES $OPTARG"
 		;;
 	P)
 		addpackageset ${OPTARG}
@@ -109,9 +110,8 @@ run config
 # ===================================================================
 for i in $PACKAGESETS; do
 	eval "XP=\${HWPACKAGES_${i}}"
-	echo "$i: $XP"
 	if [ -n "$XP" ]; then
-		EXTRAPACKAGES="$EXTRAPACKAGES $XP"
+		PACKAGES="$PACKAGES $XP"
 	fi
 done
 
@@ -171,6 +171,15 @@ fi
 
 NATIVEBUILD=false
 [ "$ARCH" = "`uname -m`" ] && NATIVEBUILD=true
+
+# Expand variables in PACKAGES now that all parameters
+# are known -- allowing for e.g. ${LIB}GL0 to install libGL0
+# or lib64GL0 depending on target arch
+PACKAGES_TMP="$PACKAGES"
+PACKAGES=""
+for i in $PACKAGES_TMP; do
+	PACKAGES="$PACKAGES $(eval echo $i)"
+done
 
 if [ -n "$KERNEL" ]; then
 	# We aren't using a packaged kernel, so we need the right toolchain...
@@ -258,7 +267,7 @@ if ! [ -d "$ROOTDIR" ]; then
 	PKGS=http://abf-downloads.openmandriva.org/$OMV_VERSION/repository/$ARCH/main/release/
 	echo $PKGS
 	curl -s -L $PKGS |grep '^<a' |cut -d'"' -f2 >PACKAGES
-	PRE_PACKAGES="openmandriva-repos"
+	PRE_PACKAGES="distro-release-repos"
 	for i in $PRE_PACKAGES; do
 		P=`grep "^$i-[0-9].*" PACKAGES`
 		if [ "$?" != "0" ]; then
@@ -275,26 +284,16 @@ if ! [ -d "$ROOTDIR" ]; then
 		cp /usr/bin/qemu-$QEMUARCH-static $OURDIR/$ROOTDIR/usr/bin/
 	fi
 
-	# FIXME allow better package selection
-	PACKAGES="NetworkManager less vim-enhanced systemd-console systemd-coredump systemd-locale systemd-cryptsetup systemd-analyze systemd-hwdb systemd-polkit systemd-boot psmisc gptfdisk timezone locales-en dnf openmandriva-repos-keys sudo usbutils passwd task-pulseaudio alsa-utils alsa-tools sound-scripts ${LIB}alsa-plugins ${LIB}alsa-plugins-pulseaudio openmandriva-repos-keys $EXTRAPACKAGES"
 	# FIXME workaround for ldd being broken on aarch64 (at least in qemu)
 	# (causes dracut to miss bash's dependencies)
 	if [ "$ARCH" = "aarch64" ]; then
 		PACKAGES="$PACKAGES xldd"
 	fi
-	# FIXME why aren't those pulled in by task-plasma? Their absence seems to break ksmserver...
-	if echo $PACKAGES |grep -q plasma; then
-		PACKAGES="$PACKAGES ${LIB}GLESv1_CM1 ${LIB}GLESv2_2 ${LIB}OpenGL0 ${LIB}OpenVG0 ${LIB}kms1"
-		# phonon4qt5-gstreamer and gstreamer-tools drag in gst-plugins-bad, which currently doesn't build on aarch64
-		if echo $PACKAGES |grep -q pulseaudio; then
-			# Very useful if both task-plasma and task-pulseaudio are there...
-			PACKAGES="$PACKAGES pavucontrol-qt"
-		fi
-	fi
-	# At least while we're mostly dealing with headless boards
-	PACKAGES="$PACKAGES openssh-server"
 	if [ "$NEED_INITRD" != "no" ]; then
 		PACKAGES="$PACKAGES dracut"
+	fi
+	if [ "$USE_UEFI" = "yes" ]; then
+		PACKAGES="$PACKAGES efibootmgr grub2-efi"
 	fi
 	PACKAGES="$PACKAGES $HWPACKAGES"
 
@@ -388,7 +387,7 @@ EOF
 	run generate-bootimg
 
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
-	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty0.service
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
 	[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable dbus-broker
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable systemd-udevd

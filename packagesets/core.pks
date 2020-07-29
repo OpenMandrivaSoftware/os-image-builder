@@ -1,0 +1,21 @@
+distro-release-repos-keys
+systemd-console
+systemd-coredump
+systemd-locale
+systemd-cryptsetup
+systemd-analyze
+systemd-hwdb
+systemd-polkit
+NetworkManager
+less
+vim-enhanced
+psmisc
+gptfdisk
+timezone
+locales-en
+dnf
+sudo
+usbutils
+passwd
+# At least while we're mostly dealing with headless boards
+openssh-server
