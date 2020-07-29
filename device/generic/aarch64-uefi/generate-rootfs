@@ -26,6 +26,7 @@ EOF
 kpartx ${LOOPDEV}
 mkfs.vfat ${LOOPDEV}p1
 mkfs.ext4 -L OMVAA64 ${LOOPDEV}p2
+rm -rf mnt
 mkdir mnt
 mount ${LOOPDEV}p1 mnt
 cd mnt
