@@ -1,7 +1,8 @@
-mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva
-cp $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva/initrd.img
-cp $OURDIR/kernel/arch/arm64/boot/Image $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva/linux.efi
-cp $OURDIR/device/socionext/synquacer/startup.nsh $OURDIR/$ROOTDIR/boot/efi/
-pushd $OURDIR/$ROOTDIR/boot/efi
-tar cJf $OURDIR/boot-${SHORTTARGET}.tar.xz *
-popd
+[ -d arm-trusted-firmware ] || git clone https://github.com/ARM-software/arm-trusted-firmware
+make -C arm-trusted-firmware CROSS_COMPILE=aarch64-linux-gnu- PLAT=sun50i_a64 DEBUG=1 bl31
+[ -d u-boot ] || git clone -b opi-v2020.04 https://megous.com/git/u-boot
+make -C u-boot pinephone_defconfig
+make -C u-boot CROSS_COMPILE=aarch64-linux-gnu- BL31=`pwd`/arm-trusted-firmware/build/sun50i_a64/debug/bl31.bin -j8
+
+mkimage -A arm -O linux -T ramdisk -C gzip -d $OURDIR/$ROOTDIR/boot/initrd-$KERNELVERSION $OURDIR/$ROOTDIR/boot/uInitrd.img
+mkimage -A arm64 -T script -C none -d $OURDIR/device/pine64/pinephone/boot.cmd $OURDIR/$ROOTDIR/boot/boot.scr
