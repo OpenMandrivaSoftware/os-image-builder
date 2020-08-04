@@ -1,0 +1,15 @@
+ARCH="aarch64"
+# Let's support what people might drop into those PCI-E slots...
+#HWPACKAGES="pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr"
+HWPACKAGES_gui="lib64dri-drivers-lima"
+# https://xnux.eu/devices/pine64-pinephone.html
+KERNEL="https://github.com/megous/linux.git#orange-pi-5.8"
+KERNEL_CONFIG="pinephone_defconfig"
+DTB="sun50i-a64-pinephone-1.2"
+# Make sure we have what the hardware needs...
+KERNEL_EXTRACONFIG="--enable TOUCHSCREEN_GOODIX --enable VIDEO_OV5640 --enable LEDS_SGM3140 --enable DRM_PANEL_XINGBANGDA_XBD599 --enable RTL8723CS --enable BT_HCIUART_RTL --enable USB_NET_QMI_WWAN --enable USB_SERIAL_OPTION --enable IIO_ST_MAGN_3AXIS --enable STK3310 --enable INV_MPU6050_I2C --enable INPUT_GPIO_VIBRA --enable LEDS_GPIO --enable KEYBOARD_SUN4I_LRADC --enable INPUT_AXP20X_PEK --enable BATTERY_AXP20X --set-val EXTRA_FIRMWARE_DIR \"`pwd`/kernel/linux-firmware\""
+# Some basic configs
+KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable MODULE_FORCE_LOAD --enable MODVERSIONS --enable MODULE_COMPRESS --disable MODULE_COMPRESS_GZIP --enable MODULE_COMPRESS_XZ"
+CMDLINE="console=tty1"
+# (this is the default anyway)
+# NEED_INITRD=yes

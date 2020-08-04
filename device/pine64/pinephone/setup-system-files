@@ -1,0 +1,1 @@
+cp -a device/pine64/pinephone/install-openmandriva $OURDIR/$ROOTDIR/home/omv/
