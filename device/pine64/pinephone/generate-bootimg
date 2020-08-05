@@ -4,5 +4,5 @@ make -C arm-trusted-firmware CROSS_COMPILE=aarch64-linux-gnu- PLAT=sun50i_a64 DE
 make -C u-boot pinephone_defconfig
 make -C u-boot CROSS_COMPILE=aarch64-linux-gnu- BL31=`pwd`/arm-trusted-firmware/build/sun50i_a64/debug/bl31.bin -j8
 
-mkimage -A arm -O linux -T ramdisk -C gzip -d $OURDIR/$ROOTDIR/boot/initrd-$KERNELVERSION $OURDIR/$ROOTDIR/boot/uInitrd.img
+mkimage -A arm -O linux -T ramdisk -C gzip -d $OURDIR/$ROOTDIR/boot/initrd-$KERNELVERSION.img $OURDIR/$ROOTDIR/boot/uInitrd.img
 mkimage -A arm64 -T script -C none -d $OURDIR/device/pine64/pinephone/boot.cmd $OURDIR/$ROOTDIR/boot/boot.scr

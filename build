@@ -297,7 +297,18 @@ if ! [ -d "$ROOTDIR" ]; then
 	fi
 	PACKAGES="$PACKAGES $HWPACKAGES"
 
-	dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $PACKAGES
+	if ! dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $PACKAGES; then
+		if [ -e $OURDIR/$ROOTDIR/bin/sh ]; then
+			cat >&2 <<EOF
+WARNING: dnf returned an error code, but it looks like installation finished.
+This is likely something (relatively) harmless like a package's post-install
+script failing - but you may want to double-check.
+EOF
+		else
+			echo "ERROR: dnf failed without installing what looks like a workable system."
+			exit 1
+		fi
+	fi
 
 	# FIXME (continued) workaround for ldd being
 	# broken on aarch64 (at least in qemu)
@@ -386,9 +397,13 @@ EOF
 	fi
 	run generate-bootimg
 
-	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty0.service
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
-	[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
+	if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ]; then
+		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
+	else
+		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default multi-user.target
+	fi
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable dbus-broker
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable NetworkManager
 	# At least while we're mostly dealing with headless boards
