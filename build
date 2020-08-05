@@ -406,6 +406,7 @@ EOF
 	fi
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable dbus-broker
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable NetworkManager
+	run postprocess
 	# At least while we're mostly dealing with headless boards
 	[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sshd.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sshd
 	# There shouldn't be any files in the root filesystem. If there are any,

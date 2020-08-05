@@ -1,0 +1,1 @@
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@ttyS0.service
