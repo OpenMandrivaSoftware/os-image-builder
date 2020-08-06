@@ -398,7 +398,21 @@ EOF
 	fi
 	run generate-bootimg
 
-	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty0.service
+	# Make sure default services are started
+	for i in "$OURDIR/$ROOTDIR"/lib/systemd/system-preset/*.preset; do
+		while read r; do
+			TYPE="$(echo $r |awk '{ print $1; }')"
+			if [ "$TYPE" = "enable" -o "$TYPE" = "disable" ]; then
+				[ "$(echo $r |awk '{ print $2; }')" = '*' ] && continue
+				set -x
+				chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl $r || :
+				set +x
+			fi
+		done < $i
+	done
+
+	# Make sure key services are started even if they're omitted
+	# in the preset files
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
 	if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ]; then
 		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
