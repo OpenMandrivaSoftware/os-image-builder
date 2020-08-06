@@ -297,6 +297,13 @@ if ! [ -d "$ROOTDIR" ]; then
 	fi
 	PACKAGES="$PACKAGES $HWPACKAGES"
 
+	# Mount relevant filesystems so %post scripts can access
+	# the likes of /dev/null and /dev/urandom
+	for mp in /proc /sys /dev /dev/pts; do
+		mkdir -p $OURDIR/$ROOTDIR$mp || :
+		mount --bind $mp $OURDIR/$ROOTDIR$mp
+	done
+
 	if ! dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $PACKAGES; then
 		if [ -e $OURDIR/$ROOTDIR/bin/sh ]; then
 			cat >&2 <<EOF
@@ -377,13 +384,10 @@ EOF
 		# Using packaged kernel -- let's determine KERNELVERSION
 		# nevertheless so we can run dracut and possibly configure
 		# bootloaders
-		KERNELVERSION=$(ls --sort=time $OURDIR/$ROOTDIR/boot/vmlinuz-* |head -n1 |sed -e 's,.*vmlinuz-,,')
+		KERNELVERSION=$(ls --sort=time $OURDIR/$ROOTDIR/boot/vmlinuz-* 2>/dev/null|head -n1 |sed -e 's,.*vmlinuz-,,')
 	fi
 	run setup-system-files
 	if [ "$NEED_INITRD" != "no" -o "$USE_UEFI" = "yes" -a -n "$KERNELVERSION" ]; then
-		for mp in /proc /sys /dev /dev/pts; do
-			mount --bind $mp $OURDIR/$ROOTDIR$mp
-		done
 		if [ "$NEED_INITRD" != "no" ]; then
 			run generate-initrd
 		fi
@@ -391,9 +395,6 @@ EOF
 			mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
 			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxterm_menu test all_video loadenv exfat ext2
 		fi
-		for mp in /proc /sys /dev/pts /dev; do
-			umount $OURDIR/$ROOTDIR$mp || :
-		done
 	fi
 	run generate-bootimg
 
@@ -418,6 +419,11 @@ EOF
 	done
 	popd
 fi
+# Stuff in virtual filesystems should not make it to
+# root filesystems...
+for mp in /proc /sys /dev/pts /dev; do
+	umount $OURDIR/$ROOTDIR$mp || :
+done
 run generate-rootfs
 
 if [ "$ABF" = "1" ]; then
