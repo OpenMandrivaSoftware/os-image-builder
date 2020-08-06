@@ -1,0 +1,4 @@
+cat >$OURDIR/$ROOTDIR/etc/modprobe.d/nouveau.conf <<EOF
+options nouveau config=NvClkMode=15
+EOF
+cp -a device/generic/aarch64-uefi/install-openmandriva $OURDIR/$ROOTDIR/home/omv/

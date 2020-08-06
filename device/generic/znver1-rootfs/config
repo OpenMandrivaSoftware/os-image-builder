@@ -1,0 +1,7 @@
+# Generic Ryzen board, rootfs only
+ARCH="znver1"
+# radeon and nouveau should be good enough, given (as of 2020),
+# you can't combine an AMD CPU with an Intel GPU
+HWPACKAGES_gui="$HWPACKAGES_gui lib64dri-drivers-radeon lib64dri-drivers-nouveau"
+# No kernel, no initrd
+NEED_INITRD=no
