@@ -2,7 +2,17 @@
 make -C arm-trusted-firmware CROSS_COMPILE=aarch64-linux-gnu- PLAT=sun50i_a64 DEBUG=1 bl31
 [ -d u-boot ] || git clone -b opi-v2020.04 https://megous.com/git/u-boot
 make -C u-boot pinephone_defconfig
-make -C u-boot CROSS_COMPILE=aarch64-linux-gnu- BL31=`pwd`/arm-trusted-firmware/build/sun50i_a64/debug/bl31.bin -j8
+cat >>u-boot/.config <<EOF
+CONFIG_IDENT_STRING=" OpenMandriva"
+CONFIG_SERIAL_PRESENT=y
+CONFIG_GZIP=y
+CONFIG_CMD_UNZIP=y
+CONFIG_CMD_EXT4=y
+CONFIG_SUPPORT_RAW_INITRD=y
+CONFIG_CMD_EXT4_WRITE=n
+CONFIG_EXT4_WRITE=n
+EOF
+make -C u-boot CROSS_COMPILE=aarch64-linux-gnu- BL31=`pwd`/arm-trusted-firmware/build/sun50i_a64/debug/bl31.bin EXTRAVERSION="-OpenMandriva"
 
 mkimage -A arm -O linux -T ramdisk -C gzip -d $OURDIR/$ROOTDIR/boot/initrd-$KERNELVERSION.img $OURDIR/$ROOTDIR/boot/uInitrd.img
-mkimage -A arm64 -T script -C none -d $OURDIR/device/pine64/pinephone/boot.cmd $OURDIR/$ROOTDIR/boot/boot.scr
+mkimage -A arm64 -O linux -T script -C none -n "U-Boot boot script" -d $OURDIR/device/pine64/pinephone/boot.cmd $OURDIR/$ROOTDIR/boot/boot.scr
