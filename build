@@ -128,7 +128,9 @@ case $ARCH in
 aarch64)
 	KERNELARCH=arm64
 	QEMUARCH=aarch64
-	KERNELTARGET=Image.gz
+	# We allow overriding KERNELTARGET in configs because
+	# some bootloaders support gzipped images, some don't
+	[ -z "$KERNELTARGET" ] && KERNELTARGET=Image.gz
 	BOOTEFI=bootaa64.efi
 	EFIARCH=arm64-efi
 	;;

@@ -28,7 +28,7 @@ rm -rf mnt
 mkdir mnt
 mount ${LOOPDEV}p1 mnt
 cd mnt
-cp ${OURDIR}/${ROOTDIR}/boot/{boot.scr,uInitrd.img} .
+cp ${OURDIR}/${ROOTDIR}/boot/{boot.scr,initrd.img} .
 cp ${OURDIR}/${ROOTDIR}/boot/vmlinuz-${KERNELVERSION} vmlinuz
 cp ${OURDIR}/${ROOTDIR}/boot/initrd-${KERNELVERSION}.img initrd.img
 cp -a ${OURDIR}/${ROOTDIR}/boot/allwinner .
