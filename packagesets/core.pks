@@ -1,3 +1,7 @@
+basesystem-minimal
+distro-release-common
+distro-release-OpenMandriva
+distro-release-repos
 distro-release-repos-keys
 systemd-console
 systemd-coredump
@@ -14,9 +18,11 @@ gptfdisk
 timezone
 locales-en
 dnf
+dnf-plugins-core
 sudo
 usbutils
 passwd
 dbus-broker
+rtkit
 # At least while we're mostly dealing with headless boards
 openssh-server

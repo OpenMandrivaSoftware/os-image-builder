@@ -1,1 +1,3 @@
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@ttyS0.service
+# Let's put the debug shell on something we stand a chance of seeing...
+sed -i -e 's,tty9,ttyS0,g' "$OURDIR/$ROOTDIR"/lib/systemd/system/debug-shell.service

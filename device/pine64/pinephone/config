@@ -1,10 +1,14 @@
 ARCH="aarch64"
 # Let's support what people might drop into those PCI-E slots...
 #HWPACKAGES="pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr"
+# Since we default to f2fs...
+HWPACKAGES="f2fs-tools"
 HWPACKAGES_gui="lib64dri-drivers-lima"
 # https://xnux.eu/devices/pine64-pinephone.html
-KERNEL="https://github.com/megous/linux.git#orange-pi-5.8"
+#KERNEL="https://gitlab.com/pine64-org/linux.git#pine64-kernel-5.7.y"
+KERNEL="https://github.com/megous/linux.git#orange-pi-5.7"
 KERNEL_CONFIG="pinephone_defconfig"
+# KERNEL_CONFIG="pine64_defconfig" for kernel from gitlab.org/pine64-org
 KERNELTARGET=Image
 DTB="allwinner/sun50i-a64-pinephone-1.2"
 # Make sure we have what the hardware needs...

@@ -405,10 +405,8 @@ EOF
 		while read r; do
 			TYPE="$(echo $r |awk '{ print $1; }')"
 			if [ "$TYPE" = "enable" -o "$TYPE" = "disable" ]; then
-				[ "$(echo $r |awk '{ print $2; }')" = '*' ] && continue
-				set -x
+				[ "$(echo "$r" |awk '{ print $2; }')" = '*' ] && continue
 				chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl $r || :
-				set +x
 			fi
 		done < $i
 	done
@@ -435,6 +433,10 @@ EOF
 	done
 	popd
 fi
+# Initialize the random seed to something, systemd might hang forever on
+# e.g. an embedded board that doesn't get entropy
+dd if=/dev/random of="$OURDIR/$ROOTDIR"/var/lib/systemd/random-seed bs=512 count=1
+chmod 0600 "$OURDIR/$ROOTDIR"/var/lib/systemd/random-seed
 # Stuff in virtual filesystems should not make it to
 # root filesystems...
 for mp in /proc /sys /dev/pts /dev; do
