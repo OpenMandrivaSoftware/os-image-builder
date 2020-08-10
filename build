@@ -65,7 +65,7 @@ while getopts "v:p:P:" opt; do
 		OMV_VERSION=$OPTARG
 		;;
 	p)
-		PACAKAGES="$PACKAGES $OPTARG"
+		PACKAGES="$PACKAGES $OPTARG"
 		;;
 	P)
 		addpackageset ${OPTARG}
