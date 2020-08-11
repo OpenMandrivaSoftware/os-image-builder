@@ -195,7 +195,7 @@ if [ -n "$UEFI" ]; then
 	mount $UEFI /mnt/destination/boot/efi
 	for i in /dev /dev/pts /proc /sys /sys/firmware/efi/efivars; do
 		mkdir -p /mnt/destination$i || :
-		mount --bind $i /mnt/destination $i
+		mount --bind $i /mnt/destination$i
 	done
 fi
 if [ -n "$HOME" ]; then
@@ -221,7 +221,7 @@ if [ -n "$UEFI" ]; then
 	cp -ax /boot/efi/* /mnt/destination/boot/efi/
 	echo "Registering with UEFI bootloader"
 	mv /mnt/destination/boot/efi/startup.nsh /mnt/destination/boot/efi/openmandriva.nsh
-	sed -i -e "s,^search .*,search --no-floppy --fs-uuid --set=root $ROOTUUID," /mnt/destination/boot/EFI/BOOT/grub.cfg
+	sed -i -e "s,^search .*,search --no-floppy --fs-uuid --set=root $ROOTUUID," /mnt/destination/boot/efi/EFI/BOOT/grub.cfg
 	sed -i -e "s,LABEL=OMVAA64,UUID=$ROOTUUID,g" /mnt/destination/boot/efi/EFI/BOOT/grub.cfg
 	cp /mnt/destination/boot/efi/EFI/BOOT/grub.cfg /mnt/destination/boot/efi/EFI/openmandriva/
 	cp /mnt/destination/boot/efi/EFI/BOOT/grub.cfg /mnt/destination/boot/grub2/
