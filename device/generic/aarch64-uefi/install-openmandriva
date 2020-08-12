@@ -98,6 +98,12 @@ n
 w
 y
 EOF
+	kpartx ${DESTINATION}
+	if [ -e ${DESTINATION}p1 ]; then
+		# Deal with e.g. sda --> sda1, sda2, ...
+		#            vs. mmcblk0 --> mmcblk0p1, mmcblk0p2, ...
+		DESTINATION="${DESTINATION}p"
+	fi
 	UEFI=${DESTINATION}1
 	SWAP=${DESTINATION}2
 	ROOT=${DESTINATION}3
@@ -137,6 +143,12 @@ n
 w
 y
 EOF
+	kpartx ${DESTINATION}
+	if [ -e ${DESTINATION}p1 ]; then
+		# Deal with e.g. sda --> sda1, sda2, ...
+		#            vs. mmcblk0 --> mmcblk0p1, mmcblk0p2, ...
+		DESTINATION="${DESTINATION}p"
+	fi
 	UEFI=${DESTINATION}1
 	ROOT=${DESTINATION}2
 	SWAP=""
@@ -182,7 +194,7 @@ if [ -n "$SWAP" ]; then
 fi
 echo "Formatting / partition..."
 mkfs.ext4 -F -L/ $ROOT &>$TOOLOUTPUT
-ROOTUUID=$(/sbin/blkid $ROOT |sed -e 's,.*UUID=",,;s,".*,,')
+ROOTUUID=$(/sbin/blkid $ROOT |sed -e 's,.* UUID=",,;s,".*,,')
 if [ -n "$HOME" ]; then
 	echo "Formatting /home partition..."
 	mkfs.ext4 -F -L/home $HOME &>$TOOLOUTPUT

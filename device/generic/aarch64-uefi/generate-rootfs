@@ -24,8 +24,10 @@ w
 y
 EOF
 kpartx ${LOOPDEV}
-mkfs.vfat ${LOOPDEV}p1
+mkfs.vfat -n OMVBOOT ${LOOPDEV}p1
+BOOTUUID=$(/sbin/blkid ${LOOPDEV}p1 |sed -e 's,.* UUID=",,;s,".*,,')
 mkfs.ext4 -L OMVAA64 ${LOOPDEV}p2
+ROOTUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* UUID=",,;s,".*,,')
 rm -rf mnt
 mkdir mnt
 mount ${LOOPDEV}p1 mnt
@@ -35,6 +37,10 @@ cd ..
 umount mnt
 mount ${LOOPDEV}p2 mnt
 cp -a ${ROOTDIR}/* mnt/
+cat >mnt/etc/fstab <<EOF
+UUID=${ROOTUUID}	/		ext4	defaults,noatime	0	1
+UUID=${BOOTUUID}	/boot/efi	vfat	umask=0077	0	2
+EOF
 umount mnt
 losetup -d ${LOOPDEV}
 popd

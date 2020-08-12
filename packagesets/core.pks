@@ -10,11 +10,12 @@ systemd-cryptsetup
 systemd-analyze
 systemd-hwdb
 systemd-polkit
-NetworkManager
 less
 vim-enhanced
 psmisc
+procps-ng
 gptfdisk
+kpartx
 timezone
 locales-en
 dnf
@@ -23,6 +24,6 @@ sudo
 usbutils
 passwd
 dbus-broker
-rtkit
 # At least while we're mostly dealing with headless boards
+NetworkManager
 openssh-server

@@ -1,7 +1,1 @@
-mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva
-cp $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva/initrd.img
-cp $OURDIR/kernel/arch/arm64/boot/Image $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva/linux.efi
-cp $OURDIR/device/socionext/synquacer/startup.nsh $OURDIR/$ROOTDIR/boot/efi/
-pushd $OURDIR/$ROOTDIR/boot/efi
-tar cJf $OURDIR/boot-${SHORTTARGET}.tar.xz *
-popd
+. ${OURDIR}/device/generic/aarch64-uefi/generate-bootimg

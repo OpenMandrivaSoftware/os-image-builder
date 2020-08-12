@@ -2,9 +2,10 @@ ARCH="aarch64"
 # Let's support what people might drop into those PCI-E slots...
 #HWPACKAGES="pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr"
 # Since we default to f2fs...
-HWPACKAGES="f2fs-tools"
+HWPACKAGES="f2fs-tools iwd"
 HWPACKAGES_gui="lib64dri-drivers-lima"
 # https://xnux.eu/devices/pine64-pinephone.html
+# Known good revision: 9422c45f7b9fb598a4d65ecc6e524e8022f2cb3a (5.7.10 based)
 #KERNEL="https://gitlab.com/pine64-org/linux.git#pine64-kernel-5.7.y"
 KERNEL="https://github.com/megous/linux.git#orange-pi-5.7"
 KERNEL_CONFIG="pinephone_defconfig"
@@ -16,5 +17,4 @@ KERNEL_EXTRACONFIG="--enable TOUCHSCREEN_GOODIX --enable VIDEO_OV5640 --enable L
 # Some basic configs
 KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable MODULE_FORCE_LOAD --enable MODVERSIONS --enable MODULE_COMPRESS --disable MODULE_COMPRESS_GZIP --enable MODULE_COMPRESS_XZ"
 CMDLINE="console=tty1 console=ttyS0,115200 no_console_suspend earlycon=uart,mmio32,0x01c28000 panic=10 consoleblank=0 loglevel=1 cma=256M"
-# (this is the default anyway)
-# NEED_INITRD=yes
+NEED_INITRD=no
