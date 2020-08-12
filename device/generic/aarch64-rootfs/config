@@ -1,0 +1,7 @@
+# Generic aarch64 board, rootfs only
+ARCH="aarch64"
+# Since this is a generic target, got to support both common onboard
+# (lima, panfrost, freedreno, etnaviv) and common PCI (radeon, nouveau) drivers...
+HWPACKAGES_gui="$HWPACKAGES_gui lib64dri-drivers-radeon lib64dri-drivers-nouveau lib64dri-drivers-lima lib64dri-drivers-panfrost lib64dri-drivers-etnaviv lib64dri-drivers-freedreno"
+# No kernel, no initrd
+NEED_INITRD=no

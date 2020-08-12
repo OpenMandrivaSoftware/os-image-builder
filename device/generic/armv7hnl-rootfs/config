@@ -1,0 +1,7 @@
+# Generic armv7hnl board, rootfs only
+ARCH="armv7hnl"
+# Since this is a generic target, got to support both common onboard
+# (lima, panfrost, freedreno, etnaviv) and common PCI (radeon, nouveau) drivers...
+HWPACKAGES_gui="$HWPACKAGES_gui libdri-drivers-radeon libdri-drivers-nouveau libdri-drivers-lima libdri-drivers-panfrost libdri-drivers-etnaviv libdri-drivers-freedreno"
+# No kernel, no initrd
+NEED_INITRD=no
