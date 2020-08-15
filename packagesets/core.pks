@@ -24,6 +24,3 @@ sudo
 usbutils
 passwd
 dbus-broker
-# At least while we're mostly dealing with headless boards
-NetworkManager
-openssh-server
