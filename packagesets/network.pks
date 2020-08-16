@@ -4,3 +4,4 @@ NetworkManager
 openssh-server
 iputils
 iproute2
+hostname
