@@ -1,8 +1,8 @@
 ARCH="aarch64"
 # Let's support what people might drop into those PCI-E slots...
 HWPACKAGES="pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr"
-HWPACKAGES_gui="lib64dri-drivers-nouveau lib64dri-drivers-radeon"
-KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/SynQuacer/5.7"
+HWPACKAGES_gui="lib64dri-drivers-nouveau lib64dri-drivers-radeon radeon-firmware"
+KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/SynQuacer/5.8"
 KERNEL_CONFIG="defconfig"
 DTB=""
 # Enable what's needed for SynQuacer, disable some options that
