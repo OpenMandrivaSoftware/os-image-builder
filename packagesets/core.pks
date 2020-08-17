@@ -24,3 +24,4 @@ sudo
 usbutils
 passwd
 dbus-broker
+sysfsutils
