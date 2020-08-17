@@ -5,3 +5,4 @@ openssh-server
 iputils
 iproute2
 hostname
+net-tools
