@@ -333,7 +333,7 @@ EOF
 		echo 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
 		echo 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
 		# Add the omv user to important groups...
-		for group in wheel lp lpadmin audio video render network storage dialout screen users sambashare; do
+		for group in wheel lp lpadmin audio video render network storage dialout screen users sambashare tty; do
 			sed -i -e "s,$group:.*\$,&omv," $OURDIR/$ROOTDIR/etc/group
 		done
 		cp -a $OURDIR/$ROOTDIR/etc/skel $OURDIR/$ROOTDIR/home/omv
