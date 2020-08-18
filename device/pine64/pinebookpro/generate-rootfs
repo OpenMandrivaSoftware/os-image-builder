@@ -29,15 +29,15 @@ rm -rf mnt
 mkdir mnt
 mount ${LOOPDEV}p1 mnt
 cd mnt
-cp ${OURDIR}/kernel/arch/arm64/boot/dts/rockchip/rk3399-pinebook-pro.dtb rk3399.dtb
+cp ${OURDIR}/kernel/arch/arm64/boot/dts/rockchip/rk3399-pinebook-pro.dtb .
 cp ${OURDIR}/kernel/arch/arm64/boot/Image .
 cp ${OURDIR}/${ROOTDIR}/boot/boot.scr .
 mkdir extlinux
 cat >extlinux/extlinux.conf <<EOF
 label OpenMandriva
 	kernel /Image
-	fdt /rk3399.dtb
-	append root=UUID=${ROOTUUID} rootwait rootfstype=f2fs init=/sbin/init
+	fdt /rk3399-pinebook-pro.dtb
+	append root=/dev/mmcblk1p2 rootwait rootfstype=f2fs init=/sbin/init
 EOF
 cd ..
 umount mnt
