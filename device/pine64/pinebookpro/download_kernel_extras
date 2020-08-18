@@ -1,0 +1,7 @@
+[ -e linux-firmware ] || git clone https://megous.com/git/linux-firmware
+cd linux-firmware
+mkdir -p edid
+cd edid
+[ -e h07C2NXL ] || wget https://pastebin.com/raw/h07C2NXL
+xxd -r h07C2NXL asus.bin
+cd ../..

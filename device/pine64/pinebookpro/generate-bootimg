@@ -1,0 +1,26 @@
+# Hack to allow calling from outside the build scripts
+# to test updated boot environments etc.
+[ -z "$OURDIR" ] && OURDIR=`pwd`
+[ -z "$ROOTDIR" ] && ROOTDIR=OpenMandriva-cooker-aarch64-root
+[ -z "$KERNELVERSION" ] && KERNELVERSION=5.8.0-gf66d3a85b
+
+# Real script starts here
+
+# Known good revision: e4c837568c8fe9fe3605326decc18a5a5e0565a5
+[ -d arm-trusted-firmware ] || git clone https://github.com/ARM-software/arm-trusted-firmware
+make -C arm-trusted-firmware CROSS_COMPILE=aarch64-linux-gnu- M0_CROSS_COMPILE=armv7hnl-linux-gnueabihf- PLAT=rk3399 DEBUG=1 bl31
+# Known good revision: d40120e18c49bb927114b575c610ed0beaf3ee33
+[ -d u-boot ] || git clone -b master https://megous.com/git/u-boot
+make -C u-boot pinebook-pro-rk3399_defconfig
+cat >>u-boot/.config <<EOF
+CONFIG_IDENT_STRING=" OpenMandriva"
+CONFIG_SERIAL_PRESENT=y
+CONFIG_GZIP=y
+CONFIG_CMD_UNZIP=y
+EOF
+make -C u-boot CROSS_COMPILE=aarch64-linux-gnu- BL31=`pwd`/arm-trusted-firmware/build/rk3399/debug/bl31/bl31.elf EXTRAVERSION="-OpenMandriva"
+
+#mkimage -A arm -O linux -T ramdisk -C gzip -d $OURDIR/$ROOTDIR/boot/initrd-$KERNELVERSION.img $OURDIR/$ROOTDIR/boot/uInitrd.img
+#ln -sf initrd-$KERNELVERSION.img $OURDIR/$ROOTDIR/boot/initrd.img
+ln -sf vmlinuz-$KERNELVERSION $OURDIR/$ROOTDIR/boot/vmlinuz
+mkimage -A arm64 -O linux -T script -C none -n "U-Boot boot script" -d $OURDIR/device/pine64/pinebookpro/boot.cmd $OURDIR/$ROOTDIR/boot/boot.scr
