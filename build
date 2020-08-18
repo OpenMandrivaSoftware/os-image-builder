@@ -165,7 +165,7 @@ i686)
 	EFIARCH=${ARCH}-efi
 	;;
 esac
-if echo $ARCH |grep -q 64; then
+if echo $ARCH |grep -qE '(64|znver1)'; then
 	LIB=lib64
 else
 	LIB=lib
@@ -414,7 +414,9 @@ EOF
 	# Make sure key services are started even if they're omitted
 	# in the preset files
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
-	if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ]; then
+	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/simplelogin.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable simplelogin
+	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/sddm.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
+	if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" -o -e "$OURDIR/$ROOTDIR/lib/systemd/system/simplelogin.service" ]; then
 		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
 	else
 		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default multi-user.target
