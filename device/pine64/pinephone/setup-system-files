@@ -1,1 +1,32 @@
 cp -a device/pine64/pinephone/install-openmandriva $OURDIR/$ROOTDIR/home/omv/
+
+# Let's make the USB port useful...
+cat >"$OURDIR/$ROOTDIR"/usr/sbin/netgadget <<'EOF'
+#!/bin/sh
+if [ "$1" = "off" ]; then
+	/sbin/ifconfig usb0 down
+	/sbin/rmmod g_ether
+	exit 0
+fi
+/sbin/modprobe g_ether
+/sbin/ip link set usb0 up
+# FIXME this should be replaced with a NM config
+/usr/bin/nmcli device set usb0 managed no
+/sbin/ip addr add 10.20.30.40/24 dev usb0
+EOF
+chmod +x "$OURDIR/$ROOTDIR"/usr/sbin/netgadget
+cat >"$OURDIR/$ROOTDIR"/lib/systemd/system/netgadget.service <<'EOF'
+[Unit]
+Description=Set up the USB port as network gadget
+After=NetworkManager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/netgadget
+ExecStop=/usr/sbin/netgadget off
+
+[Install]
+WantedBy=multi-user.target
+EOF
+ln -s /lib/systemd/system/netgadget.service "$OURDIR/$ROOTDIR"/etc/systemd/system/multi-user.target.wants/
