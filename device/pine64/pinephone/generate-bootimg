@@ -9,8 +9,9 @@
 # Known good revision: e4c837568c8fe9fe3605326decc18a5a5e0565a5
 [ -d arm-trusted-firmware ] || git clone https://github.com/ARM-software/arm-trusted-firmware
 make -C arm-trusted-firmware CROSS_COMPILE=aarch64-linux-gnu- PLAT=sun50i_a64 DEBUG=1 bl31
+# See also opi-v2020.04 branch of https://megous.com/git/u-boot
 # Known good revision: d40120e18c49bb927114b575c610ed0beaf3ee33
-[ -d u-boot ] || git clone -b opi-v2020.04 https://megous.com/git/u-boot
+[ -d u-boot ] || git clone --depth 1 --branch hardware/PinePhone https://github.com/OpenMandrivaSoftware/u-boot
 make -C u-boot pinephone_defconfig
 cat >>u-boot/.config <<EOF
 CONFIG_IDENT_STRING=" OpenMandriva"
