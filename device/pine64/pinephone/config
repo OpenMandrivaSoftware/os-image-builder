@@ -2,12 +2,12 @@ ARCH="aarch64"
 # Let's support what people might drop into those PCI-E slots...
 #HWPACKAGES="pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr"
 # Since we default to f2fs...
-HWPACKAGES="f2fs-tools iwd"
+HWPACKAGES="f2fs-tools"
 HWPACKAGES_gui="lib64dri-drivers-lima"
 # https://xnux.eu/devices/pine64-pinephone.html
 # Known good revision: 9422c45f7b9fb598a4d65ecc6e524e8022f2cb3a (5.7.10 based)
 #KERNEL="https://gitlab.com/pine64-org/linux.git#pine64-kernel-5.7.y"
-KERNEL="https://github.com/megous/linux.git#orange-pi-5.7"
+KERNEL="https://github.com/megous/linux.git#orange-pi-5.9"
 KERNEL_CONFIG="pinephone_defconfig"
 # KERNEL_CONFIG="pine64_defconfig" for kernel from gitlab.org/pine64-org
 KERNELTARGET=Image
