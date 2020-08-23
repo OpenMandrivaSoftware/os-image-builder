@@ -1,4 +1,12 @@
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@ttyS0.service
+# Disable some stuff pinephone doesn't use (but pulls in due to
+# dependencies). Longer term, those dependencies should be eliminated
+for i in mdmonitor rtkit-daemon remote-cryptsetup dnf-automatic-download \
+		dnf-automatic-install dnf-automatic-notifyonly dnf-automatic \
+		dnfdaemon dnf-makecache nscd; do
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl disable $i
+done
+
 # Let's put the debug shell on something we stand a chance of seeing...
 sed -i -e 's,tty9,ttyS0,g' "$OURDIR/$ROOTDIR"/lib/systemd/system/debug-shell.service
 #wpa_passphrase WLAN-AE58RL 2404698685687651 >>"$OURDIR/$ROOTDIR"/etc/wpa_supplicant/wpa_supplicant.conf
