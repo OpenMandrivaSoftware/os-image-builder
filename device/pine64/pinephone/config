@@ -1,8 +1,8 @@
 ARCH="aarch64"
-# Let's support what people might drop into those PCI-E slots...
-#HWPACKAGES="pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr"
+# usb-gadget is more useful than host USB on a phone
+HWPACKAGES="usb-gadget"
 # Since we default to f2fs...
-HWPACKAGES="f2fs-tools"
+HWPACKAGES="$HWPACKAGES f2fs-tools"
 HWPACKAGES_gui="lib64dri-drivers-lima"
 # https://xnux.eu/devices/pine64-pinephone.html
 # Known good revision: 9422c45f7b9fb598a4d65ecc6e524e8022f2cb3a (5.7.10 based)

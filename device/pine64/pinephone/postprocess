@@ -6,6 +6,9 @@ for i in mdmonitor rtkit-daemon remote-cryptsetup dnf-automatic-download \
 		dnfdaemon dnf-makecache nscd; do
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl disable $i
 done
+# usb-gadget support is extremely useful for debugging
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable usb-gadget
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable ofono
 
 # Let's put the debug shell on something we stand a chance of seeing...
 sed -i -e 's,tty9,ttyS0,g' "$OURDIR/$ROOTDIR"/lib/systemd/system/debug-shell.service
