@@ -1,4 +1,13 @@
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@ttyS0.service
+# Iwd works well on pinephone, might as well use it
+chroot "$OURDIR/$ROOTDIR" rpm -e wpa_supplicant
+cat >"$OURDIR/$ROOTDIR"/usr/lib/NetworkManager/conf.d/00-wifi-backend.conf <<EOF
+[device]
+wifi.backend=iwd
+EOF
+# PinePhone expects different filenames for BT firmware right now
+ln -s rtl8723cs_xx_config.bin "$OURDIR/$ROOTDIR"/lib/firmware/rtl_bt/rtl8723cs_xx_config-pinephone.bin
+ln -s rtl8723cs_xx_config.bin "$OURDIR/$ROOTDIR"/lib/firmware/rtl_bt/rtl8723cs_xx_config-pinebook.bin
 # Disable some stuff pinephone doesn't use (but pulls in due to
 # dependencies). Longer term, those dependencies should be eliminated
 for i in mdmonitor rtkit-daemon remote-cryptsetup dnf-automatic-download \
@@ -8,8 +17,9 @@ for i in mdmonitor rtkit-daemon remote-cryptsetup dnf-automatic-download \
 done
 # usb-gadget support is extremely useful for debugging
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable usb-gadget
+# phone functionality
 chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable ofono
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable ModemManager
 
 # Let's put the debug shell on something we stand a chance of seeing...
 sed -i -e 's,tty9,ttyS0,g' "$OURDIR/$ROOTDIR"/lib/systemd/system/debug-shell.service
-#wpa_passphrase WLAN-AE58RL 2404698685687651 >>"$OURDIR/$ROOTDIR"/etc/wpa_supplicant/wpa_supplicant.conf

@@ -367,6 +367,14 @@ EOF
 					break
 				fi
 			done
+			if [ -z "$SDDMSESSION" ]; then
+				for desktop in plasma-mobile plasmawayland weston; do
+					if [ -e "$OURDIR/$ROOTDIR"/usr/share/wayland-sessions/$desktop.desktop ]; then
+						SDDMSESSION=$desktop
+						break
+					fi
+				done
+			fi
 		fi
 		if [ -z "$NO_AUTOLOGIN" -a -n "$SDDMSESSION" -a -e $OURDIR/$ROOTDIR/etc/sddm.conf ]; then
 			sed -i -e "s,^User=,User=omv,;s,^Session=,Session=$SDDMSESSION," $OURDIR/$ROOTDIR/etc/sddm.conf
@@ -425,7 +433,7 @@ EOF
 	else
 		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default multi-user.target
 	fi
-	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable dbus-broker
+	[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/dbus-broker.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable dbus-broker
 	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/NetworkManager.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable NetworkManager
 	# At least while we're mostly dealing with headless boards
 	[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sshd.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sshd

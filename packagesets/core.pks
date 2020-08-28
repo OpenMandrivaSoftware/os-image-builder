@@ -23,5 +23,5 @@ dnf-plugins-core
 sudo
 usbutils
 passwd
-dbus-broker
 sysfsutils
+dbus-broker
