@@ -1,4 +1,0 @@
-gdb
-strace
-ltrace
-htop

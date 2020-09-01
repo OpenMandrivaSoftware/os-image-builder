@@ -31,7 +31,7 @@ run() {
 	fi
 }
 addpackageset() {
-	if ! [ -e "$OURDIR/packagesets/$1.pks" ]; then
+	if ! [ -e "$OURDIR/packagesets/$1.pkgs" ]; then
 		echo "Unknown package set $1" >&2
 		exit 1
 	fi
@@ -42,7 +42,7 @@ addpackageset() {
 		elif ! echo $p |grep -q '^#'; then
 			PACKAGES="$PACKAGES $p"
 		fi
-	done < <(cat "$OURDIR/packagesets/$1.pks")
+	done < <(cat "$OURDIR/packagesets/$1.pkgs")
 }
 
 if [ "$(id -u)" != "0" ]; then
