@@ -5,9 +5,6 @@ cat >"$OURDIR/$ROOTDIR"/usr/lib/NetworkManager/conf.d/00-wifi-backend.conf <<EOF
 [device]
 wifi.backend=iwd
 EOF
-# PinePhone expects different filenames for BT firmware right now
-ln -s rtl8723cs_xx_config.bin "$OURDIR/$ROOTDIR"/lib/firmware/rtl_bt/rtl8723cs_xx_config-pinephone.bin
-ln -s rtl8723cs_xx_config.bin "$OURDIR/$ROOTDIR"/lib/firmware/rtl_bt/rtl8723cs_xx_config-pinebook.bin
 # Disable some stuff pinephone doesn't use (but pulls in due to
 # dependencies). Longer term, those dependencies should be eliminated
 for i in mdmonitor rtkit-daemon remote-cryptsetup dnf-automatic-download \

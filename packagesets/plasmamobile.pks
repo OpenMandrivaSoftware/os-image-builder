@@ -15,3 +15,8 @@ breeze-plymouth
 calligra-gemini
 smplayer
 mpv
+kdeplasma-addons
+kwallet
+marble
+# Can go with Plasma 5.20 -- pulled in for the KCMs
+plasma-desktop

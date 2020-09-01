@@ -1,6 +1,7 @@
 ARCH="aarch64"
+HWPACKAGES="$HWPACKAGES pinephone-audio-setup"
 # usb-gadget is more useful than host USB on a phone
-HWPACKAGES="usb-gadget"
+HWPACKAGES="$HWPACKAGES usb-gadget"
 # For rtl8723bt firmware -- we need rtl_bt/rtl8723cs_xx_fw.bin
 HWPACKAGES="$HWPACKAGES kernel-firmware-extra"
 # On the PinePhone chipset, iwd works well
