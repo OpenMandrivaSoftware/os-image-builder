@@ -1,9 +1,7 @@
 ARCH="aarch64"
-HWPACKAGES="$HWPACKAGES pinephone-audio-setup"
+HWPACKAGES="$HWPACKAGES pinephone-tools kernel-firmware-pinephone qmi-tools"
 # usb-gadget is more useful than host USB on a phone
 HWPACKAGES="$HWPACKAGES usb-gadget"
-# For rtl8723bt firmware -- we need rtl_bt/rtl8723cs_xx_fw.bin
-HWPACKAGES="$HWPACKAGES kernel-firmware-extra"
 # On the PinePhone chipset, iwd works well
 HWPACKAGES="$HWPACKAGES iwd"
 # Since we default to f2fs...
@@ -11,10 +9,10 @@ HWPACKAGES="$HWPACKAGES f2fs-tools"
 HWPACKAGES_gui="lib64dri-drivers-lima"
 # https://xnux.eu/devices/pine64-pinephone.html
 # Known good revision: 9422c45f7b9fb598a4d65ecc6e524e8022f2cb3a (5.7.10 based)
-#KERNEL="https://gitlab.com/pine64-org/linux.git#pine64-kernel-5.7.y"
 KERNEL="https://github.com/megous/linux.git#orange-pi-5.9"
 KERNEL_CONFIG="pinephone_defconfig"
-# KERNEL_CONFIG="pine64_defconfig" for kernel from gitlab.org/pine64-org
+#KERNEL="https://gitlab.com/pine64-org/linux.git#pine64-kernel-5.7.y"
+#KERNEL_CONFIG="pine64_defconfig" #for kernel from gitlab.org/pine64-org
 KERNELTARGET=Image
 DTB="allwinner/sun50i-a64-pinephone-1.2"
 # Make sure we have what the hardware needs...
@@ -23,6 +21,6 @@ KERNEL_EXTRACONFIG="--enable TOUCHSCREEN_GOODIX --enable VIDEO_OV5640 --enable L
 KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable MODULE_FORCE_LOAD --enable MODVERSIONS --enable MODULE_COMPRESS --disable MODULE_COMPRESS_GZIP --enable MODULE_COMPRESS_XZ"
 # Make IWD great again...
 KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable KEY_DH_OPERATIONS"
-CMDLINE="console=tty1 console=ttyS0,115200 no_console_suspend earlycon=uart,mmio32,0x01c28000 panic=10 consoleblank=0 loglevel=1 cma=256M"
+CMDLINE="console=tty1 console=ttyS0,115200 no_console_suspend earlycon=uart,mmio32,0x01c28000 panic=10 consoleblank=0 loglevel=1 cma=256M quiet splash"
 NEED_INITRD=no
 SDDMSESSION=plasma-mobile

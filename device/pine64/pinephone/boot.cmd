@@ -8,7 +8,7 @@ else
 	setenv bootdev 2
 fi
 
-setenv bootargs init=/sbin/init console=tty1 console=ttyS0,115200 cma=256M rw rootwait root=/dev/mmcblk${bootdev}p2
+setenv bootargs init=/sbin/init console=tty1 console=ttyS0,115200 cma=256M rw rootwait root=/dev/mmcblk${bootdev}p2 loglevel=1 quiet splash
 
 printenv
 
