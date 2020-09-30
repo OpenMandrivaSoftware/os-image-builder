@@ -1,0 +1,4 @@
+gdb
+strace
+ltrace
+htop

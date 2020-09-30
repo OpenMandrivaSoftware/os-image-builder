@@ -1,0 +1,24 @@
+#include gui
+task-plasma-mobile
+plasma-workspace-wayland
+distro-release-desktop-Plasma-Mobile
+plasma-phone-components-wayland
+${LIB}GLESv1_CM1
+${LIB}GLESv2_2
+${LIB}OpenGL0
+${LIB}OpenVG0
+${LIB}kms1
+simplelogin
+breeze-plymouth
+calligra-gemini
+smplayer
+mpv
+kdeplasma-addons
+kwallet
+marble
+bluez
+qtbluetooth5
+bluez-qt
+bluedevil
+# Can go with Plasma 5.20 -- pulled in for the KCMs
+plasma-desktop
