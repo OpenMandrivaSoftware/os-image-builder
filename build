@@ -226,23 +226,89 @@ if [ -n "$KERNEL" ]; then
 		PN=$((PN+1))
 	done
 	run download_kernel_extras
+
 	[ -e ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} ] && cp -f ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} arch/${KERNELARCH}/configs/
+
+	if [ "$KERNEL_CLANG" = "yes" ]; then
+		make $SMPFLAGS ARCH=$KERNELARCH LLVM=1 $KERNEL_CONFIG include/config/kernel.release
+	else
+		make $SMPFLAGS ARCH=$KERNELARCH $KERNEL_CONFIG include/config/kernel.release
+	fi
+	KERNELVERSION=$(cat include/config/kernel.release)
+	KERNELVERSION_NUM="$(echo $KERNELVERSION |cut -d- -f1)"
+	KERNELVERSION_EXTRA="$(echo $KERNELVERSION |cut -d- -f2- |sed -e 's,-,.,g')"
+	cd ..
+
+	rm -rf kernel-rpm
+	mkdir kernel-rpm
+	tar cf kernel-rpm/kernel.tar kernel
+	zstd -22 --ultra --rm kernel-rpm/kernel.tar
+	cat >kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
+%define debug_package %{nil}
+
+Name:		kernel-$SHORTTARGET
+Version:	$KERNELVERSION_NUM
+EOF
+
+	if [ -n "$KERNELVERSION_EXTRA" ]; then
+		echo "Release:	0.$KERNELVERSION_EXTRA.1" >>kernel-rpm/kernel-$SHORTTARGET.spec
+	else
+		echo "Release:	1" >>kernel-rpm/kernel-$SHORTTARGET.spec
+	fi
+	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
+Summary:	kernel for $SHORTTARGET devices
+# Tarball generated from the $KERNELBRANCH branch
+# of $KERNELREPO
+# by os-image-builder
+Source0:	kernel.tar.zst
+License:	GPLv2
+Provides:	kernel = %{EVRD}
+Provides:	kernel-release = %{EVRD}
+
+EOF
+
+	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
+%description
+kernel for $SHORTTARGET devices
+
+%prep
+%autosetup -p1 -n kernel
+
+%build
+EOF
+
 	# CROSS_COMPILE_ARM32 is a Sony-ism, but doesn't hurt anywhere else, so we can specify it unconditionally
 	if [ "$KERNEL_CLANG" = "yes" ]; then
-		make $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		make $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
-		scripts/config $KERNEL_EXTRACONFIG
+		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ "$KERNEL_CLANG" = "yes" ]; then
-		make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LD=/usr/bin/$TRIPLET-ld.bfd
+		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		make $SMPFLAGS $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd
+		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
-	KERNELVERSION="$(cat include/config/kernel.release)"
+	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
+
+%install
+# Install kernel modules, if any
+make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf-
+# And DTBs -- allow failure here because old kernels (onyx08 and friends)
+# don't have the dtbs_install target
+make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- || :
+cp arch/$KERNELARCH/boot/$KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
+
+%files
+/boot/*
+/lib/modules/*
+EOF
+	cd kernel-rpm
+	rpmbuild -bb --target $ARCH --define "_sourcedir `pwd`" --define "_specdir `pwd`" --define "_srcrpmdir `pwd`/SRPMS" --define "_rpmdir `pwd`/RPMS"  kernel-$SHORTTARGET.spec
 	cd ..
+	KERNELRPM="`ls $OURDIR/kernel-rpm/RPMS/*/*.rpm`"
 else
 	echo "KERNEL not specified in $TARGET config - assuming packaged kernel"
 fi
@@ -311,7 +377,7 @@ if ! [ -d "$ROOTDIR" ]; then
 		mount --bind $mp $OURDIR/$ROOTDIR$mp
 	done
 
-	if ! dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $PACKAGES; then
+	if ! dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $PACKAGES $KERNELRPM; then
 		if [ -e $OURDIR/$ROOTDIR/bin/sh ]; then
 			cat >&2 <<EOF
 WARNING: dnf returned an error code, but it looks like installation finished.
@@ -385,17 +451,7 @@ EOF
 			sed -i -e "s,^User=,User=omv,;s,^Session=,Session=$SDDMSESSION," $OURDIR/$ROOTDIR/etc/sddm.conf
 		fi
 	fi
-	if [ -n "$KERNEL" ]; then
-		# Install kernel modules, if any
-		cd kernel
-		make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR INSTALL_DTBS_PATH=$OURDIR/$ROOTDIR/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf-
-		# And DTBs -- allow failure here because old kernels (onyx08 and friends)
-		# don't have the dtbs_install target
-		make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=$OURDIR/$ROOTDIR INSTALL_DTBS_PATH=$OURDIR/$ROOTDIR/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- || :
-		cd ..
-		# And put the kernel where the kernel package would put it too
-		cp $OURDIR/kernel/arch/$KERNELARCH/boot/$KERNELTARGET $OURDIR/$ROOTDIR/boot/vmlinuz-$KERNELVERSION
-	else
+	if [ -z "$KERNEL" ]; then
 		# Using packaged kernel -- let's determine KERNELVERSION
 		# nevertheless so we can run dracut and possibly configure
 		# bootloaders
