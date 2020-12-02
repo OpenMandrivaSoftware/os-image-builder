@@ -1,28 +1,7 @@
-if test ${mmc_bootdev} -eq 0 ; then
-	echo "Booting from SD"
-	setenv bootdev 0
-else
-	echo "Booting from eMMC"
-	setenv bootdev 2
-fi
-
-setenv bootargs init=/sbin/init console=tty1 console=ttyS0,115200 cma=256M rw rootwait root=/dev/mmcblk${bootdev}p2
-
-printenv
-
-echo Loading Kernel
-load mmc ${mmc_bootdev}:1 ${kernel_addr_r} vmlinuz
-
-echo Loading DTB
-load mmc ${mmc_bootdev}:1 ${fdt_addr_r} rockchip/rk3399-pinebook-pro.dtb
-
-echo Resizing FDT
-fdt addr ${fdt_addr_r}
-fdt resize
-
-#echo Loading Initramfs
-#load mmc ${mmc_bootdev}:1 ${ramdisk_addr_r} initrd.img
-
-echo "Booting kernel with args ${bootargs}"
-#booti ${kernel_addr_r} ${ramdisk_addr_r}:${filesize} ${fdt_addr_r}
+# dev 0 = Internal EMMC
+# dev 1 = SD card
+mmc dev 1
+ext4load mmc 1:1 ${kernel_addr_r} Image
+ext4load mmc 1:1 ${fdt_addr_r} rk3399-pinebook-pro.dtb
+setenv bootargs init=/sbin/init console=tty1 console=ttyS2,1500000 no_console_suspend earlycon=uart,mmio32,0x01c28000 cma=256M rw rootwait root=/dev/mmcblk1p2
 booti ${kernel_addr_r} - ${fdt_addr_r}

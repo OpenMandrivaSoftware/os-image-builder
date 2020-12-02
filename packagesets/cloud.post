@@ -1,0 +1,2 @@
+systemctl enable cloud-config.target
+systemctl enable cloud-init.target

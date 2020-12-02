@@ -10,7 +10,7 @@ ${LIB}OpenVG0
 ${LIB}kms1
 simplelogin
 breeze-plymouth
-calligra-gemini
+# NOT YET calligra-gemini
 smplayer
 mpv
 kdeplasma-addons
@@ -20,5 +20,18 @@ bluez
 qtbluetooth5
 bluez-qt
 bluedevil
-# Can go with Plasma 5.20 -- pulled in for the KCMs
-plasma-desktop
+maliit-keyboard
+# Used by the Plasma Mobile Camera app
+gstreamer1.0-plugins-bad
+# ofono doesn't work, let's use something else
+om-phone
+# Better not rely on gstreamer crap to drive the flash
+ledcontrol
+# Used by qt5-qtsensors to read the accelerometer
+iio-sensor-proxy
+# And qt5-qtpositioning
+qt5-qtpositioning
+geoclue
+gpsd
+# Needed to set up cameras at least on PinePhone
+v4l-utils

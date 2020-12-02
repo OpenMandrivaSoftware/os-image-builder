@@ -17,12 +17,12 @@ for i in mdmonitor rtkit-daemon remote-cryptsetup dnf-automatic-download \
 done
 # plasma-mobile likes numeric passwords
 echo 'omv:1234' | chroot "$OURDIR/$ROOTDIR" /usr/sbin/chpasswd
-# usb-gadget support is extremely useful for debugging
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable usb-gadget
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable plymouth-start
-# phone functionality
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable modem
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable ModemManager
+# Make sure some important bits and pieces are enabled
+for i in gpsd.socket gpsd.service geoclue iio-sensor-proxy \
+	usb-gadget plymouth-start modem ModemManager \
+		; do
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable $i
+done
 
 # Let's put the debug shell on something we stand a chance of seeing...
 sed -i -e 's,tty9,ttyS0,g' "$OURDIR/$ROOTDIR"/lib/systemd/system/debug-shell.service

@@ -7,44 +7,49 @@ LOOPDEV=$(losetup -j ${SHORTTARGET}.img |tail -n1 |cut -d: -f1)
 # The data fed to fdisk below (blank lines are important! Don't remove them!)
 # create 2 partitions -- a 256 MB bootpartition and a root FS spanning
 # the rest of the disk
+# Boot partition offset is 62500 to make room for u-boot at 16384 (enforced
+# by SPI bootloader).
 fdisk --wipe always $LOOPDEV <<'EOF'
 o
 n
 p
 1
-32768
+62500
 262143
 n
 p
 2
 262144
 
+t
+1
+c
 w
 EOF
 kpartx ${LOOPDEV}
-mkfs.ext4 ${LOOPDEV}p1
+mkfs.vfat ${LOOPDEV}p1
 mkfs.f2fs -l OMVAA64 ${LOOPDEV}p2
 ROOTUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* UUID=",,;s,".*,,')
 rm -rf mnt
 mkdir mnt
 mount ${LOOPDEV}p1 mnt
 cd mnt
-cp ${OURDIR}/kernel/arch/arm64/boot/dts/rockchip/rk3399-pinebook-pro.dtb .
-cp ${OURDIR}/kernel/arch/arm64/boot/Image .
+cp ${OURDIR}/${ROOTDIR}/boot/rockchip/rk3399-pinebook-pro.dtb .
+cp ${OURDIR}/${ROOTDIR}/boot/vmlinuz-${KERNELVERSION} Image
 cp ${OURDIR}/${ROOTDIR}/boot/boot.scr .
 mkdir extlinux
 cat >extlinux/extlinux.conf <<EOF
 label OpenMandriva
 	kernel /Image
 	fdt /rk3399-pinebook-pro.dtb
-	append root=/dev/mmcblk1p2 rootwait rootfstype=f2fs init=/sbin/init
+	append root=/dev/mmcblk1p2 rw rootwait rootfstype=f2fs init=/sbin/init console=tty1 console=ttyS2,1500000 video=eDP-1:1920x1080@60 video=HDMI-A-1:1920x1080@60
 EOF
 cd ..
 umount mnt
 mount ${LOOPDEV}p2 mnt
 cp -a ${ROOTDIR}/* mnt/
 umount mnt
-dd if=u-boot/idbloader.img of=${LOOPDEV} seek=64 conv=notrunc
-dd if=u-boot/u-boot.itb of=${LOOPDEV} seek=16384 conv=notrunc
+dd if=u-boot/idbloader.img of=${LOOPDEV} bs=512 seek=64 conv=notrunc
+dd if=u-boot/u-boot.itb of=${LOOPDEV} bs=512 seek=16384 conv=notrunc
 losetup -d ${LOOPDEV}
 popd

@@ -221,7 +221,7 @@ if [ -n "$KERNEL" ]; then
 	[ -d kernel ] || git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel
 	cd kernel
 	PN=1
-	for i in ${OURDIR}/device/${TARGET}/kernel-patches/*.patch; do
+	for i in ${OURDIR}/device/${TARGET}/kernel-patches/*.patch ${OURDIR}/device/${TARGET}/kernel-patches/*.diff; do
 		[ -e "$i" ] && patch -p1 -b -z .b${PN}~ <$i
 		PN=$((PN+1))
 	done
@@ -457,6 +457,11 @@ EOF
 		# bootloaders
 		KERNELVERSION=$(ls --sort=time $OURDIR/$ROOTDIR/boot/vmlinuz-* 2>/dev/null|head -n1 |sed -e 's,.*vmlinuz-,,')
 	fi
+	# Handle post-processing scripts needed by packagesets
+	for i in $PACKAGESETS; do
+		[ -e "$OURDIR/packagesets/$1.post" ] && chroot "$OURDIR/$ROOTDIR" "$OURDIR/packagesets/$1.post"
+	done
+
 	run setup-system-files
 	if [ "$NEED_INITRD" != "no" -o "$USE_UEFI" = "yes" -a -n "$KERNELVERSION" ]; then
 		if [ "$NEED_INITRD" != "no" ]; then
@@ -483,6 +488,17 @@ EOF
 			fi
 		done < $i
 	done
+
+	# Some devices require special alsa configs to initialize
+	# (e.g. unmuted DAC).
+	# Since /var/lib/alsa/asound.state is restored (and stored) by
+	# our systemd files, it's better to just initialize that (and
+	# not overwrite newly saved states by a package update) than to
+	# ship the file in a package.
+	if [ -e "$OURDIR"/device/$TARGET/asound.state ]; then
+		mkdir -p "$OURDIR/$ROOTDIR"/var/lib/alsa
+		install -c -m 644 "$OURDIR"/device/$TARGET/asound.state "$OURDIR/$ROOTDIR"/var/lib/alsa/asound.state
+	fi
 
 	# Make sure key services are started even if they're omitted
 	# in the preset files
