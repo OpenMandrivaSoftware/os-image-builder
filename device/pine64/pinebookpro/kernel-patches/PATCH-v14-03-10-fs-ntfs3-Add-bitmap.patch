@@ -1,3 +1,79 @@
+From mboxrd@z Thu Jan  1 00:00:00 1970
+Return-Path: <linux-kernel-owner@kernel.org>
+X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
+	aws-us-west-2-korg-lkml-1.web.codeaurora.org
+X-Spam-Level: 
+X-Spam-Status: No, score=-18.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_GIT autolearn=unavailable autolearn_force=no version=3.4.0
+Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
+	by smtp.lore.kernel.org (Postfix) with ESMTP id A9A46C0018C
+	for <linux-kernel@archiver.kernel.org>; Fri,  4 Dec 2020 15:49:25 +0000 (UTC)
+Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
+	by mail.kernel.org (Postfix) with ESMTP id 82E8B22C97
+	for <linux-kernel@archiver.kernel.org>; Fri,  4 Dec 2020 15:49:25 +0000 (UTC)
+Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
+        id S1730781AbgLDPsx (ORCPT
+        <rfc822;linux-kernel@archiver.kernel.org>);
+        Fri, 4 Dec 2020 10:48:53 -0500
+Received: from relayfre-01.paragon-software.com ([176.12.100.13]:55234 "EHLO
+        relayfre-01.paragon-software.com" rhost-flags-OK-OK-OK-OK)
+        by vger.kernel.org with ESMTP id S1730509AbgLDPsv (ORCPT
+        <rfc822;linux-kernel@vger.kernel.org>);
+        Fri, 4 Dec 2020 10:48:51 -0500
+Received: from dlg2.mail.paragon-software.com (vdlg-exch-02.paragon-software.com [172.30.1.105])
+        by relayfre-01.paragon-software.com (Postfix) with ESMTPS id 67AB81D3E;
+        Fri,  4 Dec 2020 18:48:07 +0300 (MSK)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=paragon-software.com; s=mail; t=1607096887;
+        bh=dMWweGuH2ggisHm6Gp1PMQCBWAZCxVnHdGXjB2AeV0Y=;
+        h=From:To:CC:Subject:Date:In-Reply-To:References;
+        b=uSuHJ8tl9oZQgZ+JS6B7CuROGa0hu4BQRKP5BQ8/z5pNdgHFz8vcJkH9AJNuC2cZy
+         sfy0xKno+DFTnXz7BQaiAuwVA+t5LlX/cxyUiQIOyyPF58iZtLzm8CQNt/eMojJL0D
+         MQgy+HYyV1agrcnBUFDhKOGHE64OK7YHc/1NzG4A=
+Received: from fsd-lkpg.ufsd.paragon-software.com (172.30.114.105) by
+ vdlg-exch-02.paragon-software.com (172.30.1.105) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
+ 15.1.1847.3; Fri, 4 Dec 2020 18:48:06 +0300
+From:   Konstantin Komarov <almaz.alexandrovich@paragon-software.com>
+To:     <linux-fsdevel@vger.kernel.org>
+CC:     <viro@zeniv.linux.org.uk>, <linux-kernel@vger.kernel.org>,
+        <pali@kernel.org>, <dsterba@suse.cz>, <aaptel@suse.com>,
+        <willy@infradead.org>, <rdunlap@infradead.org>, <joe@perches.com>,
+        <mark@harmstone.com>, <nborisov@suse.com>,
+        <linux-ntfs-dev@lists.sourceforge.net>, <anton@tuxera.com>,
+        <dan.carpenter@oracle.com>, <hch@lst.de>, <ebiggers@kernel.org>,
+        Konstantin Komarov <almaz.alexandrovich@paragon-software.com>
+Subject: [PATCH v14 03/10] fs/ntfs3: Add bitmap
+Date:   Fri, 4 Dec 2020 18:45:53 +0300
+Message-ID: <20201204154600.1546096-4-almaz.alexandrovich@paragon-software.com>
+X-Mailer: git-send-email 2.25.4
+In-Reply-To: <20201204154600.1546096-1-almaz.alexandrovich@paragon-software.com>
+References: <20201204154600.1546096-1-almaz.alexandrovich@paragon-software.com>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Content-Type: text/plain
+X-Originating-IP: [172.30.114.105]
+X-ClientProxiedBy: vdlg-exch-02.paragon-software.com (172.30.1.105) To
+ vdlg-exch-02.paragon-software.com (172.30.1.105)
+Precedence: bulk
+List-ID: <linux-kernel.vger.kernel.org>
+X-Mailing-List: linux-kernel@vger.kernel.org
+Archived-At: <https://lore.kernel.org/lkml/20201204154600.1546096-4-almaz.alexandrovich@paragon-software.com/>
+List-Archive: <https://lore.kernel.org/lkml/>
+List-Post: <mailto:linux-kernel@vger.kernel.org>
+
+This adds bitmap
+
+Signed-off-by: Konstantin Komarov <almaz.alexandrovich@paragon-software.com>
+---
+ fs/ntfs3/bitfunc.c |  135 ++++
+ fs/ntfs3/bitmap.c  | 1504 ++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 1639 insertions(+)
+ create mode 100644 fs/ntfs3/bitfunc.c
+ create mode 100644 fs/ntfs3/bitmap.c
+
 diff --git a/fs/ntfs3/bitfunc.c b/fs/ntfs3/bitfunc.c
 new file mode 100644
 index 000000000000..2d43d718d645
@@ -1649,3 +1725,7 @@ index 000000000000..db7c4567c59a
 +
 +	return err;
 +}
+-- 
+2.25.4
+
+

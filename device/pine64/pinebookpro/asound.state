@@ -2,7 +2,7 @@ state.rockchipes8316c {
 	control.1 {
 		iface CARD
 		name 'Headphones Jack'
-		value true
+		value false
 		comment {
 			access read
 			type BOOLEAN
@@ -28,8 +28,8 @@ state.rockchipes8316c {
 	control.3 {
 		iface MIXER
 		name 'Headphone Mixer Volume'
-		value.0 9
-		value.1 9
+		value.0 10
+		value.1 10
 		comment {
 			access 'read write'
 			type INTEGER
@@ -37,8 +37,8 @@ state.rockchipes8316c {
 			range '0 - 11'
 			dbmin -1200
 			dbmax 0
-			dbvalue.0 -300
-			dbvalue.1 -300
+			dbvalue.0 -150
+			dbvalue.1 -150
 		}
 	}
 	control.4 {
@@ -115,7 +115,7 @@ state.rockchipes8316c {
 	control.10 {
 		iface MIXER
 		name 'DAC Stereo Enhancement'
-		value 0
+		value 7
 		comment {
 			access 'read write'
 			type INTEGER

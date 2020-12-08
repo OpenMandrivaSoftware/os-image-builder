@@ -1,3 +1,17 @@
+This adds headers and misc files
+
+Signed-off-by: Konstantin Komarov <almaz.alexandrovich@paragon-software.com>
+---
+ fs/ntfs3/debug.h   |   61 +++
+ fs/ntfs3/ntfs.h    | 1237 ++++++++++++++++++++++++++++++++++++++++++++
+ fs/ntfs3/ntfs_fs.h | 1075 ++++++++++++++++++++++++++++++++++++++
+ fs/ntfs3/upcase.c  |   77 +++
+ 4 files changed, 2450 insertions(+)
+ create mode 100644 fs/ntfs3/debug.h
+ create mode 100644 fs/ntfs3/ntfs.h
+ create mode 100644 fs/ntfs3/ntfs_fs.h
+ create mode 100644 fs/ntfs3/upcase.c
+
 diff --git a/fs/ntfs3/debug.h b/fs/ntfs3/debug.h
 new file mode 100644
 index 000000000000..9e57ef878b05
@@ -67,10 +81,10 @@ index 000000000000..9e57ef878b05
 +// clang-format on
 diff --git a/fs/ntfs3/ntfs.h b/fs/ntfs3/ntfs.h
 new file mode 100644
-index 000000000000..8af2f8f489e5
+index 000000000000..9b1a9be80529
 --- /dev/null
 +++ b/fs/ntfs3/ntfs.h
-@@ -0,0 +1,1262 @@
+@@ -0,0 +1,1237 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*
 + *
@@ -246,10 +260,7 @@ index 000000000000..8af2f8f489e5
 +
 +extern const __le16 BAD_NAME[4];
 +extern const __le16 SDS_NAME[4];
-+extern const __le16 EFS_NAME[4];
-+extern const __le16 WOF_NAME[17];
-+extern const __le16 J_NAME[2];
-+extern const __le16 MAX_NAME[4];
++extern const __le16 WOF_NAME[17];	/* WofCompressedData */
 +
 +/* MFT record number structure */
 +struct MFT_REF {
@@ -942,12 +953,6 @@ index 000000000000..8af2f8f489e5
 +				// to be used in a network environment where the local
 +				// machine is part of a Windows 2000 Domain. This may be
 +				// used in a Windows 2000 Advanced Server managed domain.
-+
-+	// The last 8 bytes of this structure contains
-+	// the VCN of subnode
-+	// !!! Note !!!
-+	// This field is presented only if (flags & 0x1)
-+	// __le64	      SubnodesVCN;
 +};
 +
 +static_assert(sizeof(struct NTFS_DE_O) == 0x58);
@@ -970,13 +975,6 @@ index 000000000000..8af2f8f489e5
 +	__le64 ExceededTime;	// 0x3C:
 +
 +	// SID is placed here
-+
-+	// The last 8 bytes of this structure contains
-+	// the VCN of subnode
-+	// !!! Note !!!
-+	// This field is presented only if (flags & 0x1)
-+	// __le64	      SubnodesVCN;
-+
 +}; // sizeof() = 0x44
 +
 +#define SIZEOF_NTFS_DE_Q 0x44
@@ -999,7 +997,6 @@ index 000000000000..8af2f8f489e5
 +	// Security descriptor itself is placed here
 +	// Total size is 16 byte aligned
 +	//
-+
 +} __packed;
 +
 +#define SIZEOF_SECURITY_HDR 0x14
@@ -1009,7 +1006,6 @@ index 000000000000..8af2f8f489e5
 +	struct NTFS_DE de;
 +	__le32 sec_id;			// 0x10: Key: sizeof(security_id) = wKeySize
 +	struct SECURITY_HDR sec_hdr;	// 0x14:
-+
 +} __packed;
 +
 +#define SIZEOF_SII_DIRENTRY 0x28
@@ -1027,7 +1023,6 @@ index 000000000000..8af2f8f489e5
 +struct REPARSE_KEY {
 +	__le32 ReparseTag;		// 0x00: Reparse Tag
 +	struct MFT_REF ref;		// 0x04: MFT record number with this file
-+
 +}; // sizeof() = 0x0C
 +
 +static_assert(offsetof(struct REPARSE_KEY, ref) == 0x04);
@@ -1037,16 +1032,10 @@ index 000000000000..8af2f8f489e5
 +struct NTFS_DE_R {
 +	struct NTFS_DE de;
 +	struct REPARSE_KEY key;		// 0x10: Reparse Key
++	u32 zero;			// 0x1c
++}; // sizeof() = 0x20
 +
-+	// The last 8 bytes of this structure contains
-+	// the VCN of subnode
-+	// !!! Note !!!
-+	// This field is presented only if (flags & 0x1)
-+	// __le64	      SubnodesVCN;
-+
-+}; // sizeof() = 0x1C
-+
-+#define SIZEOF_R_DIRENTRY 0x1C
++static_assert(sizeof(struct NTFS_DE_R) == 0x20);
 +
 +/* CompressReparseBuffer.WofVersion */
 +#define WOF_CURRENT_VERSION		cpu_to_le32(1)
@@ -1057,10 +1046,10 @@ index 000000000000..8af2f8f489e5
 +/* CompressReparseBuffer.ProviderVer */
 +#define WOF_PROVIDER_CURRENT_VERSION	cpu_to_le32(1)
 +
-+#define WOF_COMPRESSION_XPRESS4K	0 // 4k
-+#define WOF_COMPRESSION_LZX		1 // 32k
-+#define WOF_COMPRESSION_XPRESS8K	2 // 8k
-+#define WOF_COMPRESSION_XPRESS16K	3 // 16k
++#define WOF_COMPRESSION_XPRESS4K	cpu_to_le32(0) // 4k
++#define WOF_COMPRESSION_LZX32K		cpu_to_le32(1) // 32k
++#define WOF_COMPRESSION_XPRESS8K	cpu_to_le32(2) // 8k
++#define WOF_COMPRESSION_XPRESS16K	cpu_to_le32(3) // 16k
 +
 +/*
 + * ATTR_REPARSE (0xC0)
@@ -1295,7 +1284,7 @@ index 000000000000..8af2f8f489e5
 +
 +#define ACL_REVISION 2
 +
-+#define SE_SELF_RELATIVE 0x8000
++#define SE_SELF_RELATIVE cpu_to_le16(0x8000)
 +
 +struct SECURITY_DESCRIPTOR_RELATIVE {
 +	u8 Revision;
@@ -1335,10 +1324,10 @@ index 000000000000..8af2f8f489e5
 +// clang-format on
 diff --git a/fs/ntfs3/ntfs_fs.h b/fs/ntfs3/ntfs_fs.h
 new file mode 100644
-index 000000000000..ce43b17a8f08
+index 000000000000..402ba820f99d
 --- /dev/null
 +++ b/fs/ntfs3/ntfs_fs.h
-@@ -0,0 +1,988 @@
+@@ -0,0 +1,1075 @@
 +/* SPDX-License-Identifier: GPL-2.0 */
 +/*
 + *
@@ -1357,28 +1346,32 @@ index 000000000000..ce43b17a8f08
 +
 +/* ntfs specific error code when fixup failed*/
 +#define E_NTFS_FIXUP			555
++/* ntfs specific error code about resident->nonresident*/
++#define E_NTFS_NONRESIDENT		556
 +
 +/* sbi->flags */
 +#define NTFS_FLAGS_NODISCARD		0x00000001
 +#define NTFS_FLAGS_NEED_REPLAY		0x04000000
 +
 +/* ni->ni_flags */
-+#define NI_FLAG_DIR			0x00000001
-+#define NI_FLAG_RESIDENT		0x00000002
-+#define NI_FLAG_UPDATE_PARENT		0x00000004
-+/* Data attribute is external compressed (lzx/xpress) */
-+#define NI_FLAG_COMPRESSED_MASK		0x00000f00
++/*
++ * Data attribute is external compressed (lzx/xpress)
++ * 1 - WOF_COMPRESSION_XPRESS4K
++ * 2 - WOF_COMPRESSION_XPRESS8K
++ * 3 - WOF_COMPRESSION_XPRESS16K
++ * 4 - WOF_COMPRESSION_LZX32K
++ */
++#define NI_FLAG_COMPRESSED_MASK		0x0000000f
 +/* Data attribute is deduplicated */
-+#define NI_FLAG_DEDUPLICATED		0x00001000
-+#define NI_FLAG_EA			0x00002000
++#define NI_FLAG_DEDUPLICATED		0x00000010
++#define NI_FLAG_EA			0x00000020
++#define NI_FLAG_DIR			0x00000040
++#define NI_FLAG_RESIDENT		0x00000080
++#define NI_FLAG_UPDATE_PARENT		0x00000100
 +// clang-format on
 +
-+struct ntfs_inode;
-+struct ntfs_sb_info;
-+struct lznt;
-+
 +struct ntfs_mount_options {
-+	struct nls_table *nls[2];
++	struct nls_table *nls;
 +
 +	kuid_t fs_uid;
 +	kgid_t fs_gid;
@@ -1389,7 +1382,7 @@ index 000000000000..ce43b17a8f08
 +		gid : 1, /* gid was set */
 +		fmask : 1, /* fmask was set */
 +		dmask : 1, /*dmask was set*/
-+		sys_immutable : 1, /* set = system files are immutable */
++		sys_immutable : 1, /* immutable system files */
 +		discard : 1, /* issue discard requests on deletions */
 +		sparse : 1, /*create sparse files*/
 +		showmeta : 1, /*show meta files*/
@@ -1400,7 +1393,8 @@ index 000000000000..ce43b17a8f08
 +		;
 +};
 +
-+struct ntfs_run;
++/* special value to unpack and deallocate*/
++#define RUN_DEALLOCATE ((struct runs_tree *)(size_t)1)
 +
 +/* TODO: use rb tree instead of array */
 +struct runs_tree {
@@ -1595,31 +1589,58 @@ index 000000000000..ce43b17a8f08
 +	} objid;
 +
 +	struct {
-+		/*protect 'frame_unc' and 'ctx'*/
++		/*
++		 * protect 'lznt/xpress/lzx'
++		 * Should we use different spinlocks for each ctx?
++		 */
 +		spinlock_t lock;
-+		struct lznt *ctx;
++		struct lznt *lznt;
++#ifdef CONFIG_NTFS3_LZX_XPRESS
++		struct xpress_decompressor *xpress;
++		struct lzx_decompressor *lzx;
++#endif
 +	} compress;
 +
 +	struct ntfs_mount_options options;
 +	struct ratelimit_state msg_ratelimit;
 +};
 +
++/*
++ * one MFT record(usually 1024 bytes), consists of attributes
++ */
 +struct mft_inode {
 +	struct rb_node node;
 +	struct ntfs_sb_info *sbi;
 +
-+	CLST rno;
 +	struct MFT_REC *mrec;
 +	struct ntfs_buffers nb;
 +
++	CLST rno;
 +	bool dirty;
 +};
 +
-+/* ntfs file system inode data memory */
++/* nested class for ntfs_inode::ni_lock */
++enum ntfs_inode_mutex_lock_class {
++	NTFS_INODE_MUTEX_DIRTY,
++	NTFS_INODE_MUTEX_SECURITY,
++	NTFS_INODE_MUTEX_OBJID,
++	NTFS_INODE_MUTEX_REPARSE,
++	NTFS_INODE_MUTEX_NORMAL,
++	NTFS_INODE_MUTEX_PARENT,
++};
++
++/*
++ * ntfs inode - extends linux inode. consists of one or more mft inodes
++ */
 +struct ntfs_inode {
 +	struct mft_inode mi; // base record
 +
-+	loff_t i_valid; /* valid size */
++	/*
++	 * Valid size: [0 - i_valid) - these range in file contains valid data
++	 * Range [i_valid - inode->i_size) - contains 0
++	 * Usually i_valid <= inode->i_size
++	 */
++	loff_t i_valid;
 +	struct timespec64 i_crtime;
 +
 +	struct mutex ni_lock;
@@ -1628,7 +1649,11 @@ index 000000000000..ce43b17a8f08
 +	enum FILE_ATTRIBUTE std_fa;
 +	__le32 std_security_id;
 +
-+	// subrecords tree
++	/*
++	 * tree of mft_inode
++	 * not empty when primary MFT record (usually 1024 bytes) can't save all attributes
++	 * e.g. file becomes too fragmented or contains a lot of names
++	 */
 +	struct rb_root mi_tree;
 +
 +	union {
@@ -1636,6 +1661,9 @@ index 000000000000..ce43b17a8f08
 +		struct {
 +			struct rw_semaphore run_lock;
 +			struct runs_tree run;
++#ifdef CONFIG_NTFS3_LZX_XPRESS
++			struct page *offs_page;
++#endif
 +		} file;
 +	};
 +
@@ -1677,15 +1705,26 @@ index 000000000000..ce43b17a8f08
 +			   CLST vcn, CLST lcn, CLST len, CLST *pre_alloc,
 +			   enum ALLOCATE_OPT opt, CLST *alen, const size_t fr,
 +			   CLST *new_lcn);
++int attr_make_nonresident(struct ntfs_inode *ni, struct ATTRIB *attr,
++			  struct ATTR_LIST_ENTRY *le, struct mft_inode *mi,
++			  u64 new_size, struct runs_tree *run,
++			  struct ATTRIB **ins_attr, struct page *page);
 +int attr_set_size(struct ntfs_inode *ni, enum ATTR_TYPE type,
 +		  const __le16 *name, u8 name_len, struct runs_tree *run,
 +		  u64 new_size, const u64 *new_valid, bool keep_prealloc,
 +		  struct ATTRIB **ret);
 +int attr_data_get_block(struct ntfs_inode *ni, CLST vcn, CLST clen, CLST *lcn,
 +			CLST *len, bool *new);
++int attr_data_read_resident(struct ntfs_inode *ni, struct page *page);
++int attr_data_write_resident(struct ntfs_inode *ni, struct page *page);
 +int attr_load_runs_vcn(struct ntfs_inode *ni, enum ATTR_TYPE type,
 +		       const __le16 *name, u8 name_len, struct runs_tree *run,
 +		       CLST vcn);
++int attr_wof_load_runs_range(struct ntfs_inode *ni, struct runs_tree *run,
++			     u64 from, u64 to);
++int attr_wof_frame_info(struct ntfs_inode *ni, struct ATTRIB *attr,
++			struct runs_tree *run, u64 frame, u64 frames,
++			u8 frame_bits, u32 *ondisk_size, u64 *vbo_data);
 +int attr_is_frame_compressed(struct ntfs_inode *ni, struct ATTRIB *attr,
 +			     CLST frame, CLST *clst_data);
 +int attr_allocate_frame(struct ntfs_inode *ni, CLST frame, size_t compr_size,
@@ -1736,8 +1775,8 @@ index 000000000000..ce43b17a8f08
 +/* globals from file.c*/
 +int ntfs_getattr(const struct path *path, struct kstat *stat, u32 request_mask,
 +		 u32 flags);
-+void ntfs_sparse_cluster(struct inode *inode, struct page *page0, loff_t vbo,
-+			 u32 bytes);
++void ntfs_sparse_cluster(struct inode *inode, struct page *page0, CLST vcn,
++			 CLST len);
 +int ntfs_file_fsync(struct file *filp, loff_t start, loff_t end, int datasync);
 +void ntfs_truncate_blocks(struct inode *inode, loff_t offset);
 +int ntfs_setattr(struct dentry *dentry, struct iattr *attr);
@@ -1799,6 +1838,7 @@ index 000000000000..ce43b17a8f08
 +int ni_fiemap(struct ntfs_inode *ni, struct fiemap_extent_info *fieinfo,
 +	      __u64 vbo, __u64 len);
 +int ni_readpage_cmpr(struct ntfs_inode *ni, struct page *page);
++int ni_decompress_file(struct ntfs_inode *ni);
 +int ni_read_frame(struct ntfs_inode *ni, u64 frame_vbo, struct page **pages,
 +		  u32 pages_per_frame);
 +int ni_write_frame(struct ntfs_inode *ni, struct page **pages,
@@ -1985,7 +2025,8 @@ index 000000000000..ce43b17a8f08
 +void run_truncate_head(struct runs_tree *run, CLST vcn);
 +void run_truncate_around(struct runs_tree *run, CLST vcn);
 +bool run_lookup(const struct runs_tree *run, CLST vcn, size_t *Index);
-+bool run_add_entry(struct runs_tree *run, CLST vcn, CLST lcn, CLST len);
++bool run_add_entry(struct runs_tree *run, CLST vcn, CLST lcn, CLST len,
++		   bool is_mft);
 +bool run_get_entry(const struct runs_tree *run, size_t index, CLST *vcn,
 +		   CLST *lcn, CLST *len);
 +bool run_is_mapped_full(const struct runs_tree *run, CLST svcn, CLST evcn);
@@ -2050,7 +2091,7 @@ index 000000000000..ce43b17a8f08
 +extern const struct xattr_handler *ntfs_xattr_handlers[];
 +
 +/* globals from lznt.c */
-+struct lznt *get_compression_ctx(bool std);
++struct lznt *get_lznt_ctx(int level);
 +size_t compress_lznt(const void *uncompressed, size_t uncompressed_size,
 +		     void *compressed, size_t compressed_size,
 +		     struct lznt *ctx);
@@ -2183,7 +2224,7 @@ index 000000000000..ce43b17a8f08
 +/* Align up on cluster boundary */
 +static inline u64 ntfs_up_cluster(const struct ntfs_sb_info *sbi, u64 size)
 +{
-+	return (size + sbi->cluster_mask) & ~((u64)sbi->cluster_mask);
++	return (size + sbi->cluster_mask) & sbi->cluster_mask_inv;
 +}
 +
 +/* Align up on cluster boundary */
@@ -2241,6 +2282,17 @@ index 000000000000..ce43b17a8f08
 +	       (ni->ni_flags & NI_FLAG_COMPRESSED_MASK);
 +}
 +
++static inline int ni_ext_compress_bits(const struct ntfs_inode *ni)
++{
++	return 0xb + (ni->ni_flags & NI_FLAG_COMPRESSED_MASK);
++}
++
++/* bits - 0xc, 0xd, 0xe, 0xf, 0x10 */
++static inline void ni_set_ext_compress_bits(struct ntfs_inode *ni, u8 bits)
++{
++	ni->ni_flags |= (bits - 0xb) & NI_FLAG_COMPRESSED_MASK;
++}
++
 +static inline bool is_dedup(const struct ntfs_inode *ni)
 +{
 +	return ni->ni_flags & NI_FLAG_DEDUPLICATED;
@@ -2254,6 +2306,11 @@ index 000000000000..ce43b17a8f08
 +static inline bool is_sparsed(const struct ntfs_inode *ni)
 +{
 +	return ni->std_fa & FILE_ATTRIBUTE_SPARSE_FILE;
++}
++
++static inline int is_resident(struct ntfs_inode *ni)
++{
++	return ni->ni_flags & NI_FLAG_RESIDENT;
 +}
 +
 +static inline void le16_sub_cpu(__le16 *var, u16 val)
@@ -2297,7 +2354,12 @@ index 000000000000..ce43b17a8f08
 +
 +static inline void ni_lock(struct ntfs_inode *ni)
 +{
-+	mutex_lock(&ni->ni_lock);
++	mutex_lock_nested(&ni->ni_lock, NTFS_INODE_MUTEX_NORMAL);
++}
++
++static inline void ni_lock_dir(struct ntfs_inode *ni)
++{
++	mutex_lock_nested(&ni->ni_lock, NTFS_INODE_MUTEX_PARENT);
 +}
 +
 +static inline void ni_unlock(struct ntfs_inode *ni)
@@ -2308,11 +2370,6 @@ index 000000000000..ce43b17a8f08
 +static inline int ni_trylock(struct ntfs_inode *ni)
 +{
 +	return mutex_trylock(&ni->ni_lock);
-+}
-+
-+static inline int ni_has_resident_data(struct ntfs_inode *ni)
-+{
-+	return ni->ni_flags & NI_FLAG_RESIDENT;
 +}
 +
 +static inline int attr_load_runs_attr(struct ntfs_inode *ni,
@@ -2327,6 +2384,25 @@ index 000000000000..ce43b17a8f08
 +{
 +	*var = cpu_to_le64(le64_to_cpu(*var) - val);
 +}
++
++#ifdef CONFIG_NTFS3_LZX_XPRESS
++/* globals from lib/decompress_xpress.c */
++struct xpress_decompressor *xpress_allocate_decompressor(void);
++void xpress_free_decompressor(struct xpress_decompressor *d);
++int xpress_decompress(struct xpress_decompressor *__restrict d,
++		      const void *__restrict compressed_data,
++		      size_t compressed_size,
++		      void *__restrict uncompressed_data,
++		      size_t uncompressed_size);
++
++/* globals from lib/decompress_lzx.c */
++struct lzx_decompressor *lzx_allocate_decompressor(size_t max_block_size);
++void lzx_free_decompressor(struct lzx_decompressor *d);
++int lzx_decompress(struct lzx_decompressor *__restrict d,
++		   const void *__restrict compressed_data,
++		   size_t compressed_size, void *__restrict uncompressed_data,
++		   size_t uncompressed_size);
++#endif
 diff --git a/fs/ntfs3/upcase.c b/fs/ntfs3/upcase.c
 new file mode 100644
 index 000000000000..87b65f9ccc16
@@ -2410,3 +2486,7 @@ index 000000000000..87b65f9ccc16
 +
 +	return l1 - l2;
 +}
+-- 
+2.25.4
+
+

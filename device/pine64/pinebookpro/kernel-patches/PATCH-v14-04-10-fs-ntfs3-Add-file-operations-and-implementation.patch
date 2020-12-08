@@ -1,9 +1,93 @@
+From mboxrd@z Thu Jan  1 00:00:00 1970
+Return-Path: <linux-kernel-owner@kernel.org>
+X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
+	aws-us-west-2-korg-lkml-1.web.codeaurora.org
+X-Spam-Level: 
+X-Spam-Status: No, score=-18.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,USER_AGENT_GIT
+	autolearn=ham autolearn_force=no version=3.4.0
+Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
+	by smtp.lore.kernel.org (Postfix) with ESMTP id D1F1AC2BBCA
+	for <linux-kernel@archiver.kernel.org>; Fri,  4 Dec 2020 15:49:26 +0000 (UTC)
+Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
+	by mail.kernel.org (Postfix) with ESMTP id B0D9F22C97
+	for <linux-kernel@archiver.kernel.org>; Fri,  4 Dec 2020 15:49:26 +0000 (UTC)
+Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
+        id S1730876AbgLDPtR (ORCPT
+        <rfc822;linux-kernel@archiver.kernel.org>);
+        Fri, 4 Dec 2020 10:49:17 -0500
+Received: from relaydlg-01.paragon-software.com ([81.5.88.159]:37114 "EHLO
+        relaydlg-01.paragon-software.com" rhost-flags-OK-OK-OK-OK)
+        by vger.kernel.org with ESMTP id S1730722AbgLDPtQ (ORCPT
+        <rfc822;linux-kernel@vger.kernel.org>);
+        Fri, 4 Dec 2020 10:49:16 -0500
+Received: from dlg2.mail.paragon-software.com (vdlg-exch-02.paragon-software.com [172.30.1.105])
+        by relaydlg-01.paragon-software.com (Postfix) with ESMTPS id A58178225A;
+        Fri,  4 Dec 2020 18:48:07 +0300 (MSK)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=paragon-software.com; s=mail; t=1607096887;
+        bh=6RhajCZp7IpgFnc6Ghg38G1VDW37O1OVRf7DuxPR17I=;
+        h=From:To:CC:Subject:Date:In-Reply-To:References;
+        b=AQaE42d8Se9kut1Nc4F7kVGAT9PXU2T1AkqS9Oxu7t0C5E44aUjliWN13t/KG7zMp
+         nMUBXh49Y4mW4N4pFCgFMJbCydV/j0J4Yv+ZTsrTpJxGcTu9FzjTpsdrHmrR82N7SE
+         EApu9iXgpzw7nQ81sgsJrCh1SLcjrnO9OnOqDDh8=
+Received: from fsd-lkpg.ufsd.paragon-software.com (172.30.114.105) by
+ vdlg-exch-02.paragon-software.com (172.30.1.105) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
+ 15.1.1847.3; Fri, 4 Dec 2020 18:48:06 +0300
+From:   Konstantin Komarov <almaz.alexandrovich@paragon-software.com>
+To:     <linux-fsdevel@vger.kernel.org>
+CC:     <viro@zeniv.linux.org.uk>, <linux-kernel@vger.kernel.org>,
+        <pali@kernel.org>, <dsterba@suse.cz>, <aaptel@suse.com>,
+        <willy@infradead.org>, <rdunlap@infradead.org>, <joe@perches.com>,
+        <mark@harmstone.com>, <nborisov@suse.com>,
+        <linux-ntfs-dev@lists.sourceforge.net>, <anton@tuxera.com>,
+        <dan.carpenter@oracle.com>, <hch@lst.de>, <ebiggers@kernel.org>,
+        Konstantin Komarov <almaz.alexandrovich@paragon-software.com>
+Subject: [PATCH v14 04/10] fs/ntfs3: Add file operations and implementation
+Date:   Fri, 4 Dec 2020 18:45:54 +0300
+Message-ID: <20201204154600.1546096-5-almaz.alexandrovich@paragon-software.com>
+X-Mailer: git-send-email 2.25.4
+In-Reply-To: <20201204154600.1546096-1-almaz.alexandrovich@paragon-software.com>
+References: <20201204154600.1546096-1-almaz.alexandrovich@paragon-software.com>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Content-Type: text/plain
+X-Originating-IP: [172.30.114.105]
+X-ClientProxiedBy: vdlg-exch-02.paragon-software.com (172.30.1.105) To
+ vdlg-exch-02.paragon-software.com (172.30.1.105)
+Precedence: bulk
+List-ID: <linux-kernel.vger.kernel.org>
+X-Mailing-List: linux-kernel@vger.kernel.org
+Archived-At: <https://lore.kernel.org/lkml/20201204154600.1546096-5-almaz.alexandrovich@paragon-software.com/>
+List-Archive: <https://lore.kernel.org/lkml/>
+List-Post: <mailto:linux-kernel@vger.kernel.org>
+
+This adds file operations and implementation
+
+Signed-off-by: Konstantin Komarov <almaz.alexandrovich@paragon-software.com>
+---
+ fs/ntfs3/dir.c     |  575 +++++++++
+ fs/ntfs3/file.c    | 1093 ++++++++++++++++
+ fs/ntfs3/frecord.c | 3085 ++++++++++++++++++++++++++++++++++++++++++++
+ fs/ntfs3/namei.c   |  590 +++++++++
+ fs/ntfs3/record.c  |  614 +++++++++
+ fs/ntfs3/run.c     | 1192 +++++++++++++++++
+ 6 files changed, 7149 insertions(+)
+ create mode 100644 fs/ntfs3/dir.c
+ create mode 100644 fs/ntfs3/file.c
+ create mode 100644 fs/ntfs3/frecord.c
+ create mode 100644 fs/ntfs3/namei.c
+ create mode 100644 fs/ntfs3/record.c
+ create mode 100644 fs/ntfs3/run.c
+
 diff --git a/fs/ntfs3/dir.c b/fs/ntfs3/dir.c
 new file mode 100644
-index 000000000000..f8abe459c39d
+index 000000000000..f1df3f9ead9c
 --- /dev/null
 +++ b/fs/ntfs3/dir.c
-@@ -0,0 +1,610 @@
+@@ -0,0 +1,575 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + *
@@ -31,7 +115,7 @@ index 000000000000..f8abe459c39d
 +	int ret, uni_len;
 +	const __le16 *ip;
 +	u8 *op;
-+	struct nls_table *nls = sbi->options.nls[0];
++	struct nls_table *nls = sbi->options.nls;
 +
 +	static_assert(sizeof(wchar_t) == sizeof(__le16));
 +
@@ -83,17 +167,24 @@ index 000000000000..f8abe459c39d
 +#define SURROGATE_BITS	0x000003ff
 +// clang-format off
 +
++/*
++ * modified version of put_utf16 from fs/nls/nls_base.c
++ * is sparse warnings free
++ */
 +static inline void put_utf16(wchar_t *s, unsigned int c, enum utf16_endian endian)
 +{
++	static_assert(sizeof(wchar_t) == sizeof(__le16));
++	static_assert(sizeof(wchar_t) == sizeof(__be16));
++
 +	switch (endian) {
 +	default:
 +		*s = (wchar_t)c;
 +		break;
 +	case UTF16_LITTLE_ENDIAN:
-+		*s = __cpu_to_le16(c);
++		*(__le16 *)s = __cpu_to_le16(c);
 +		break;
 +	case UTF16_BIG_ENDIAN:
-+		*s = __cpu_to_be16(c);
++		*(__be16 *)s = __cpu_to_be16(c);
 +		break;
 +	}
 +}
@@ -151,23 +242,39 @@ index 000000000000..f8abe459c39d
 +	return op - pwcs;
 +}
 +
-+/* helper for ntfs_nls_to_utf16 */
-+static int _ntfs_nls_to_utf16(struct nls_table *nls, const u8 *name,
-+			      u32 name_len, wchar_t *uname, u32 max_ulen,
-+			      enum utf16_endian endian)
++/*
++ * Convert input string to utf16
++ *
++ * name, name_len - input name
++ * uni, max_ulen - destination memory
++ * endian - endian of target utf16 string
++ *
++ * This function is called:
++ * - to create ntfs name
++ * - to create symlink
++ *
++ * returns utf16 string length or error (if negative)
++ */
++int ntfs_nls_to_utf16(struct ntfs_sb_info *sbi, const u8 *name, u32 name_len,
++		      struct cpu_str *uni, u32 max_ulen,
++		      enum utf16_endian endian)
 +{
 +	int ret, slen;
 +	const u8 *end;
++	struct nls_table *nls = sbi->options.nls;
++	u16 *uname = uni->name;
++
++	static_assert(sizeof(wchar_t) == sizeof(u16));
 +
 +	if (!nls) {
 +		/* utf8 -> utf16 */
-+		return _utf8s_to_utf16s(name, name_len, endian, uname,
++		ret = _utf8s_to_utf16s(name, name_len, endian, uname,
 +					max_ulen);
++		uni->len = ret;
++		return ret;
 +	}
 +
-+	ret = 0;
-+
-+	for (end = name + name_len; name < end; ret++, name += slen) {
++	for (ret = 0, end = name + name_len; name < end; ret++, name += slen) {
 +		if (ret >= max_ulen)
 +			return -ENAMETOOLONG;
 +
@@ -198,65 +305,7 @@ index 000000000000..f8abe459c39d
 +	}
 +#endif
 +
-+	return ret;
-+}
-+
-+/*
-+ * Convert input string to utf16
-+ *
-+ * name, name_len - input name
-+ * uni, max_ulen - destination memory
-+ * endian - endian of target utf16 string
-+ *
-+ * This function is called:
-+ * - to create ntfs name
-+ * - to create symlink
-+ *
-+ * returns utf16 string length or error (if negative)
-+ */
-+int ntfs_nls_to_utf16(struct ntfs_sb_info *sbi, const u8 *name, u32 name_len,
-+		      struct cpu_str *uni, u32 max_ulen,
-+		      enum utf16_endian endian)
-+{
-+	int ret;
-+	struct nls_table *nls = sbi->options.nls[0];
-+
-+	static_assert(sizeof(wchar_t) == sizeof(u16));
-+
-+	/* use primary nls (may be NULL) */
-+	ret = _ntfs_nls_to_utf16(nls, name, name_len, uni->name, max_ulen,
-+				 endian);
-+
-+	if (ret == -ENAMETOOLONG)
-+		return -ENAMETOOLONG;
-+
-+	if (ret > 0)
-+		return uni->len = ret;
-+
-+	if (!sbi->options.nls[1]) {
-+		ntfs_warn(sbi->sb, "%s failed to convert \"%.*s\" into utf16",
-+			  nls ? nls->charset : "utf8", name_len, name);
-+		return ret;
-+	}
-+
-+	/* use alternative nls */
-+	ret = _ntfs_nls_to_utf16(sbi->options.nls[1], name, name_len, uni->name,
-+				 max_ulen, endian);
-+
-+	if (ret == -ENAMETOOLONG)
-+		return -ENAMETOOLONG;
-+
-+	if (ret > 0) {
-+		/*
-+		 * primary nls failed but alternative nls ok
-+		 * should we print something?
-+		 */
-+		return uni->len = ret;
-+	}
-+
-+	ntfs_warn(sbi->sb, "%s and %s failed to convert \"%.*s\" into utf16",
-+		  nls ? nls->charset : "utf8", sbi->options.nls[1]->charset,
-+		  name_len, name);
++	uni->len = ret;
 +	return ret;
 +}
 +
@@ -616,10 +665,10 @@ index 000000000000..f8abe459c39d
 +};
 diff --git a/fs/ntfs3/file.c b/fs/ntfs3/file.c
 new file mode 100644
-index 000000000000..38177db431b4
+index 000000000000..03e8eecc58b9
 --- /dev/null
 +++ b/fs/ntfs3/file.c
-@@ -0,0 +1,1153 @@
+@@ -0,0 +1,1093 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + *
@@ -731,6 +780,11 @@ index 000000000000..38177db431b4
 +	loff_t pos = valid;
 +	int err;
 +
++	if (is_resident(ni)) {
++		ni->i_valid = new_valid;
++		return 0;
++	}
++
 +	WARN_ON(is_compressed(ni));
 +	WARN_ON(valid >= new_valid);
 +
@@ -817,11 +871,13 @@ index 000000000000..38177db431b4
 + *
 + * Helper function to zero a new allocated clusters
 + */
-+void ntfs_sparse_cluster(struct inode *inode, struct page *page0, loff_t vbo,
-+			 u32 bytes)
++void ntfs_sparse_cluster(struct inode *inode, struct page *page0, CLST vcn,
++			 CLST len)
 +{
 +	struct address_space *mapping = inode->i_mapping;
 +	struct ntfs_sb_info *sbi = inode->i_sb->s_fs_info;
++	u64 vbo = (u64)vcn << sbi->cluster_bits;
++	u64 bytes = (u64)len << sbi->cluster_bits;
 +	u32 blocksize = 1 << inode->i_blkbits;
 +	pgoff_t idx0 = page0 ? page0->index : -1;
 +	loff_t vbo_clst = vbo & sbi->cluster_mask_inv;
@@ -888,72 +944,10 @@ index 000000000000..38177db431b4
 +			unlock_page(page);
 +			put_page(page);
 +		}
++		cond_resched();
 +	}
 +	mark_inode_dirty(inode);
 +}
-+
-+struct vma_cookie {
-+	loff_t to;
-+};
-+
-+/*
-+ * vm_operations_struct::close
-+ */
-+static void ntfs_filemap_close(struct vm_area_struct *vma)
-+{
-+	struct inode *inode = file_inode(vma->vm_file);
-+	struct ntfs_inode *ni = ntfs_i(inode);
-+	loff_t to;
-+
-+	if (sizeof(void *) >= sizeof(loff_t))
-+		to = (loff_t)vma->vm_private_data;
-+	else
-+		to = ((struct vma_cookie *)vma->vm_private_data)->to;
-+
-+	// Update valid size
-+	ni->i_valid = max_t(loff_t, ni->i_valid,
-+			    min_t(loff_t, i_size_read(inode), to));
-+
-+	if (sizeof(void *) < sizeof(loff_t)) {
-+		ntfs_free(vma->vm_private_data);
-+		vma->vm_private_data = NULL; // is it necessary?
-+	}
-+}
-+
-+/*
-+ * vm_operations_struct::fault
-+ */
-+static vm_fault_t ntfs_filemap_fault(struct vm_fault *vmf)
-+{
-+	struct vm_area_struct *vma = vmf->vma;
-+	vm_fault_t ret;
-+	loff_t to, *vmc_to;
-+
-+	ret = filemap_fault(vmf);
-+
-+	if (!(ret & VM_FAULT_LOCKED))
-+		return ret;
-+
-+	/* Update maximum mapped range */
-+	to = (loff_t)(vmf->pgoff + 1) << PAGE_SHIFT;
-+
-+	if (sizeof(void *) >= sizeof(loff_t))
-+		vmc_to = (loff_t *)&vma->vm_private_data;
-+	else
-+		vmc_to = &((struct vma_cookie *)vma->vm_private_data)->to;
-+
-+	if (*vmc_to < to)
-+		*vmc_to = to;
-+
-+	return ret;
-+}
-+
-+static const struct vm_operations_struct vma_cookie = {
-+	.close = ntfs_filemap_close,
-+	.fault = ntfs_filemap_fault,
-+	.map_pages = filemap_map_pages,
-+	.page_mkwrite = filemap_page_mkwrite,
-+};
 +
 +/*
 + * file_operations::mmap
@@ -968,27 +962,25 @@ index 000000000000..38177db431b4
 +	int err;
 +
 +	if (is_encrypted(ni)) {
++		ntfs_inode_warn(inode,
++				"mmap is not supported for encrypted files");
 +		err = -EOPNOTSUPP;
 +		goto out;
 +	}
 +
-+	if (!rw) {
-+		err = generic_file_mmap(file, vma);
-+		goto out;
-+	}
++	if (!rw)
++		goto do_map;
 +
 +	if (is_compressed(ni)) {
++		ntfs_inode_warn(
++			inode,
++			"mmap(write) is not supported for compressed files");
 +		err = -EOPNOTSUPP;
 +		goto out;
 +	}
 +
-+	// map for write
-+	inode_lock(inode);
-+
-+	to = from + vma->vm_end - vma->vm_start;
-+
-+	if (to > inode->i_size)
-+		to = inode->i_size;
++	to = min_t(loff_t, i_size_read(inode),
++		   from + vma->vm_end - vma->vm_start);
 +
 +	if (is_sparsed(ni)) {
 +		/* allocate clusters for rw map */
@@ -999,64 +991,24 @@ index 000000000000..38177db431b4
 +
 +		for (vcn = from >> sbi->cluster_bits; vcn < end; vcn += len) {
 +			err = attr_data_get_block(ni, vcn, 1, &lcn, &len, &new);
-+			if (err) {
-+				inode_unlock(inode);
++			if (err)
 +				goto out;
-+			}
 +			if (!new)
 +				continue;
-+			ntfs_sparse_cluster(inode, NULL,
-+					    (u64)vcn << sbi->cluster_bits,
-+					    sbi->cluster_size);
++			ntfs_sparse_cluster(inode, NULL, vcn, 1);
 +		}
 +	}
 +
-+	err = ni->i_valid < to ?
-+		      ntfs_extend_initialized_size(file, ni, ni->i_valid, to) :
-+		      0;
-+
-+	inode_unlock(inode);
-+	if (err)
-+		goto out;
-+
-+	if (vma->vm_private_data) {
-+		ntfs_inode_warn(
-+			inode,
-+			"mmap: failed to keep private vma_data, possible garbidge data");
-+		err = generic_file_mmap(file, vma);
-+		goto out;
-+	}
-+
-+	if (!mapping->a_ops->readpage) {
-+		err = -ENOEXEC;
-+		goto out;
-+	}
-+
-+	/*
-+	 * Allocate and init small struct to keep track the mapping operations
-+	 * It is useful when mmap(size) + truncate(size/2) + unmap(). see
-+	 * xfstests/generic/039
-+	 *
-+	 * TODO: if sizeof(void*) == 8 bytes we can store the only field 'to'
-+	 * of vma_cookie in vma->vm_private_data
-+	 */
-+	if (sizeof(void *) >= sizeof(loff_t))
-+		vma->vm_private_data = (void *)to;
-+	else {
-+		struct vma_cookie *vmc =
-+			ntfs_alloc(sizeof(struct vma_cookie), 0);
-+
-+		if (unlikely(!vmc)) {
-+			err = -ENOMEM;
++	if (ni->i_valid < to) {
++		inode_lock(inode);
++		err = ntfs_extend_initialized_size(file, ni, ni->i_valid, to);
++		inode_unlock(inode);
++		if (err)
 +			goto out;
-+		}
-+		vmc->to = to;
-+		vma->vm_private_data = vmc;
 +	}
 +
-+	file_accessed(file);
-+	vma->vm_ops = &vma_cookie;
-+
++do_map:
++	err = generic_file_mmap(file, vma);
 +out:
 +	return err;
 +}
@@ -1075,8 +1027,8 @@ index 000000000000..38177db431b4
 +	struct ntfs_inode *ni = ntfs_i(inode);
 +	struct address_space *mapping = inode->i_mapping;
 +	loff_t end = pos + count;
-+	int err;
 +	bool extend_init = file && pos > ni->i_valid;
++	int err;
 +
 +	if (end <= inode->i_size && !extend_init)
 +		return 0;
@@ -1182,13 +1134,14 @@ index 000000000000..38177db431b4
 +		goto out;
 +
 +	if (is_sparsed(ni) || is_compressed(ni)) {
++		CLST vcn_v = ni->i_valid >> sbi->cluster_bits;
 +		CLST vcn = vbo >> sbi->cluster_bits;
 +		CLST cend = bytes_to_cluster(sbi, end);
 +		CLST lcn, clen;
 +		bool new;
 +
 +		/*
-+		 * allocate but not zero new clusters
++		 * allocate but not zero new clusters (see below comments)
 +		 * this breaks security (one can read unused on-disk areas)
 +		 * zeroing these clusters may be too long
 +		 * may be we should check here for root rights?
@@ -1198,6 +1151,19 @@ index 000000000000..38177db431b4
 +						  &clen, &new);
 +			if (err)
 +				goto out;
++			if (!new || vcn >= vcn_v)
++				continue;
++
++			/*
++			 * This variant zeroes new allocated clusters inside valid size
++			 * Dangerous in case:
++			 * 1G of sparsed clusters + 1 cluster of data =>
++			 * valid_size == 1G + 1 cluster
++			 * fallocate(1G) will zero 1G and this can be very long
++			 */
++			/*ntfs_sparse_cluster(inode, NULL, vcn,
++			 *		    min(vcn_v - vcn, clen));
++			 */
 +		}
 +	}
 +
@@ -1241,6 +1207,11 @@ index 000000000000..38177db431b4
 +
 +	truncate_setsize(inode, new_size);
 +
++	down_write(&ni->file.run_lock);
++	err = attr_set_size(ni, ATTR_DATA, NULL, 0, &ni->file.run, new_size,
++			    &new_valid, true, NULL);
++	up_write(&ni->file.run_lock);
++
 +	if (new_valid < ni->i_valid)
 +		ni->i_valid = new_valid;
 +
@@ -1255,8 +1226,6 @@ index 000000000000..38177db431b4
 +		if (err)
 +			return;
 +	}
-+
-+	inode->i_blocks = vcn;
 +
 +	if (dirty)
 +		mark_inode_dirty(inode);
@@ -1292,6 +1261,19 @@ index 000000000000..38177db431b4
 +	if (ia_valid & ATTR_SIZE) {
 +		loff_t oldsize = inode->i_size;
 +
++		if (ni->ni_flags & NI_FLAG_COMPRESSED_MASK) {
++#ifdef CONFIG_NTFS3_LZX_XPRESS
++			err = ni_decompress_file(ni);
++			if (err)
++				goto out;
++#else
++			ntfs_inode_warn(
++				inode,
++				"activate CONFIG_NTFS3_LZX_XPRESS to truncate external compressed files");
++			err = -EOPNOTSUPP;
++			goto out;
++#endif
++		}
 +		inode_dio_wait(inode);
 +
 +		if (attr->ia_size < oldsize) {
@@ -1352,12 +1334,14 @@ index 000000000000..38177db431b4
 +		return -EOPNOTSUPP;
 +	}
 +
++#ifndef CONFIG_NTFS3_LZX_XPRESS
 +	if (ni->ni_flags & NI_FLAG_COMPRESSED_MASK) {
 +		ntfs_inode_warn(
 +			inode,
-+			"read external compressed file not supported (temporary)");
++			"activate CONFIG_NTFS3_LZX_XPRESS to read external compressed files");
 +		return -EOPNOTSUPP;
 +	}
++#endif
 +
 +	if (is_dedup(ni)) {
 +		ntfs_inode_warn(inode, "read deduplicated not supported");
@@ -1403,8 +1387,7 @@ index 000000000000..38177db431b4
 +}
 +
 +/*helper for ntfs_file_write_iter (compressed files)*/
-+static noinline ssize_t ntfs_compress_write(struct kiocb *iocb,
-+					    struct iov_iter *from)
++static ssize_t ntfs_compress_write(struct kiocb *iocb, struct iov_iter *from)
 +{
 +	int err;
 +	struct file *file = iocb->ki_filp;
@@ -1647,13 +1630,6 @@ index 000000000000..38177db431b4
 +		return -EOPNOTSUPP;
 +	}
 +
-+	if (ni->ni_flags & NI_FLAG_COMPRESSED_MASK) {
-+		ntfs_inode_warn(
-+			inode,
-+			"write into external compressed file not supported (temporary)");
-+		return -EOPNOTSUPP;
-+	}
-+
 +	if (is_dedup(ni)) {
 +		ntfs_inode_warn(inode, "write into deduplicated not supported");
 +		return -EOPNOTSUPP;
@@ -1668,6 +1644,23 @@ index 000000000000..38177db431b4
 +	ret = generic_write_checks(iocb, from);
 +	if (ret <= 0)
 +		goto out;
++
++	if (ni->ni_flags & NI_FLAG_COMPRESSED_MASK) {
++#ifdef CONFIG_NTFS3_LZX_XPRESS
++		int err = ni_decompress_file(ni);
++
++		if (err) {
++			ret = err;
++			goto out;
++		}
++#else
++		ntfs_inode_warn(
++			inode,
++			"activate CONFIG_NTFS3_LZX_XPRESS to read external compressed files");
++		ret = -EOPNOTSUPP;
++		goto out;
++#endif
++	}
 +
 +	ret = ntfs_extend_ex(inode, iocb->ki_pos, ret, file);
 +	if (ret)
@@ -1706,25 +1699,21 @@ index 000000000000..38177db431b4
 +static int ntfs_file_release(struct inode *inode, struct file *file)
 +{
 +	struct ntfs_inode *ni = ntfs_i(inode);
-+	struct ntfs_sb_info *sbi;
-+	int err;
++	struct ntfs_sb_info *sbi = ni->mi.sbi;
++	int err = 0;
 +
 +	/* if we are the last writer on the inode, drop the block reservation */
-+	if (!(file->f_mode & FMODE_WRITE) ||
-+	    atomic_read(&inode->i_writecount) != 1)
-+		return 0;
++	if (sbi->options.prealloc && ((file->f_mode & FMODE_WRITE) &&
++				      atomic_read(&inode->i_writecount) == 1)) {
++		ni_lock(ni);
++		down_write(&ni->file.run_lock);
 +
-+	sbi = ni->mi.sbi;
++		err = attr_set_size(ni, ATTR_DATA, NULL, 0, &ni->file.run,
++				    inode->i_size, &ni->i_valid, false, NULL);
 +
-+	ni_lock(ni);
-+	down_write(&ni->file.run_lock);
-+
-+	err = attr_set_size(ni, ATTR_DATA, NULL, 0, &ni->file.run,
-+			    inode->i_size, &ni->i_valid, false, NULL);
-+
-+	up_write(&ni->file.run_lock);
-+	ni_unlock(ni);
-+
++		up_write(&ni->file.run_lock);
++		ni_unlock(ni);
++	}
 +	return err;
 +}
 +
@@ -1775,10 +1764,10 @@ index 000000000000..38177db431b4
 +};
 diff --git a/fs/ntfs3/frecord.c b/fs/ntfs3/frecord.c
 new file mode 100644
-index 000000000000..f8f762ccdbcc
+index 000000000000..4ebb80d012ef
 --- /dev/null
 +++ b/fs/ntfs3/frecord.c
-@@ -0,0 +1,2696 @@
+@@ -0,0 +1,3085 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + *
@@ -1920,8 +1909,16 @@ index 000000000000..f8f762ccdbcc
 +	/* bad inode always has mode == S_IFREG */
 +	if (ni->ni_flags & NI_FLAG_DIR)
 +		indx_clear(&ni->dir);
-+	else
++	else {
 +		run_close(&ni->file.run);
++#ifdef CONFIG_NTFS3_LZX_XPRESS
++		if (ni->file.offs_page) {
++			/* on-demand allocated page for offsets */
++			put_page(ni->file.offs_page);
++			ni->file.offs_page = NULL;
++		}
++#endif
++	}
 +
 +	mi_clear(&ni->mi);
 +}
@@ -2307,7 +2304,6 @@ index 000000000000..f8f762ccdbcc
 +	le->ref = ref;
 +
 +out:
-+
 +	return attr;
 +}
 +
@@ -2347,7 +2343,7 @@ index 000000000000..f8f762ccdbcc
 +		}
 +
 +		if (!svcn) {
-+			alloc = le32_to_cpu(attr->nres.alloc_size) >>
++			alloc = le64_to_cpu(attr->nres.alloc_size) >>
 +				cluster_bits;
 +			mi_p = NULL;
 +		} else if (svcn != evcn + 1) {
@@ -2386,6 +2382,7 @@ index 000000000000..f8f762ccdbcc
 +			svcn_p = svcn;
 +			evcn_p = evcn;
 +			le_p = le;
++			err = 0;
 +			continue;
 +		}
 +
@@ -3335,9 +3332,8 @@ index 000000000000..f8f762ccdbcc
 +		roff = le16_to_cpu(attr->nres.run_off);
 +
 +		/*run==1 means unpack and deallocate*/
-+		run_unpack_ex((struct runs_tree *)(size_t)1, sbi, ni->mi.rno,
-+			      svcn, evcn, svcn, Add2Ptr(attr, roff),
-+			      asize - roff);
++		run_unpack_ex(RUN_DEALLOCATE, sbi, ni->mi.rno, svcn, evcn, svcn,
++			      Add2Ptr(attr, roff), asize - roff);
 +	}
 +
 +	if (ni->attr_list.size) {
@@ -3525,7 +3521,7 @@ index 000000000000..f8f762ccdbcc
 +				   void *buffer)
 +{
 +	const struct REPARSE_DATA_BUFFER *rp = NULL;
-+	u32 c_format;
++	u8 bits;
 +	u16 len;
 +	typeof(rp->CompressReparseBuffer) *cmpr;
 +
@@ -3569,11 +3565,25 @@ index 000000000000..f8f762ccdbcc
 +		    cmpr->ProviderVer != WOF_PROVIDER_CURRENT_VERSION) {
 +			return REPARSE_NONE;
 +		}
-+		c_format = le32_to_cpu(cmpr->CompressionFormat);
-+		if (c_format > 3)
-+			return REPARSE_NONE;
 +
-+		ni->ni_flags |= (c_format + 1) << 8;
++		switch (cmpr->CompressionFormat) {
++		case WOF_COMPRESSION_XPRESS4K:
++			bits = 0xc; // 4k
++			break;
++		case WOF_COMPRESSION_XPRESS8K:
++			bits = 0xd; // 8k
++			break;
++		case WOF_COMPRESSION_XPRESS16K:
++			bits = 0xe; // 16k
++			break;
++		case WOF_COMPRESSION_LZX32K:
++			bits = 0xf; // 32k
++			break;
++		default:
++			bits = 0x10; // 64k
++			break;
++		}
++		ni_set_ext_compress_bits(ni, bits);
 +		return REPARSE_COMPRESSED;
 +
 +	case IO_REPARSE_TAG_DEDUP:
@@ -3801,29 +3811,8 @@ index 000000000000..f8f762ccdbcc
 +	}
 +
 +	if (ni->ni_flags & NI_FLAG_COMPRESSED_MASK) {
-+		u32 cmpr = ((ni->ni_flags & NI_FLAG_COMPRESSED_MASK) >> 8) - 1;
-+
-+		switch (cmpr) {
-+		case WOF_COMPRESSION_XPRESS4K:
-+			/* xpress 4k*/
-+			frame_bits = 12;
-+			break;
-+		case WOF_COMPRESSION_LZX:
-+			/* lzx 32k*/
-+			frame_bits = 15;
-+			break;
-+		case WOF_COMPRESSION_XPRESS8K:
-+			/* xpress 8k*/
-+			frame_bits = 13;
-+			break;
-+		case WOF_COMPRESSION_XPRESS16K:
-+			/* xpress 16k*/
-+			frame_bits = 14;
-+			break;
-+		}
-+		/* TODO: port lzx/xpress */
-+		err = -EOPNOTSUPP;
-+		goto out;
++		/* xpress or lzx */
++		frame_bits = ni_ext_compress_bits(ni);
 +	} else {
 +		/* lznt compression*/
 +		frame_bits = NTFS_LZNT_CUNIT + sbi->cluster_bits;
@@ -3878,6 +3867,285 @@ index 000000000000..f8f762ccdbcc
 +	return err;
 +}
 +
++#ifdef CONFIG_NTFS3_LZX_XPRESS
++/*
++ * decompress lzx/xpress compressed file
++ * remove ATTR_DATA::WofCompressedData
++ * remove ATTR_REPARSE
++ */
++int ni_decompress_file(struct ntfs_inode *ni)
++{
++	struct ntfs_sb_info *sbi = ni->mi.sbi;
++	struct inode *inode = &ni->vfs_inode;
++	loff_t i_size = inode->i_size;
++	struct address_space *mapping = inode->i_mapping;
++	gfp_t gfp_mask = mapping_gfp_mask(mapping);
++	struct page **pages = NULL;
++	struct ATTR_LIST_ENTRY *le;
++	struct ATTRIB *attr;
++	CLST vcn, cend, lcn, clen, end;
++	pgoff_t index;
++	u64 vbo;
++	u8 frame_bits;
++	u32 i, frame_size, pages_per_frame, bytes;
++	struct mft_inode *mi;
++	int err;
++
++	/* clusters for decompressed data*/
++	cend = bytes_to_cluster(sbi, i_size);
++
++	if (!i_size)
++		goto remove_wof;
++
++	/* check in advance */
++	if (cend > wnd_zeroes(&sbi->used.bitmap)) {
++		err = -ENOSPC;
++		goto out;
++	}
++
++	frame_bits = ni_ext_compress_bits(ni);
++	frame_size = 1u << frame_bits;
++	pages_per_frame = frame_size >> PAGE_SHIFT;
++	pages = ntfs_alloc(pages_per_frame * sizeof(struct page *), 1);
++	if (!pages) {
++		err = -ENOMEM;
++		goto out;
++	}
++
++	/*
++	 * Step 1: decompress data and copy to new allocated clusters
++	 */
++	index = 0;
++	for (vbo = 0; vbo < i_size; vbo += bytes) {
++		u32 nr_pages;
++		bool new;
++
++		if (vbo + frame_size > i_size) {
++			bytes = i_size - vbo;
++			nr_pages = (bytes + PAGE_SIZE - 1) >> PAGE_SHIFT;
++		} else {
++			nr_pages = pages_per_frame;
++			bytes = frame_size;
++		}
++
++		end = bytes_to_cluster(sbi, vbo + bytes);
++
++		for (vcn = vbo >> sbi->cluster_bits; vcn < end; vcn += clen) {
++			err = attr_data_get_block(ni, vcn, cend - vcn, &lcn,
++						  &clen, &new);
++			if (err)
++				goto out;
++		}
++
++		for (i = 0; i < pages_per_frame; i++, index++) {
++			struct page *pg;
++
++			pg = find_or_create_page(mapping, index, gfp_mask);
++			if (!pg) {
++				while (i--) {
++					unlock_page(pages[i]);
++					put_page(pages[i]);
++				}
++				err = -ENOMEM;
++				goto out;
++			}
++			pages[i] = pg;
++		}
++
++		err = ni_read_frame(ni, vbo, pages, pages_per_frame);
++
++		if (!err) {
++			down_read(&ni->file.run_lock);
++			err = ntfs_bio_pages(sbi, &ni->file.run, pages,
++					     nr_pages, vbo, bytes,
++					     REQ_OP_WRITE);
++			up_read(&ni->file.run_lock);
++		}
++
++		for (i = 0; i < pages_per_frame; i++) {
++			unlock_page(pages[i]);
++			put_page(pages[i]);
++		}
++
++		if (err)
++			goto out;
++
++		cond_resched();
++	}
++
++remove_wof:
++	/*
++	 * Step 2: deallocate attributes ATTR_DATA::WofCompressedData and ATTR_REPARSE
++	 */
++	attr = NULL;
++	le = NULL;
++	while ((attr = ni_enum_attr_ex(ni, attr, &le))) {
++		CLST svcn, evcn;
++		u32 asize, roff;
++
++		if (attr->type == ATTR_REPARSE) {
++			struct MFT_REF ref;
++
++			get_mi_ref(&ni->mi, &ref);
++			ntfs_remove_reparse(sbi, 0, &ref);
++		}
++
++		if (!attr->non_res)
++			continue;
++
++		if (attr->type != ATTR_REPARSE &&
++		    (attr->type != ATTR_DATA ||
++		     attr->name_len != ARRAY_SIZE(WOF_NAME) ||
++		     memcmp(attr_name(attr), WOF_NAME, sizeof(WOF_NAME))))
++			continue;
++
++		svcn = le64_to_cpu(attr->nres.svcn);
++		evcn = le64_to_cpu(attr->nres.evcn);
++
++		if (evcn + 1 <= svcn)
++			continue;
++
++		asize = le32_to_cpu(attr->size);
++		roff = le16_to_cpu(attr->nres.run_off);
++
++		/*run==1 means unpack and deallocate*/
++		run_unpack_ex(RUN_DEALLOCATE, sbi, ni->mi.rno, svcn, evcn, svcn,
++			      Add2Ptr(attr, roff), asize - roff);
++	}
++
++	/*
++	 * Step 3: remove attribute ATTR_DATA::WofCompressedData
++	 */
++	err = ni_remove_attr(ni, ATTR_DATA, WOF_NAME, ARRAY_SIZE(WOF_NAME),
++			     false, NULL);
++	if (err)
++		goto out;
++
++	/*
++	 * Step 4: remove ATTR_REPARSE
++	 */
++	err = ni_remove_attr(ni, ATTR_REPARSE, NULL, 0, false, NULL);
++	if (err)
++		goto out;
++
++	/*
++	 * Step 5: remove sparse flag from data attribute
++	 */
++	attr = ni_find_attr(ni, NULL, NULL, ATTR_DATA, NULL, 0, NULL, &mi);
++	if (!attr) {
++		err = -EINVAL;
++		goto out;
++	}
++
++	if (attr->non_res && is_attr_sparsed(attr)) {
++		/* sparsed attribute header is 8 bytes bigger than normal*/
++		struct MFT_REC *rec = mi->mrec;
++		u32 used = le32_to_cpu(rec->used);
++		u32 asize = le32_to_cpu(attr->size);
++		u16 roff = le16_to_cpu(attr->nres.run_off);
++		char *rbuf = Add2Ptr(attr, roff);
++
++		memmove(rbuf - 8, rbuf, used - PtrOffset(rec, rbuf));
++		attr->size = cpu_to_le32(asize - 8);
++		attr->flags &= ~ATTR_FLAG_SPARSED;
++		attr->nres.run_off = cpu_to_le16(roff - 8);
++		attr->nres.c_unit = 0;
++		rec->used = cpu_to_le32(used - 8);
++		mi->dirty = true;
++		ni->std_fa &= ~(FILE_ATTRIBUTE_SPARSE_FILE |
++				FILE_ATTRIBUTE_REPARSE_POINT);
++
++		mark_inode_dirty(inode);
++	}
++
++	/* clear cached flag */
++	ni->ni_flags &= ~NI_FLAG_COMPRESSED_MASK;
++	if (ni->file.offs_page) {
++		put_page(ni->file.offs_page);
++		ni->file.offs_page = NULL;
++	}
++	mapping->a_ops = &ntfs_aops;
++
++out:
++	ntfs_free(pages);
++	if (err) {
++		make_bad_inode(inode);
++		ntfs_set_state(sbi, NTFS_DIRTY_ERROR);
++	}
++
++	return err;
++}
++
++/* external compression lzx/xpress */
++static int decompress_lzx_xpress(struct ntfs_sb_info *sbi, const char *cmpr,
++				 size_t cmpr_size, void *unc, size_t unc_size,
++				 u32 frame_size)
++{
++	int err;
++	void *ctx;
++
++	if (cmpr_size == unc_size) {
++		/* frame not compressed */
++		memcpy(unc, cmpr, unc_size);
++		return 0;
++	}
++
++	err = 0;
++	ctx = NULL;
++	spin_lock(&sbi->compress.lock);
++	if (frame_size == 0x8000) {
++		/* LZX: frame compressed */
++		if (!sbi->compress.lzx) {
++			/* Lazy initialize lzx decompress context */
++			spin_unlock(&sbi->compress.lock);
++			ctx = lzx_allocate_decompressor(0x8000);
++			if (!ctx)
++				return -ENOMEM;
++			if (IS_ERR(ctx)) {
++				/* should never failed */
++				err = PTR_ERR(ctx);
++				goto out;
++			}
++
++			spin_lock(&sbi->compress.lock);
++			if (!sbi->compress.lzx) {
++				sbi->compress.lzx = ctx;
++				ctx = NULL;
++			}
++		}
++
++		if (lzx_decompress(sbi->compress.lzx, cmpr, cmpr_size, unc,
++				   unc_size)) {
++			err = -EINVAL;
++		}
++	} else {
++		/* XPRESS: frame compressed */
++		if (!sbi->compress.xpress) {
++			/* Lazy initialize xpress decompress context */
++			spin_unlock(&sbi->compress.lock);
++			ctx = xpress_allocate_decompressor();
++			if (!ctx)
++				return -ENOMEM;
++
++			spin_lock(&sbi->compress.lock);
++			if (!sbi->compress.xpress) {
++				sbi->compress.xpress = ctx;
++				ctx = NULL;
++			}
++		}
++
++		if (xpress_decompress(sbi->compress.xpress, cmpr, cmpr_size,
++				      unc, unc_size)) {
++			err = -EINVAL;
++		}
++	}
++	spin_unlock(&sbi->compress.lock);
++out:
++	ntfs_free(ctx);
++	return err;
++}
++#endif
++
 +/*
 + * ni_read_frame
 + *
@@ -3888,126 +4156,201 @@ index 000000000000..f8f762ccdbcc
 +{
 +	int err;
 +	struct ntfs_sb_info *sbi = ni->mi.sbi;
++	u8 cluster_bits = sbi->cluster_bits;
 +	char *frame_ondisk = NULL;
 +	char *frame_mem = NULL;
 +	struct page **pages_disk = NULL;
++	struct ATTR_LIST_ENTRY *le = NULL;
++	struct runs_tree *run = &ni->file.run;
 +	u64 valid_size = ni->i_valid;
-+	u32 frame_size;
++	u64 vbo_disk;
 +	size_t unc_size;
-+	u32 ondisk_size, i, npages_disk;
++	u32 frame_size, i, npages_disk, ondisk_size;
 +	struct page *pg;
 +	struct ATTRIB *attr;
 +	CLST frame, clst_data;
 +
-+	attr = ni_find_attr(ni, NULL, NULL, ATTR_DATA, NULL, 0, NULL, NULL);
++	/*
++	 * To simplify decompress algorithm do vmap for source and target pages
++	 */
++	for (i = 0; i < pages_per_frame; i++)
++		kmap(pages[i]);
++
++	frame_size = pages_per_frame << PAGE_SHIFT;
++	frame_mem = vmap(pages, pages_per_frame, VM_MAP, PAGE_KERNEL);
++	if (!frame_mem) {
++		err = -ENOMEM;
++		goto out;
++	}
++
++	attr = ni_find_attr(ni, NULL, &le, ATTR_DATA, NULL, 0, NULL, NULL);
 +	if (!attr) {
 +		err = -ENOENT;
-+		goto out;
++		goto out1;
 +	}
 +
 +	if (!attr->non_res) {
 +		u32 data_size = le32_to_cpu(attr->res.data_size);
-+		void *kaddr = kmap_atomic(pages[0]);
 +
-+		memset(kaddr, 0, PAGE_SIZE);
++		memset(frame_mem, 0, frame_size);
 +		if (frame_vbo < data_size) {
-+			err = data_size - frame_vbo;
-+			if (err > PAGE_SIZE)
-+				err = PAGE_SIZE;
-+			memcpy(kaddr, resident_data(attr) + frame_vbo, err);
++			ondisk_size = data_size - frame_vbo;
++			memcpy(frame_mem, resident_data(attr) + frame_vbo,
++			       min(ondisk_size, frame_size));
 +		}
-+		flush_dcache_page(pages[0]);
-+		kunmap_atomic(kaddr);
 +		err = 0;
-+		goto out;
++		goto out1;
 +	}
 +
 +	if (frame_vbo >= valid_size) {
-+all_zero:
-+		for (i = 0; i < pages_per_frame; i++)
-+			zero_user_segment(pages[i], 0, PAGE_SIZE);
++		memset(frame_mem, 0, frame_size);
 +		err = 0;
-+		goto out;
++		goto out1;
 +	}
 +
 +	if (ni->ni_flags & NI_FLAG_COMPRESSED_MASK) {
-+		u32 cmpr = ((ni->ni_flags & NI_FLAG_COMPRESSED_MASK) >> 8) - 1;
-+
-+		switch (cmpr) {
-+		case WOF_COMPRESSION_XPRESS4K:
-+			/* xpress 4k*/
-+			frame_size = 0x1000;
-+			break;
-+		case WOF_COMPRESSION_LZX:
-+			/* lzx 32k*/
-+			frame_size = 0x8000;
-+			break;
-+		case WOF_COMPRESSION_XPRESS8K:
-+			/* xpress 8k*/
-+			frame_size = 0x2000;
-+			break;
-+		case WOF_COMPRESSION_XPRESS16K:
-+			/* xpress 16k*/
-+			frame_size = 0x4000;
-+			break;
-+		}
-+		/* TODO: port lzx/xpress */
++#ifndef CONFIG_NTFS3_LZX_XPRESS
 +		err = -EOPNOTSUPP;
-+		goto out;
++		goto out1;
++#else
++		u32 frame_bits = ni_ext_compress_bits(ni);
++		u64 frame64 = frame_vbo >> frame_bits;
++		u64 frames, vbo_data;
++
++		if (frame_size != (1u << frame_bits)) {
++			err = -EINVAL;
++			goto out1;
++		}
++		switch (frame_size) {
++		case 0x1000:
++		case 0x2000:
++		case 0x4000:
++		case 0x8000:
++			break;
++		default:
++			/* unknown compression */
++			err = -EOPNOTSUPP;
++			goto out1;
++		}
++
++		attr = ni_find_attr(ni, attr, &le, ATTR_DATA, WOF_NAME,
++				    ARRAY_SIZE(WOF_NAME), NULL, NULL);
++		if (!attr) {
++			ntfs_inode_err(
++				&ni->vfs_inode,
++				"external compressed file should contains data attribute \"WofCompressedData\"");
++			err = -EINVAL;
++			goto out1;
++		}
++
++		if (!attr->non_res) {
++			run = NULL;
++		} else {
++			run = run_alloc();
++			if (!run) {
++				err = -ENOMEM;
++				goto out1;
++			}
++		}
++
++		frames = (ni->vfs_inode.i_size - 1) >> frame_bits;
++
++		err = attr_wof_frame_info(ni, attr, run, frame64, frames,
++					  frame_bits, &ondisk_size, &vbo_data);
++		if (err)
++			goto out2;
++
++		if (frame64 == frames) {
++			unc_size = 1 + ((ni->vfs_inode.i_size - 1) &
++					(frame_size - 1));
++			ondisk_size = attr_size(attr) - vbo_data;
++		} else {
++			unc_size = frame_size;
++		}
++
++		if (ondisk_size > frame_size) {
++			err = -EINVAL;
++			goto out2;
++		}
++
++		if (!attr->non_res) {
++			if (vbo_data + ondisk_size >
++			    le32_to_cpu(attr->res.data_size)) {
++				err = -EINVAL;
++				goto out1;
++			}
++
++			err = decompress_lzx_xpress(
++				sbi, Add2Ptr(resident_data(attr), vbo_data),
++				ondisk_size, frame_mem, unc_size, frame_size);
++			goto out1;
++		}
++		vbo_disk = vbo_data;
++		/* load all runs to read [vbo_disk-vbo_to) */
++		err = attr_wof_load_runs_range(ni, run, vbo_disk,
++					       vbo_data + ondisk_size);
++		if (err)
++			goto out2;
++		npages_disk = (ondisk_size + (vbo_disk & (PAGE_SIZE - 1)) +
++			       PAGE_SIZE - 1) >>
++			      PAGE_SHIFT;
++#endif
 +	} else if (is_attr_compressed(attr)) {
 +		/* lznt compression*/
 +		if (sbi->cluster_size > NTFS_LZNT_MAX_CLUSTER) {
 +			err = -EOPNOTSUPP;
-+			goto out;
++			goto out1;
 +		}
 +
 +		if (attr->nres.c_unit != NTFS_LZNT_CUNIT) {
 +			err = -EOPNOTSUPP;
-+			goto out;
++			goto out1;
 +		}
 +
 +		down_write(&ni->file.run_lock);
-+		run_truncate_around(&ni->file.run,
-+				    le64_to_cpu(attr->nres.svcn));
-+		frame = frame_vbo >> (sbi->cluster_bits + NTFS_LZNT_CUNIT);
++		run_truncate_around(run, le64_to_cpu(attr->nres.svcn));
++		frame = frame_vbo >> (cluster_bits + NTFS_LZNT_CUNIT);
 +		err = attr_is_frame_compressed(ni, attr, frame, &clst_data);
 +		up_write(&ni->file.run_lock);
 +		if (err)
-+			goto out;
++			goto out1;
 +
-+		if (!clst_data)
-+			goto all_zero;
++		if (!clst_data) {
++			memset(frame_mem, 0, frame_size);
++			goto out1;
++		}
 +
 +		frame_size = sbi->cluster_size << NTFS_LZNT_CUNIT;
-+		ondisk_size = clst_data << sbi->cluster_bits;
++		ondisk_size = clst_data << cluster_bits;
 +
 +		if (clst_data >= NTFS_LZNT_CLUSTERS) {
 +			/* frame is not compressed */
 +			down_read(&ni->file.run_lock);
-+			err = ntfs_bio_pages(sbi, &ni->file.run, pages,
-+					     pages_per_frame, frame_vbo,
-+					     ondisk_size, REQ_OP_READ);
++			err = ntfs_bio_pages(sbi, run, pages, pages_per_frame,
++					     frame_vbo, ondisk_size,
++					     REQ_OP_READ);
 +			up_read(&ni->file.run_lock);
-+			goto out;
++			goto out1;
 +		}
++		vbo_disk = frame_vbo;
++		npages_disk = (ondisk_size + PAGE_SIZE - 1) >> PAGE_SHIFT;
 +	} else {
 +		__builtin_unreachable();
 +		err = -EINVAL;
-+		goto out;
++		goto out1;
 +	}
 +
-+	npages_disk = (ondisk_size + PAGE_SIZE - 1) >> PAGE_SHIFT;
 +	pages_disk = ntfs_alloc(npages_disk * sizeof(struct page *), 1);
 +	if (!pages_disk) {
 +		err = -ENOMEM;
-+		goto out;
++		goto out2;
 +	}
 +
 +	for (i = 0; i < npages_disk; i++) {
 +		pg = alloc_page(GFP_KERNEL);
 +		if (!pg) {
 +			err = -ENOMEM;
-+			goto out1;
++			goto out3;
 +		}
 +		pages_disk[i] = pg;
 +		lock_page(pg);
@@ -4016,54 +4359,48 @@ index 000000000000..f8f762ccdbcc
 +
 +	/* read 'ondisk_size' bytes from disk */
 +	down_read(&ni->file.run_lock);
-+	err = ntfs_bio_pages(sbi, &ni->file.run, pages_disk, npages_disk,
-+			     frame_vbo, ondisk_size, REQ_OP_READ);
++	err = ntfs_bio_pages(sbi, run, pages_disk, npages_disk, vbo_disk,
++			     ondisk_size, REQ_OP_READ);
 +	up_read(&ni->file.run_lock);
 +	if (err)
-+		goto out1;
++		goto out3;
 +
 +	/*
 +	 * To simplify decompress algorithm do vmap for source and target pages
 +	 */
-+	frame_ondisk = vmap(pages_disk, npages_disk, VM_MAP, PAGE_KERNEL);
++	frame_ondisk = vmap(pages_disk, npages_disk, VM_MAP, PAGE_KERNEL_RO);
 +	if (!frame_ondisk) {
 +		err = -ENOMEM;
-+		goto out1;
-+	}
-+
-+	for (i = 0; i < pages_per_frame; i++)
-+		kmap(pages[i]);
-+
-+	frame_mem = vmap(pages, pages_per_frame, VM_MAP, PAGE_KERNEL);
-+	if (!frame_mem) {
-+		err = -ENOMEM;
-+		goto out2;
++		goto out3;
 +	}
 +
 +	/* decompress: frame_ondisk -> frame_mem */
-+	unc_size = decompress_lznt(frame_ondisk, ondisk_size, frame_mem,
-+				   frame_size);
++#ifdef CONFIG_NTFS3_LZX_XPRESS
++	if (run != &ni->file.run) {
++		/* LZX or XPRESS */
++		err = decompress_lzx_xpress(
++			sbi, frame_ondisk + (vbo_disk & (PAGE_SIZE - 1)),
++			ondisk_size, frame_mem, unc_size, frame_size);
++	} else
++#endif
++	{
++		/* LZNT - native ntfs compression */
++		unc_size = decompress_lznt(frame_ondisk, ondisk_size, frame_mem,
++					   frame_size);
++		if ((ssize_t)unc_size < 0)
++			err = unc_size;
++		else if (!unc_size || unc_size > frame_size)
++			err = -EINVAL;
++	}
++	if (!err && valid_size < frame_vbo + frame_size) {
++		size_t ok = valid_size - frame_vbo;
 +
-+	if ((ssize_t)unc_size < 0) {
-+		err = unc_size;
-+	} else if (!unc_size || unc_size > frame_size) {
-+		err = -EINVAL;
-+	} else {
-+		if (valid_size < frame_vbo + frame_size) {
-+			size_t ok = valid_size - frame_vbo;
-+
-+			memset(frame_mem + ok, 0, frame_size - ok);
-+		}
++		memset(frame_mem + ok, 0, frame_size - ok);
 +	}
 +
-+	vunmap(frame_mem);
-+out2:
-+	for (i = 0; i < pages_per_frame; i++) {
-+		pg = pages[i];
-+		kunmap(pg);
-+	}
 +	vunmap(frame_ondisk);
-+out1:
++
++out3:
 +	for (i = 0; i < npages_disk; i++) {
 +		pg = pages_disk[i];
 +		if (pg) {
@@ -4073,9 +4410,18 @@ index 000000000000..f8f762ccdbcc
 +		}
 +	}
 +	ntfs_free(pages_disk);
++
++out2:
++#ifdef CONFIG_NTFS3_LZX_XPRESS
++	if (run != &ni->file.run)
++		run_free(run);
++#endif
++out1:
++	vunmap(frame_mem);
 +out:
 +	for (i = 0; i < pages_per_frame; i++) {
 +		pg = pages[i];
++		kunmap(pg);
 +		ClearPageError(pg);
 +		SetPageUptodate(pg);
 +	}
@@ -4099,21 +4445,18 @@ index 000000000000..f8f762ccdbcc
 +	CLST frame = frame_vbo >> frame_bits;
 +	char *frame_ondisk = NULL;
 +	struct page **pages_disk = NULL;
++	struct ATTR_LIST_ENTRY *le = NULL;
 +	char *frame_mem;
 +	struct ATTRIB *attr;
++	struct mft_inode *mi;
 +	u32 i;
 +	struct page *pg;
 +	size_t compr_size, ondisk_size;
++	struct lznt *lznt;
 +
-+	attr = ni_find_attr(ni, NULL, NULL, ATTR_DATA, NULL, 0, NULL, NULL);
++	attr = ni_find_attr(ni, NULL, &le, ATTR_DATA, NULL, 0, NULL, &mi);
 +	if (!attr) {
 +		err = -ENOENT;
-+		goto out;
-+	}
-+
-+	if (!attr->non_res) {
-+		WARN_ON(1);
-+		err = 0;
 +		goto out;
 +	}
 +
@@ -4126,6 +4469,16 @@ index 000000000000..f8f762ccdbcc
 +	if (sbi->cluster_size > NTFS_LZNT_MAX_CLUSTER) {
 +		err = -EOPNOTSUPP;
 +		goto out;
++	}
++
++	if (!attr->non_res) {
++		down_write(&ni->file.run_lock);
++		err = attr_make_nonresident(ni, attr, le, mi,
++					    le32_to_cpu(attr->res.data_size),
++					    &ni->file.run, &attr, pages[0]);
++		up_write(&ni->file.run_lock);
++		if (err)
++			goto out;
 +	}
 +
 +	if (attr->nres.c_unit != NTFS_LZNT_CUNIT) {
@@ -4162,6 +4515,7 @@ index 000000000000..f8f762ccdbcc
 +	for (i = 0; i < pages_per_frame; i++)
 +		kmap(pages[i]);
 +
++	/* map in-memory frame for read-only */
 +	frame_mem = vmap(pages, pages_per_frame, VM_MAP, PAGE_KERNEL_RO);
 +	if (!frame_mem) {
 +		err = -ENOMEM;
@@ -4169,10 +4523,33 @@ index 000000000000..f8f762ccdbcc
 +	}
 +
 +	spin_lock(&sbi->compress.lock);
++	lznt = NULL;
++	if (!sbi->compress.lznt) {
++		spin_unlock(&sbi->compress.lock);
++		/*
++		 * lznt implements two levels of compression:
++		 * 0 - standard compression
++		 * 1 - best compression, requires a lot of cpu
++		 * use mount option?
++		 */
++		lznt = get_lznt_ctx(0);
++		if (!lznt) {
++			err = -ENOMEM;
++			goto out3;
++		}
++
++		spin_lock(&sbi->compress.lock);
++		if (!sbi->compress.lznt) {
++			sbi->compress.lznt = lznt;
++			lznt = NULL;
++		}
++	}
++
 +	/* compress: frame_mem -> frame_ondisk */
 +	compr_size = compress_lznt(frame_mem, frame_size, frame_ondisk,
-+				   frame_size, sbi->compress.ctx);
++				   frame_size, sbi->compress.lznt);
 +	spin_unlock(&sbi->compress.lock);
++	ntfs_free(lznt);
 +
 +	if (compr_size + sbi->cluster_size > frame_size) {
 +		/* frame is not compressed */
@@ -4204,6 +4581,7 @@ index 000000000000..f8f762ccdbcc
 +			     REQ_OP_WRITE);
 +	up_read(&ni->file.run_lock);
 +
++out3:
 +	vunmap(frame_mem);
 +
 +out2:
@@ -4477,10 +4855,10 @@ index 000000000000..f8f762ccdbcc
 +}
 diff --git a/fs/ntfs3/namei.c b/fs/ntfs3/namei.c
 new file mode 100644
-index 000000000000..860e65f6d384
+index 000000000000..e41d09dd419d
 --- /dev/null
 +++ b/fs/ntfs3/namei.c
-@@ -0,0 +1,576 @@
+@@ -0,0 +1,590 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + *
@@ -4592,7 +4970,7 @@ index 000000000000..860e65f6d384
 +	struct ntfs_inode *ni = ntfs_i(dir);
 +	struct inode *inode;
 +
-+	ni_lock(ni);
++	ni_lock_dir(ni);
 +
 +	err = ntfs_create_inode(dir, dentry, NULL, S_IFREG | mode, 0, NULL, 0,
 +				excl, NULL, &inode);
@@ -4619,9 +4997,9 @@ index 000000000000..860e65f6d384
 +	if (inode->i_nlink >= NTFS_LINK_MAX)
 +		return -EMLINK;
 +
-+	ni_lock(ni);
++	ni_lock_dir(ntfs_i(dir));
 +	if (inode != dir)
-+		ni_lock(ntfs_i(dir));
++		ni_lock(ni);
 +
 +	dir->i_ctime = dir->i_mtime = inode->i_ctime = current_time(inode);
 +	inc_nlink(inode);
@@ -4638,8 +5016,8 @@ index 000000000000..860e65f6d384
 +	}
 +
 +	if (inode != dir)
-+		ni_unlock(ntfs_i(dir));
-+	ni_unlock(ni);
++		ni_unlock(ni);
++	ni_unlock(ntfs_i(dir));
 +
 +	return err;
 +}
@@ -4654,7 +5032,7 @@ index 000000000000..860e65f6d384
 +	struct ntfs_inode *ni = ntfs_i(dir);
 +	int err;
 +
-+	ni_lock(ni);
++	ni_lock_dir(ni);
 +
 +	err = ntfs_unlink_inode(dir, dentry);
 +
@@ -4676,7 +5054,7 @@ index 000000000000..860e65f6d384
 +	struct inode *inode;
 +	struct ntfs_inode *ni = ntfs_i(dir);
 +
-+	ni_lock(ni);
++	ni_lock_dir(ni);
 +
 +	err = ntfs_create_inode(dir, dentry, NULL, S_IFLNK | 0777, 0, symname,
 +				size, 0, NULL, &inode);
@@ -4697,7 +5075,7 @@ index 000000000000..860e65f6d384
 +	struct inode *inode;
 +	struct ntfs_inode *ni = ntfs_i(dir);
 +
-+	ni_lock(ni);
++	ni_lock_dir(ni);
 +
 +	err = ntfs_create_inode(dir, dentry, NULL, S_IFDIR | mode, 0, NULL, -1,
 +				0, NULL, &inode);
@@ -4717,7 +5095,7 @@ index 000000000000..860e65f6d384
 +	struct ntfs_inode *ni = ntfs_i(dir);
 +	int err;
 +
-+	ni_lock(ni);
++	ni_lock_dir(ni);
 +
 +	err = ntfs_unlink_inode(dir, dentry);
 +
@@ -4738,9 +5116,9 @@ index 000000000000..860e65f6d384
 +	int err;
 +	struct super_block *sb = old_dir->i_sb;
 +	struct ntfs_sb_info *sbi = sb->s_fs_info;
-+	struct ntfs_inode *old_diri = ntfs_i(old_dir);
-+	struct ntfs_inode *new_diri = ntfs_i(new_dir);
-+	struct ntfs_inode *ni;
++	struct ntfs_inode *old_dir_ni = ntfs_i(old_dir);
++	struct ntfs_inode *new_dir_ni = ntfs_i(new_dir);
++	struct ntfs_inode *old_ni;
 +	struct ATTR_FILE_NAME *old_name, *new_name, *fname;
 +	u8 name_type;
 +	bool is_same;
@@ -4761,10 +5139,7 @@ index 000000000000..860e65f6d384
 +	old_inode = d_inode(old_dentry);
 +	new_inode = d_inode(new_dentry);
 +
-+	ni = ntfs_i(old_inode);
-+
-+	ni_lock(ni);
-+	ni_lock(old_diri);
++	old_ni = ntfs_i(old_inode);
 +
 +	is_same = old_dentry->d_name.len == new_dentry->d_name.len &&
 +		  !memcmp(old_dentry->d_name.name, new_dentry->d_name.name,
@@ -4773,38 +5148,35 @@ index 000000000000..860e65f6d384
 +	if (is_same && old_dir == new_dir) {
 +		/* Nothing to do */
 +		err = 0;
-+		goto out1;
++		goto out;
 +	}
 +
 +	if (ntfs_is_meta_file(sbi, old_inode->i_ino)) {
 +		err = -EINVAL;
-+		goto out1;
++		goto out;
 +	}
 +
 +	if (new_inode) {
 +		/*target name exists. unlink it*/
 +		dget(new_dentry);
-+		if (old_diri != new_diri)
-+			ni_lock(new_diri);
++		ni_lock_dir(new_dir_ni);
 +		err = ntfs_unlink_inode(new_dir, new_dentry);
-+		if (old_diri != new_diri)
-+			ni_unlock(new_diri);
-+
++		ni_unlock(new_dir_ni);
 +		dput(new_dentry);
 +		if (err)
-+			goto out1;
++			goto out;
 +	}
 +
 +	/* allocate PATH_MAX bytes */
 +	old_de = __getname();
 +	if (!old_de) {
 +		err = -ENOMEM;
-+		goto out1;
++		goto out;
 +	}
 +
 +	err = fill_name_de(sbi, old_de, &old_dentry->d_name, NULL);
 +	if (err < 0)
-+		goto out2;
++		goto out1;
 +
 +	old_name = (struct ATTR_FILE_NAME *)(old_de + 1);
 +
@@ -4814,17 +5186,20 @@ index 000000000000..860e65f6d384
 +		new_de = Add2Ptr(old_de, 1024);
 +		err = fill_name_de(sbi, new_de, &new_dentry->d_name, NULL);
 +		if (err < 0)
-+			goto out2;
++			goto out1;
 +	}
++
++	ni_lock_dir(old_dir_ni);
++	ni_lock(old_ni);
 +
 +	old_name->home.low = cpu_to_le32(old_dir->i_ino);
 +#ifdef NTFS3_64BIT_CLUSTER
 +	old_name->home.high = cpu_to_le16(old_dir->i_ino >> 32);
 +#endif
-+	old_name->home.seq = ntfs_i(old_dir)->mi.mrec->seq;
++	old_name->home.seq = old_dir_ni->mi.mrec->seq;
 +
 +	/*get pointer to file_name in mft*/
-+	fname = ni_fname_name(ni, (struct cpu_str *)&old_name->name_len,
++	fname = ni_fname_name(old_ni, (struct cpu_str *)&old_name->name_len,
 +			      &old_name->home, &le);
 +	if (!fname) {
 +		err = -EINVAL;
@@ -4838,36 +5213,38 @@ index 000000000000..860e65f6d384
 +	name_type = paired_name(fname->type);
 +
 +	/* remove first name from directory */
-+	err = indx_delete_entry(&old_diri->dir, old_diri, old_de + 1,
++	err = indx_delete_entry(&old_dir_ni->dir, old_dir_ni, old_de + 1,
 +				le16_to_cpu(old_de->key_size), sbi);
 +	if (err)
 +		goto out3;
 +
 +	/* remove first name from mft */
-+	err = ni_remove_attr_le(ni, attr_from_name(fname), le);
++	err = ni_remove_attr_le(old_ni, attr_from_name(fname), le);
 +	if (err)
 +		goto out4;
 +
-+	le16_add_cpu(&ni->mi.mrec->hard_links, -1);
-+	ni->mi.dirty = true;
++	le16_add_cpu(&old_ni->mi.mrec->hard_links, -1);
++	old_ni->mi.dirty = true;
 +
 +	if (name_type != FILE_NAME_POSIX) {
 +		/* get paired name */
-+		fname = ni_fname_type(ni, name_type, &le);
++		fname = ni_fname_type(old_ni, name_type, &le);
 +		if (fname) {
 +			/* remove second name from directory */
-+			err = indx_delete_entry(&old_diri->dir, old_diri, fname,
-+						fname_full_size(fname), sbi);
++			err = indx_delete_entry(&old_dir_ni->dir, old_dir_ni,
++						fname, fname_full_size(fname),
++						sbi);
 +			if (err)
 +				goto out5;
 +
 +			/* remove second name from mft */
-+			err = ni_remove_attr_le(ni, attr_from_name(fname), le);
++			err = ni_remove_attr_le(old_ni, attr_from_name(fname),
++						le);
 +			if (err)
 +				goto out6;
 +
-+			le16_add_cpu(&ni->mi.mrec->hard_links, -1);
-+			ni->mi.dirty = true;
++			le16_add_cpu(&old_ni->mi.mrec->hard_links, -1);
++			old_ni->mi.dirty = true;
 +		}
 +	}
 +
@@ -4877,7 +5254,7 @@ index 000000000000..860e65f6d384
 +	new_de->ref.high = cpu_to_le16(old_inode->i_ino >> 32);
 +	new_name->home.high = cpu_to_le16(new_dir->i_ino >> 32);
 +#endif
-+	new_de->ref.seq = ni->mi.mrec->seq;
++	new_de->ref.seq = old_ni->mi.mrec->seq;
 +
 +	new_name->home.low = cpu_to_le32(new_dir->i_ino);
 +	new_name->home.seq = ntfs_i(new_dir)->mi.mrec->seq;
@@ -4885,8 +5262,8 @@ index 000000000000..860e65f6d384
 +	new_de_key_size = le16_to_cpu(new_de->key_size);
 +
 +	/* insert new name in mft */
-+	err = ni_insert_resident(ni, new_de_key_size, ATTR_NAME, NULL, 0, &attr,
-+				 NULL);
++	err = ni_insert_resident(old_ni, new_de_key_size, ATTR_NAME, NULL, 0,
++				 &attr, NULL);
 +	if (err)
 +		goto out7;
 +
@@ -4894,11 +5271,12 @@ index 000000000000..860e65f6d384
 +
 +	memcpy(Add2Ptr(attr, SIZEOF_RESIDENT), new_name, new_de_key_size);
 +
-+	le16_add_cpu(&ni->mi.mrec->hard_links, 1);
-+	ni->mi.dirty = true;
++	le16_add_cpu(&old_ni->mi.mrec->hard_links, 1);
++	old_ni->mi.dirty = true;
 +
 +	/* insert new name in directory */
-+	err = indx_insert_entry(&new_diri->dir, new_diri, new_de, sbi, NULL);
++	err = indx_insert_entry(&new_dir_ni->dir, new_dir_ni, new_de, sbi,
++				NULL);
 +	if (err)
 +		goto out8;
 +
@@ -4924,27 +5302,41 @@ index 000000000000..860e65f6d384
 +	}
 +
 +	err = 0;
++	/* normal way */
 +	goto out2;
 +
 +out8:
-+	mi_remove_attr(&ni->mi, attr);
-+
++	/* undo
++	 * ni_insert_resident(old_ni, new_de_key_size, ATTR_NAME, NULL, 0,
++	 *			 &attr, NULL);
++	 */
++	mi_remove_attr(&old_ni->mi, attr);
 +out7:
++	/* undo
++	 * ni_remove_attr_le(old_ni, attr_from_name(fname), le);
++	 */
 +out6:
++	/* undo
++	 * indx_delete_entry(&old_dir_ni->dir, old_dir_ni,
++	 *					fname, fname_full_size(fname),
++	 *					sbi);
++	 */
 +out5:
++	/* undo
++	 * ni_remove_attr_le(old_ni, attr_from_name(fname), le);
++	 */
 +out4:
-+	/* Undo:
-+	 *err = indx_delete_entry(&old_diri->dir, old_diri, old_de + 1,
++	/* undo:
++	 * indx_delete_entry(&old_dir_ni->dir, old_dir_ni, old_de + 1,
 +	 *			old_de->key_size, NULL);
 +	 */
-+
 +out3:
 +out2:
-+	__putname(old_de);
++	ni_unlock(old_ni);
++	ni_unlock(old_dir_ni);
 +out1:
-+	ni_unlock(old_diri);
-+	ni_unlock(ni);
-+
++	__putname(old_de);
++out:
 +	return err;
 +}
 +
@@ -4973,7 +5365,7 @@ index 000000000000..860e65f6d384
 +	if (err < 0)
 +		goto out;
 +
-+	ni_lock(ni);
++	ni_lock_dir(ni);
 +
 +	if (d_in_lookup(dentry)) {
 +		fnd = fnd_get(&ntfs_i(dir)->dir);
@@ -5059,10 +5451,10 @@ index 000000000000..860e65f6d384
 +};
 diff --git a/fs/ntfs3/record.c b/fs/ntfs3/record.c
 new file mode 100644
-index 000000000000..f79756a955be
+index 000000000000..cca71ca82657
 --- /dev/null
 +++ b/fs/ntfs3/record.c
-@@ -0,0 +1,613 @@
+@@ -0,0 +1,614 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + *
@@ -5587,6 +5979,7 @@ index 000000000000..f79756a955be
 +	return true;
 +}
 +
++/* bytes = "new attribute size" - "old attribute size" */
 +bool mi_resize_attr(struct mft_inode *mi, struct ATTRIB *attr, int bytes)
 +{
 +	struct MFT_REC *rec = mi->mrec;
@@ -5678,10 +6071,10 @@ index 000000000000..f79756a955be
 +}
 diff --git a/fs/ntfs3/run.c b/fs/ntfs3/run.c
 new file mode 100644
-index 000000000000..85321249e592
+index 000000000000..32d43ecb58fd
 --- /dev/null
 +++ b/fs/ntfs3/run.c
-@@ -0,0 +1,1190 @@
+@@ -0,0 +1,1192 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + *
@@ -5997,7 +6390,8 @@ index 000000000000..85321249e592
 + * run to be added may overlap with existing location.
 + * returns false if of memory
 + */
-+bool run_add_entry(struct runs_tree *run, CLST vcn, CLST lcn, CLST len)
++bool run_add_entry(struct runs_tree *run, CLST vcn, CLST lcn, CLST len,
++		   bool is_mft)
 +{
 +	size_t used, index;
 +	struct ntfs_run *r;
@@ -6067,8 +6461,7 @@ index 000000000000..85321249e592
 +				bytes = run->allocated + (16 * PAGE_SIZE);
 +			}
 +
-+			//BUG_ON(bytes > NTFS3_RUN_MAX_BYTES);
-+			WARN_ON(bytes > NTFS3_RUN_MAX_BYTES);
++			WARN_ON(!is_mft && bytes > NTFS3_RUN_MAX_BYTES);
 +
 +			new_ptr = ntfs_alloc(bytes, 0);
 +
@@ -6159,7 +6552,7 @@ index 000000000000..85321249e592
 +	 * I have to add extra range a tail.
 +	 */
 +	if (should_add_tail &&
-+	    !run_add_entry(run, tail_vcn, tail_lcn, tail_len))
++	    !run_add_entry(run, tail_vcn, tail_lcn, tail_len, is_mft))
 +		return false;
 +
 +	return true;
@@ -6477,6 +6870,7 @@ index 000000000000..85321249e592
 +{
 +	u64 prev_lcn, vcn64, lcn, next_vcn;
 +	const u8 *run_last, *run_0;
++	bool is_mft = ino == MFT_REC_MFT;
 +
 +	/* Check for empty */
 +	if (evcn + 1 == svcn)
@@ -6658,17 +7052,18 @@ index 000000000000..85321249e592
 +
 +		if (!run)
 +			; /* called from check_attr(fslog.c) to check run */
-+		else if ((size_t)run == 1) {
++		else if (run == RUN_DEALLOCATE) {
 +			/* called from ni_delete_all to free clusters without storing in run */
 +			if (lcn != SPARSE_LCN)
 +				mark_as_free_ex(sbi, lcn, len, true);
 +		} else if (vcn64 >= vcn) {
-+			if (!run_add_entry(run, vcn64, lcn, len))
++			if (!run_add_entry(run, vcn64, lcn, len, is_mft))
 +				return -ENOMEM;
 +		} else if (next_vcn > vcn) {
 +			u64 dlen = vcn - vcn64;
 +
-+			if (!run_add_entry(run, vcn, lcn + dlen, len - dlen))
++			if (!run_add_entry(run, vcn, lcn + dlen, len - dlen,
++					   is_mft))
 +				return -ENOMEM;
 +		}
 +
@@ -6707,7 +7102,7 @@ index 000000000000..85321249e592
 +	if (ret < 0)
 +		return ret;
 +
-+	if (!sbi->used.bitmap.sb || !run || (size_t)run == 1)
++	if (!sbi->used.bitmap.sb || !run || run == RUN_DEALLOCATE)
 +		return ret;
 +
 +	if (ino == MFT_REC_BADCLUST)
@@ -6872,3 +7267,7 @@ index 000000000000..85321249e592
 +	*highest_vcn = vcn64 - 1;
 +	return 0;
 +}
+-- 
+2.25.4
+
+

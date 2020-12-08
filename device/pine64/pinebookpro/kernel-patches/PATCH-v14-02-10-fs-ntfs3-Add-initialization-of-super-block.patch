@@ -1,9 +1,89 @@
+From mboxrd@z Thu Jan  1 00:00:00 1970
+Return-Path: <linux-kernel-owner@kernel.org>
+X-Spam-Checker-Version: SpamAssassin 3.4.0 (2014-02-07) on
+	aws-us-west-2-korg-lkml-1.web.codeaurora.org
+X-Spam-Level: 
+X-Spam-Status: No, score=-18.8 required=3.0 tests=BAYES_00,DKIM_SIGNED,
+	DKIM_VALID,DKIM_VALID_AU,HEADER_FROM_DIFFERENT_DOMAINS,INCLUDES_CR_TRAILER,
+	INCLUDES_PATCH,MAILING_LIST_MULTI,SPF_HELO_NONE,SPF_PASS,URIBL_BLOCKED,
+	USER_AGENT_GIT autolearn=ham autolearn_force=no version=3.4.0
+Received: from mail.kernel.org (mail.kernel.org [198.145.29.99])
+	by smtp.lore.kernel.org (Postfix) with ESMTP id 47B4FC1B0D9
+	for <linux-kernel@archiver.kernel.org>; Fri,  4 Dec 2020 15:49:26 +0000 (UTC)
+Received: from vger.kernel.org (vger.kernel.org [23.128.96.18])
+	by mail.kernel.org (Postfix) with ESMTP id 12D9E22C9C
+	for <linux-kernel@archiver.kernel.org>; Fri,  4 Dec 2020 15:49:26 +0000 (UTC)
+Received: (majordomo@vger.kernel.org) by vger.kernel.org via listexpand
+        id S1730807AbgLDPs7 (ORCPT
+        <rfc822;linux-kernel@archiver.kernel.org>);
+        Fri, 4 Dec 2020 10:48:59 -0500
+Received: from relayfre-01.paragon-software.com ([176.12.100.13]:55210 "EHLO
+        relayfre-01.paragon-software.com" rhost-flags-OK-OK-OK-OK)
+        by vger.kernel.org with ESMTP id S1730497AbgLDPs4 (ORCPT
+        <rfc822;linux-kernel@vger.kernel.org>);
+        Fri, 4 Dec 2020 10:48:56 -0500
+Received: from dlg2.mail.paragon-software.com (vdlg-exch-02.paragon-software.com [172.30.1.105])
+        by relayfre-01.paragon-software.com (Postfix) with ESMTPS id 2F7AF1D2D;
+        Fri,  4 Dec 2020 18:48:07 +0300 (MSK)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=paragon-software.com; s=mail; t=1607096887;
+        bh=UzZrLzB+qcyDrnPJLsujLosIxI4A6el31A6itemIrFE=;
+        h=From:To:CC:Subject:Date:In-Reply-To:References;
+        b=NTGINcyEx+Shnt+gQMmOT5Li4+4zwng30xpIFSZUnjJaebsJMmCmTnJNWCThsQZI6
+         0+NN+jb+D5K1b2zI9zg0oMM/EAYknZw+QIj2vnfICk5tg1C0N3XR+ku5pzNI1wcCxN
+         rRDow7j5eG97TBIsS4Nclv0XpRJZ7gGDYPkDmGIg=
+Received: from fsd-lkpg.ufsd.paragon-software.com (172.30.114.105) by
+ vdlg-exch-02.paragon-software.com (172.30.1.105) with Microsoft SMTP Server
+ (version=TLS1_2, cipher=TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256) id
+ 15.1.1847.3; Fri, 4 Dec 2020 18:48:06 +0300
+From:   Konstantin Komarov <almaz.alexandrovich@paragon-software.com>
+To:     <linux-fsdevel@vger.kernel.org>
+CC:     <viro@zeniv.linux.org.uk>, <linux-kernel@vger.kernel.org>,
+        <pali@kernel.org>, <dsterba@suse.cz>, <aaptel@suse.com>,
+        <willy@infradead.org>, <rdunlap@infradead.org>, <joe@perches.com>,
+        <mark@harmstone.com>, <nborisov@suse.com>,
+        <linux-ntfs-dev@lists.sourceforge.net>, <anton@tuxera.com>,
+        <dan.carpenter@oracle.com>, <hch@lst.de>, <ebiggers@kernel.org>,
+        Konstantin Komarov <almaz.alexandrovich@paragon-software.com>
+Subject: [PATCH v14 02/10] fs/ntfs3: Add initialization of super block
+Date:   Fri, 4 Dec 2020 18:45:52 +0300
+Message-ID: <20201204154600.1546096-3-almaz.alexandrovich@paragon-software.com>
+X-Mailer: git-send-email 2.25.4
+In-Reply-To: <20201204154600.1546096-1-almaz.alexandrovich@paragon-software.com>
+References: <20201204154600.1546096-1-almaz.alexandrovich@paragon-software.com>
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+Content-Type: text/plain
+X-Originating-IP: [172.30.114.105]
+X-ClientProxiedBy: vdlg-exch-02.paragon-software.com (172.30.1.105) To
+ vdlg-exch-02.paragon-software.com (172.30.1.105)
+Precedence: bulk
+List-ID: <linux-kernel.vger.kernel.org>
+X-Mailing-List: linux-kernel@vger.kernel.org
+Archived-At: <https://lore.kernel.org/lkml/20201204154600.1546096-3-almaz.alexandrovich@paragon-software.com/>
+List-Archive: <https://lore.kernel.org/lkml/>
+List-Post: <mailto:linux-kernel@vger.kernel.org>
+
+This adds initialization of super block
+
+Signed-off-by: Konstantin Komarov <almaz.alexandrovich@paragon-software.com>
+---
+ fs/ntfs3/fsntfs.c | 2528 ++++++++++++++++++++++++++++++++++++++++++
+ fs/ntfs3/index.c  | 2665 +++++++++++++++++++++++++++++++++++++++++++++
+ fs/ntfs3/inode.c  | 2056 ++++++++++++++++++++++++++++++++++
+ fs/ntfs3/super.c  | 1464 +++++++++++++++++++++++++
+ 4 files changed, 8713 insertions(+)
+ create mode 100644 fs/ntfs3/fsntfs.c
+ create mode 100644 fs/ntfs3/index.c
+ create mode 100644 fs/ntfs3/inode.c
+ create mode 100644 fs/ntfs3/super.c
+
 diff --git a/fs/ntfs3/fsntfs.c b/fs/ntfs3/fsntfs.c
 new file mode 100644
-index 000000000000..a75b48e0c003
+index 000000000000..d7614749dd7e
 --- /dev/null
 +++ b/fs/ntfs3/fsntfs.c
-@@ -0,0 +1,2565 @@
+@@ -0,0 +1,2528 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + *
@@ -20,134 +100,91 @@ index 000000000000..a75b48e0c003
 +#include "ntfs.h"
 +#include "ntfs_fs.h"
 +
++// clang-format off
 +const struct cpu_str NAME_MFT = {
-+	4,
-+	0,
-+	{ '$', 'M', 'F', 'T' },
++	4, 0, { '$', 'M', 'F', 'T' },
 +};
 +const struct cpu_str NAME_MIRROR = {
-+	8,
-+	0,
-+	{ '$', 'M', 'F', 'T', 'M', 'i', 'r', 'r' },
++	8, 0, { '$', 'M', 'F', 'T', 'M', 'i', 'r', 'r' },
 +};
 +const struct cpu_str NAME_LOGFILE = {
-+	8,
-+	0,
-+	{ '$', 'L', 'o', 'g', 'F', 'i', 'l', 'e' },
++	8, 0, { '$', 'L', 'o', 'g', 'F', 'i', 'l', 'e' },
 +};
 +const struct cpu_str NAME_VOLUME = {
-+	7,
-+	0,
-+	{ '$', 'V', 'o', 'l', 'u', 'm', 'e' },
++	7, 0, { '$', 'V', 'o', 'l', 'u', 'm', 'e' },
 +};
 +const struct cpu_str NAME_ATTRDEF = {
-+	8,
-+	0,
-+	{ '$', 'A', 't', 't', 'r', 'D', 'e', 'f' },
++	8, 0, { '$', 'A', 't', 't', 'r', 'D', 'e', 'f' },
 +};
 +const struct cpu_str NAME_ROOT = {
-+	1,
-+	0,
-+	{ '.' },
++	1, 0, { '.' },
 +};
 +const struct cpu_str NAME_BITMAP = {
-+	7,
-+	0,
-+	{ '$', 'B', 'i', 't', 'm', 'a', 'p' },
++	7, 0, { '$', 'B', 'i', 't', 'm', 'a', 'p' },
 +};
 +const struct cpu_str NAME_BOOT = {
-+	5,
-+	0,
-+	{ '$', 'B', 'o', 'o', 't' },
++	5, 0, { '$', 'B', 'o', 'o', 't' },
 +};
 +const struct cpu_str NAME_BADCLUS = {
-+	8,
-+	0,
-+	{ '$', 'B', 'a', 'd', 'C', 'l', 'u', 's' },
++	8, 0, { '$', 'B', 'a', 'd', 'C', 'l', 'u', 's' },
 +};
 +const struct cpu_str NAME_QUOTA = {
-+	6,
-+	0,
-+	{ '$', 'Q', 'u', 'o', 't', 'a' },
++	6, 0, { '$', 'Q', 'u', 'o', 't', 'a' },
 +};
 +const struct cpu_str NAME_SECURE = {
-+	7,
-+	0,
-+	{ '$', 'S', 'e', 'c', 'u', 'r', 'e' },
++	7, 0, { '$', 'S', 'e', 'c', 'u', 'r', 'e' },
 +};
 +const struct cpu_str NAME_UPCASE = {
-+	7,
-+	0,
-+	{ '$', 'U', 'p', 'C', 'a', 's', 'e' },
++	7, 0, { '$', 'U', 'p', 'C', 'a', 's', 'e' },
 +};
 +const struct cpu_str NAME_EXTEND = {
-+	7,
-+	0,
-+	{ '$', 'E', 'x', 't', 'e', 'n', 'd' },
++	7, 0, { '$', 'E', 'x', 't', 'e', 'n', 'd' },
 +};
 +const struct cpu_str NAME_OBJID = {
-+	6,
-+	0,
-+	{ '$', 'O', 'b', 'j', 'I', 'd' },
++	6, 0, { '$', 'O', 'b', 'j', 'I', 'd' },
 +};
 +const struct cpu_str NAME_REPARSE = {
-+	8,
-+	0,
-+	{ '$', 'R', 'e', 'p', 'a', 'r', 's', 'e' },
++	8, 0, { '$', 'R', 'e', 'p', 'a', 'r', 's', 'e' },
 +};
 +const struct cpu_str NAME_USNJRNL = {
-+	8,
-+	0,
-+	{ '$', 'U', 's', 'n', 'J', 'r', 'n', 'l' },
++	8, 0, { '$', 'U', 's', 'n', 'J', 'r', 'n', 'l' },
 +};
 +const __le16 BAD_NAME[4] = {
-+	cpu_to_le16('$'),
-+	cpu_to_le16('B'),
-+	cpu_to_le16('a'),
-+	cpu_to_le16('d'),
++	cpu_to_le16('$'), cpu_to_le16('B'), cpu_to_le16('a'), cpu_to_le16('d'),
 +};
 +const __le16 I30_NAME[4] = {
-+	cpu_to_le16('$'),
-+	cpu_to_le16('I'),
-+	cpu_to_le16('3'),
-+	cpu_to_le16('0'),
++	cpu_to_le16('$'), cpu_to_le16('I'), cpu_to_le16('3'), cpu_to_le16('0'),
 +};
 +const __le16 SII_NAME[4] = {
-+	cpu_to_le16('$'),
-+	cpu_to_le16('S'),
-+	cpu_to_le16('I'),
-+	cpu_to_le16('I'),
++	cpu_to_le16('$'), cpu_to_le16('S'), cpu_to_le16('I'), cpu_to_le16('I'),
 +};
 +const __le16 SDH_NAME[4] = {
-+	cpu_to_le16('$'),
-+	cpu_to_le16('S'),
-+	cpu_to_le16('D'),
-+	cpu_to_le16('H'),
++	cpu_to_le16('$'), cpu_to_le16('S'), cpu_to_le16('D'), cpu_to_le16('H'),
 +};
 +const __le16 SDS_NAME[4] = {
-+	cpu_to_le16('$'),
-+	cpu_to_le16('S'),
-+	cpu_to_le16('D'),
-+	cpu_to_le16('S'),
++	cpu_to_le16('$'), cpu_to_le16('S'), cpu_to_le16('D'), cpu_to_le16('S'),
 +};
 +const __le16 SO_NAME[2] = {
-+	cpu_to_le16('$'),
-+	cpu_to_le16('O'),
++	cpu_to_le16('$'), cpu_to_le16('O'),
 +};
 +const __le16 SQ_NAME[2] = {
-+	cpu_to_le16('$'),
-+	cpu_to_le16('Q'),
++	cpu_to_le16('$'), cpu_to_le16('Q'),
 +};
 +const __le16 SR_NAME[2] = {
-+	cpu_to_le16('$'),
-+	cpu_to_le16('R'),
++	cpu_to_le16('$'), cpu_to_le16('R'),
 +};
-+//const __le16 EFS_NAME[4] = { '$', 'E', 'F', 'S' };
 +
-+//const __le16 WOF_NAME[17] = { 'W', 'o', 'f', 'C', 'o', 'm', 'p', 'r', 'e',
-+//			      'S', 'S', 'e', 'd', 'D', 'a', 't', 'a' };
-+//const __le16 J_NAME[2] = { '$', 'J' };
-+//const __le16 MAX_NAME[4] = { '$', 'M', 'a', 'x' };
++#ifdef CONFIG_NTFS3_LZX_XPRESS
++const __le16 WOF_NAME[17] = {
++	cpu_to_le16('W'), cpu_to_le16('o'), cpu_to_le16('f'), cpu_to_le16('C'),
++	cpu_to_le16('o'), cpu_to_le16('m'), cpu_to_le16('p'), cpu_to_le16('r'),
++	cpu_to_le16('e'), cpu_to_le16('s'), cpu_to_le16('s'), cpu_to_le16('e'),
++	cpu_to_le16('d'), cpu_to_le16('D'), cpu_to_le16('a'), cpu_to_le16('t'),
++	cpu_to_le16('a'),
++};
++#endif
++
++// clang-format on
 +
 +/*
 + * ntfs_fix_pre_write
@@ -999,7 +1036,7 @@ index 000000000000..a75b48e0c003
 +	if (!ni)
 +		return -EINVAL;
 +
-+	inode_lock(&ni->vfs_inode);
++	mutex_lock_nested(&ni->ni_lock, NTFS_INODE_MUTEX_DIRTY);
 +
 +	attr = ni_find_attr(ni, NULL, NULL, ATTR_VOL_INFO, NULL, 0, NULL, &mi);
 +	if (!attr) {
@@ -1031,7 +1068,7 @@ index 000000000000..a75b48e0c003
 +	err = 0;
 +
 +out:
-+	inode_unlock(&ni->vfs_inode);
++	ni_unlock(ni);
 +	if (err)
 +		return err;
 +
@@ -1529,7 +1566,7 @@ index 000000000000..a75b48e0c003
 +	struct block_device *bdev = sb->s_bdev;
 +	struct page *page;
 +	u8 cluster_bits = sbi->cluster_bits;
-+	CLST lcn, clen, vcn = vbo >> cluster_bits;
++	CLST lcn, clen, vcn;
 +	u32 add, off, page_idx;
 +	u64 lbo, len;
 +	size_t run_idx;
@@ -1540,6 +1577,12 @@ index 000000000000..a75b48e0c003
 +
 +	blk_start_plug(&plug);
 +
++	/* align vbo and bytes to be 512 bytes aligned */
++	lbo = (vbo + bytes + 511) & ~511ull;
++	vbo = vbo & ~511ull;
++	bytes = lbo - vbo;
++
++	vcn = vbo >> cluster_bits;
 +	if (!run_lookup_entry(run, vcn, &lcn, &clen, &run_idx)) {
 +		err = -ENOENT;
 +		goto out;
@@ -1820,7 +1863,7 @@ index 000000000000..a75b48e0c003
 +	if (sd->Sbz1)
 +		return false;
 +
-+	if (!(sd->Control & cpu_to_le16(SE_SELF_RELATIVE)))
++	if (!(sd->Control & SE_SELF_RELATIVE))
 +		return false;
 +
 +	sd_owner = le32_to_cpu(sd->Owner);
@@ -2019,7 +2062,7 @@ index 000000000000..a75b48e0c003
 +
 +	*sd = NULL;
 +
-+	inode_lock_shared(&ni->vfs_inode);
++	mutex_lock_nested(&ni->ni_lock, NTFS_INODE_MUTEX_SECURITY);
 +
 +	fnd_sii = fnd_get(indx);
 +	if (!fnd_sii) {
@@ -2088,7 +2131,7 @@ index 000000000000..a75b48e0c003
 +out:
 +	ntfs_free(p);
 +	fnd_put(fnd_sii);
-+	inode_unlock_shared(&ni->vfs_inode);
++	ni_unlock(ni);
 +
 +	return err;
 +}
@@ -2142,7 +2185,7 @@ index 000000000000..a75b48e0c003
 +	if (!d_security)
 +		return -ENOMEM;
 +
-+	inode_lock(&ni->vfs_inode);
++	mutex_lock_nested(&ni->ni_lock, NTFS_INODE_MUTEX_SECURITY);
 +
 +	fnd_sdh = fnd_get(indx_sdh);
 +	if (!fnd_sdh) {
@@ -2301,7 +2344,7 @@ index 000000000000..a75b48e0c003
 +out:
 +	fnd_put(fnd_sdh);
 +	mark_inode_dirty(&ni->vfs_inode);
-+	inode_unlock(&ni->vfs_inode);
++	ni_unlock(ni);
 +	ntfs_free(d_security);
 +
 +	return err;
@@ -2396,12 +2439,12 @@ index 000000000000..a75b48e0c003
 +	if (!ni)
 +		return -EINVAL;
 +
-+	inode_lock(&ni->vfs_inode);
++	mutex_lock_nested(&ni->ni_lock, NTFS_INODE_MUTEX_OBJID);
 +
 +	err = indx_delete_entry(indx, ni, guid, sizeof(*guid), NULL);
 +
 +	mark_inode_dirty(&ni->vfs_inode);
-+	inode_unlock(&ni->vfs_inode);
++	ni_unlock(ni);
 +
 +	return err;
 +}
@@ -2419,19 +2462,19 @@ index 000000000000..a75b48e0c003
 +
 +	memset(&re, 0, sizeof(re));
 +
-+	re.de.view.data_off = cpu_to_le16(SIZEOF_R_DIRENTRY);
-+	re.de.size = cpu_to_le16(QuadAlign(SIZEOF_R_DIRENTRY));
++	re.de.view.data_off = cpu_to_le16(offsetof(struct NTFS_DE_R, zero));
++	re.de.size = cpu_to_le16(sizeof(struct NTFS_DE_R));
 +	re.de.key_size = cpu_to_le16(sizeof(re.key));
 +
 +	re.key.ReparseTag = rtag;
 +	memcpy(&re.key.ref, ref, sizeof(*ref));
 +
-+	inode_lock(&ni->vfs_inode);
++	mutex_lock_nested(&ni->ni_lock, NTFS_INODE_MUTEX_REPARSE);
 +
 +	err = indx_insert_entry(indx, ni, &re.de, NULL, NULL);
 +
 +	mark_inode_dirty(&ni->vfs_inode);
-+	inode_unlock(&ni->vfs_inode);
++	ni_unlock(ni);
 +
 +	return err;
 +}
@@ -2453,7 +2496,7 @@ index 000000000000..a75b48e0c003
 +	rkey.ReparseTag = rtag;
 +	rkey.ref = *ref;
 +
-+	inode_lock(&ni->vfs_inode);
++	mutex_lock_nested(&ni->ni_lock, NTFS_INODE_MUTEX_REPARSE);
 +
 +	if (rtag) {
 +		err = indx_delete_entry(indx, ni, &rkey, sizeof(rkey), NULL);
@@ -2497,7 +2540,7 @@ index 000000000000..a75b48e0c003
 +
 +out1:
 +	mark_inode_dirty(&ni->vfs_inode);
-+	inode_unlock(&ni->vfs_inode);
++	ni_unlock(ni);
 +
 +	return err;
 +}
@@ -5242,10 +5285,10 @@ index 000000000000..b7caeb3da500
 +}
 diff --git a/fs/ntfs3/inode.c b/fs/ntfs3/inode.c
 new file mode 100644
-index 000000000000..79160d00120d
+index 000000000000..13116e68f9f6
 --- /dev/null
 +++ b/fs/ntfs3/inode.c
-@@ -0,0 +1,2030 @@
+@@ -0,0 +1,2056 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + *
@@ -5310,7 +5353,7 @@ index 000000000000..79160d00120d
 +		sbi->mft.ni = ni;
 +		init_rwsem(&ni->file.run_lock);
 +
-+		if (!run_add_entry(&ni->file.run, 0, t64, t32)) {
++		if (!run_add_entry(&ni->file.run, 0, t64, t32, true)) {
 +			err = -ENOMEM;
 +			goto out;
 +		}
@@ -5763,6 +5806,7 @@ index 000000000000..79160d00120d
 +	struct super_block *sb = inode->i_sb;
 +	struct ntfs_sb_info *sbi = sb->s_fs_info;
 +	struct ntfs_inode *ni = ntfs_i(inode);
++	struct page *page = bh->b_page;
 +	u8 cluster_bits = sbi->cluster_bits;
 +	u32 block_size = sb->s_blocksize;
 +	u64 bytes, lbo, valid;
@@ -5784,6 +5828,17 @@ index 000000000000..79160d00120d
 +	if (vbo >= inode->i_size) {
 +		/* out of size */
 +		return 0;
++	}
++
++	if (is_resident(ni)) {
++		ni_lock(ni);
++		err = attr_data_read_resident(ni, page);
++		ni_unlock(ni);
++
++		if (!err)
++			set_buffer_uptodate(bh);
++		bh->b_size = block_size;
++		return err;
 +	}
 +
 +	vcn = vbo >> cluster_bits;
@@ -5809,16 +5864,10 @@ index 000000000000..79160d00120d
 +		WARN_ON(1);
 +	}
 +
-+	WARN_ON(lcn == RESIDENT_LCN);
-+
 +	if (new) {
-+		u32 allocated = len * sbi->cluster_size;
-+
 +		set_buffer_new(bh);
-+		if (allocated > block_size)
-+			ntfs_sparse_cluster(inode, bh->b_page,
-+					    (loff_t)vcn << sbi->cluster_bits,
-+					    allocated);
++		if ((len << cluster_bits) > block_size)
++			ntfs_sparse_cluster(inode, page, vcn, len);
 +	}
 +
 +	lbo = ((u64)lcn << cluster_bits) + off;
@@ -5836,9 +5885,8 @@ index 000000000000..79160d00120d
 +	} else if (create && ctx == GET_BLOCK_WRITE_BEGIN &&
 +		   vbo + bh->b_size > valid) {
 +		u32 voff = valid > vbo ? (valid - vbo) : 0;
-+		struct page *page = bh->b_page;
 +
-+		off = bh_offset(bh);
++		off = vbo & (PAGE_SIZE - 1);
 +		zero_user_segment(page, off + voff, off + bh->b_size);
 +		set_buffer_uptodate(bh);
 +		ni->i_valid = vbo + bh->b_size;
@@ -5853,6 +5901,8 @@ index 000000000000..79160d00120d
 +			ni->i_valid = vbo + bytes;
 +			mark_inode_dirty(inode);
 +		}
++	} else if (valid >= inode->i_size) {
++		/* normal read of normal file*/
 +	} else if (vbo >= valid) {
 +		/* read out of valid data*/
 +		/* should never be here 'cause already checked */
@@ -5867,9 +5917,10 @@ index 000000000000..79160d00120d
 +		 * read across valid size: vbo < valid && valid < vbo + block_size
 +		 */
 +		u32 voff = valid - vbo;
-+		struct page *page = bh->b_page;
 +
 +		bh->b_size = bytes = block_size;
++		off = vbo & (PAGE_SIZE - 1);
++		set_bh_page(bh, page, off);
 +		ll_rw_block(REQ_OP_READ, 0, 1, &bh);
 +		wait_on_buffer(bh);
 +		/* Uhhuh. Read error. Complain and punt. */
@@ -5877,8 +5928,6 @@ index 000000000000..79160d00120d
 +			err = -EIO;
 +			goto out;
 +		}
-+
-+		off = bh_offset(bh);
 +		zero_user_segment(page, off + voff, off + block_size);
 +	}
 +
@@ -5926,51 +5975,13 @@ index 000000000000..79160d00120d
 +	struct inode *inode = mapping->host;
 +	struct ntfs_inode *ni = ntfs_i(inode);
 +
-+	if (ni_has_resident_data(ni)) {
++	if (is_resident(ni)) {
 +		ni_lock(ni);
-+
-+		if (!ni_has_resident_data(ni)) {
-+			ni_unlock(ni);
-+		} else {
-+			u64 vbo = page->index << PAGE_SHIFT;
-+			struct ATTRIB *attr;
-+			const char *data;
-+			u32 data_size;
-+
-+			attr = ni_find_attr(ni, NULL, NULL, ATTR_DATA, NULL, 0,
-+					    NULL, NULL);
-+			if (!attr) {
-+				err = -EINVAL;
-+				ni_unlock(ni);
-+				unlock_page(page);
-+				goto out;
-+			}
-+
-+			WARN_ON(attr->non_res);
-+
-+			data = resident_data(attr);
-+			data_size = le32_to_cpu(attr->res.data_size);
-+
-+			if (vbo < data_size) {
-+				void *kaddr = kmap_atomic(page);
-+
-+				err = data_size - vbo;
-+				if (err > PAGE_SIZE)
-+					err = PAGE_SIZE;
-+
-+				memcpy(kaddr, data + vbo, err);
-+				flush_dcache_page(page);
-+				kunmap_atomic(kaddr);
-+				zero_user_segment(page, err, PAGE_SIZE);
-+				SetPageUptodate(page);
-+			} else if (!PageUptodate(page)) {
-+				zero_user_segment(page, 0, PAGE_SIZE);
-+				SetPageUptodate(page);
-+			}
-+
-+			ni_unlock(ni);
++		err = attr_data_read_resident(ni, page);
++		ni_unlock(ni);
++		if (err != E_NTFS_NONRESIDENT) {
 +			unlock_page(page);
-+			return 0;
++			return err;
 +		}
 +	}
 +
@@ -5982,9 +5993,7 @@ index 000000000000..79160d00120d
 +	}
 +
 +	/* normal + sparse files */
-+	err = mpage_readpage(page, ntfs_get_block);
-+out:
-+	return err;
++	return mpage_readpage(page, ntfs_get_block);
 +}
 +
 +static void ntfs_readahead(struct readahead_control *rac)
@@ -5995,7 +6004,7 @@ index 000000000000..79160d00120d
 +	u64 valid;
 +	loff_t pos;
 +
-+	if (ni_has_resident_data(ni)) {
++	if (is_resident(ni)) {
 +		/* no readahead for resident */
 +		return;
 +	}
@@ -6008,7 +6017,8 @@ index 000000000000..79160d00120d
 +	valid = ni->i_valid;
 +	pos = readahead_pos(rac);
 +
-+	if (pos <= valid && valid < pos + readahead_length(rac)) {
++	if (valid < i_size_read(inode) && pos <= valid &&
++	    valid < pos + readahead_length(rac)) {
 +		/* range cross 'valid'. read it page by page */
 +		return;
 +	}
@@ -6030,16 +6040,6 @@ index 000000000000..79160d00120d
 +				  bh_result, create, GET_BLOCK_DIRECT_IO_W);
 +}
 +
-+static void ntfs_write_failed(struct address_space *mapping, loff_t to)
-+{
-+	struct inode *inode = mapping->host;
-+
-+	if (to > inode->i_size) {
-+		truncate_pagecache(inode, inode->i_size);
-+		ntfs_truncate_blocks(inode, inode->i_size);
-+	}
-+}
-+
 +static ssize_t ntfs_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
 +{
 +	struct file *file = iocb->ki_filp;
@@ -6055,13 +6055,17 @@ index 000000000000..79160d00120d
 +	loff_t valid;
 +	ssize_t ret;
 +
++	if (is_resident(ni)) {
++		/*switch to buffered write*/
++		ret = 0;
++		goto out;
++	}
++
 +	ret = blockdev_direct_IO(iocb, inode, iter,
 +				 wr ? ntfs_get_block_direct_IO_W :
 +				      ntfs_get_block_direct_IO_R);
 +	valid = ni->i_valid;
 +	if (wr) {
-+		if (ret < 0)
-+			ntfs_write_failed(mapping, end);
 +		if (ret <= 0)
 +			goto out;
 +
@@ -6142,13 +6146,33 @@ index 000000000000..79160d00120d
 +
 +static int ntfs_writepage(struct page *page, struct writeback_control *wbc)
 +{
++	struct address_space *mapping = page->mapping;
++	struct inode *inode = mapping->host;
++	struct ntfs_inode *ni = ntfs_i(inode);
++	int err;
++
++	if (is_resident(ni)) {
++		ni_lock(ni);
++		err = attr_data_write_resident(ni, page);
++		ni_unlock(ni);
++		if (err != E_NTFS_NONRESIDENT) {
++			unlock_page(page);
++			return err;
++		}
++	}
++
 +	return block_write_full_page(page, ntfs_get_block, wbc);
 +}
 +
 +static int ntfs_writepages(struct address_space *mapping,
 +			   struct writeback_control *wbc)
 +{
-+	return mpage_writepages(mapping, wbc, ntfs_get_block);
++	struct inode *inode = mapping->host;
++	struct ntfs_inode *ni = ntfs_i(inode);
++	/* redirect call to 'ntfs_writepage' for resident files*/
++	get_block_t *get_block = is_resident(ni) ? NULL : &ntfs_get_block;
++
++	return mpage_writepages(mapping, wbc, get_block);
 +}
 +
 +static int ntfs_get_block_write_begin(struct inode *inode, sector_t vbn,
@@ -6163,14 +6187,38 @@ index 000000000000..79160d00120d
 +			    void **fsdata)
 +{
 +	int err;
++	struct inode *inode = mapping->host;
++	struct ntfs_inode *ni = ntfs_i(inode);
 +
 +	*pagep = NULL;
++	if (is_resident(ni)) {
++		struct page *page = grab_cache_page_write_begin(
++			mapping, pos >> PAGE_SHIFT, flags);
++
++		if (!page) {
++			err = -ENOMEM;
++			goto out;
++		}
++
++		ni_lock(ni);
++		err = attr_data_read_resident(ni, page);
++		ni_unlock(ni);
++
++		if (!err) {
++			*pagep = page;
++			goto out;
++		}
++		unlock_page(page);
++		put_page(page);
++
++		if (err != E_NTFS_NONRESIDENT)
++			goto out;
++	}
 +
 +	err = block_write_begin(mapping, pos, len, flags, pagep,
 +				ntfs_get_block_write_begin);
-+	if (err < 0)
-+		ntfs_write_failed(mapping, pos + len);
 +
++out:
 +	return err;
 +}
 +
@@ -6183,15 +6231,37 @@ index 000000000000..79160d00120d
 +	struct inode *inode = mapping->host;
 +	struct ntfs_inode *ni = ntfs_i(inode);
 +	u64 valid = ni->i_valid;
++	bool dirty = false;
 +	int err;
 +
-+	err = generic_write_end(file, mapping, pos, len, copied, page, fsdata);
++	if (is_resident(ni)) {
++		ni_lock(ni);
++		err = attr_data_write_resident(ni, page);
++		ni_unlock(ni);
++		if (!err) {
++			dirty = true;
++			/* clear any buffers in page*/
++			if (page_has_buffers(page)) {
++				struct buffer_head *head, *bh;
 +
-+	if (err < len)
-+		ntfs_write_failed(mapping, pos + len);
++				bh = head = page_buffers(page);
++				do {
++					clear_buffer_dirty(bh);
++					clear_buffer_mapped(bh);
++					set_buffer_uptodate(bh);
++				} while (head != (bh = bh->b_this_page));
++			}
++			SetPageUptodate(page);
++			err = copied;
++		}
++		unlock_page(page);
++		put_page(page);
++	} else {
++		err = generic_write_end(file, mapping, pos, len, copied, page,
++					fsdata);
++	}
++
 +	if (err >= 0) {
-+		bool dirty = false;
-+
 +		if (!(ni->std_fa & FILE_ATTRIBUTE_ARCHIVE)) {
 +			inode->i_ctime = inode->i_mtime = current_time(inode);
 +			ni->std_fa |= FILE_ATTRIBUTE_ARCHIVE;
@@ -6660,11 +6730,10 @@ index 000000000000..79160d00120d
 +	} else {
 +		/*
 +		 * regular file
-+		 * Create empty nonresident data attribute
 +		 */
 +		attr->type = ATTR_DATA;
 +		attr->id = cpu_to_le16(aid++);
-+		/* Create non resident data attribute */
++		/* Create empty non resident data attribute */
 +		attr->non_res = 1;
 +		attr->nres.evcn = cpu_to_le64(-1ll);
 +		if (fa & FILE_ATTRIBUTE_SPARSE_FILE) {
@@ -7278,10 +7347,10 @@ index 000000000000..79160d00120d
 +};
 diff --git a/fs/ntfs3/super.c b/fs/ntfs3/super.c
 new file mode 100644
-index 000000000000..433fc4721c4e
+index 000000000000..6b53001052a6
 --- /dev/null
 +++ b/fs/ntfs3/super.c
-@@ -0,0 +1,1479 @@
+@@ -0,0 +1,1464 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + *
@@ -7294,6 +7363,10 @@ index 000000000000..433fc4721c4e
 + * vbo - virtual byte offset    - offset inside the file in bytes
 + * lcn - logical cluster number - 0 based cluster in clusters heap
 + * lbo - logical byte offset    - absolute position inside volume
++ * run - maps vcn to lcn        - stored in attributes in packed form
++ * attr - attribute segment     - std/name/data etc records inside MFT
++ * mi  - mft inode              - one MFT record(usually 1024 bytes), consists of attributes
++ * ni  - ntfs inode             - extends linux inode. consists of one or more mft inodes
 + *
 + */
 +
@@ -7339,37 +7412,42 @@ index 000000000000..433fc4721c4e
 +	va_end(args);
 +}
 +
++static char s_name_buf[512];
++static atomic_t s_name_buf_cnt = ATOMIC_INIT(1); // 1 means 'free s_name_buf'
++
 +/* print warnings/notices/errors about inode using name or inode number */
 +void ntfs_inode_printk(struct inode *inode, const char *fmt, ...)
 +{
 +	struct super_block *sb = inode->i_sb;
 +	struct ntfs_sb_info *sbi = sb->s_fs_info;
-+	struct dentry *dentry;
 +	char *name;
 +	va_list args;
 +	struct va_format vaf;
 +	int level;
-+	/*not necessary to print full inode name. just for information */
-+	const u32 name_len = 63;
 +
 +	if (!___ratelimit(&sbi->msg_ratelimit, "ntfs3"))
 +		return;
 +
-+	name = ntfs_alloc(name_len + 1, 0);
-+	if (!name)
-+		return;
-+
-+	dentry = d_find_alias(inode);
-+	if (dentry) {
-+		/*we can get the name of inode*/
-+		spin_lock(&dentry->d_lock);
-+		snprintf(name, name_len, "%s", dentry->d_name.name);
-+		spin_unlock(&dentry->d_lock);
-+		dput(dentry);
-+		name[name_len] = 0; /* to be sure*/
++	if (atomic_dec_and_test(&s_name_buf_cnt)) {
++		/* use static allocated buffer */
++		name = s_name_buf;
 +	} else {
-+		/*use inode number as inode info*/
-+		snprintf(name, name_len, "ino=%lx", inode->i_ino);
++		name = kmalloc(sizeof(s_name_buf), GFP_NOFS);
++	}
++
++	if (name) {
++		struct dentry *dentry = d_find_alias(inode);
++		const u32 name_len = ARRAY_SIZE(s_name_buf) - 1;
++
++		if (dentry) {
++			spin_lock(&dentry->d_lock);
++			snprintf(name, name_len, "%s", dentry->d_name.name);
++			spin_unlock(&dentry->d_lock);
++			dput(dentry);
++			name[name_len] = 0; /* to be sure*/
++		} else {
++			name[0] = 0;
++		}
 +	}
 +
 +	va_start(args, fmt);
@@ -7378,12 +7456,14 @@ index 000000000000..433fc4721c4e
 +	vaf.fmt = printk_skip_level(fmt);
 +	vaf.va = &args;
 +
-+	printk("%c%cntfs3: %s: %s %pV\n", KERN_SOH_ASCII, level, sb->s_id, name,
-+	       &vaf);
++	printk("%c%cntfs3: %s: ino=%lx, \"%s\" %pV\n", KERN_SOH_ASCII, level,
++	       sb->s_id, inode->i_ino, name ? name : "", &vaf);
 +
 +	va_end(args);
 +
-+	ntfs_free(name);
++	atomic_inc(&s_name_buf_cnt);
++	if (name != s_name_buf)
++		kfree(name);
 +}
 +#endif
 +
@@ -7463,12 +7543,9 @@ index 000000000000..433fc4721c4e
 +	return ret;
 +}
 +
-+static void clear_mount_options(struct ntfs_mount_options *options)
++static inline void clear_mount_options(struct ntfs_mount_options *options)
 +{
-+	static_assert(ARRAY_SIZE(options->nls) == 2);
-+
-+	unload_nls(options->nls[0]);
-+	unload_nls(options->nls[1]);
++	unload_nls(options->nls);
 +}
 +
 +enum Opt {
@@ -7486,7 +7563,6 @@ index 000000000000..433fc4721c4e
 +	Opt_acl,
 +	Opt_noatime,
 +	Opt_nls,
-+	Opt_nls_alt,
 +	Opt_prealloc,
 +	Opt_no_acs_rules,
 +	Opt_err,
@@ -7507,7 +7583,6 @@ index 000000000000..433fc4721c4e
 +	{ Opt_noatime, "noatime" },
 +	{ Opt_showmeta, "showmeta" },
 +	{ Opt_nls, "nls=%s" },
-+	{ Opt_nls_alt, "nls_alt=%s" },
 +	{ Opt_prealloc, "prealloc" },
 +	{ Opt_no_acs_rules, "no_acs_rules" },
 +	{ Opt_err, NULL },
@@ -7519,14 +7594,14 @@ index 000000000000..433fc4721c4e
 +{
 +	char *p;
 +	substring_t args[MAX_OPT_ARGS];
-+	int i, option;
-+	char nls_name[2][30];
++	int option;
++	char nls_name[30];
++	struct nls_table *nls;
 +
 +	opts->fs_uid = current_uid();
 +	opts->fs_gid = current_gid();
 +	opts->fs_fmask_inv = opts->fs_dmask_inv = ~current_umask();
-+	nls_name[0][0] = 0;
-+	nls_name[1][0] = 0;
++	nls_name[0] = 0;
 +
 +	if (!options)
 +		goto out;
@@ -7598,9 +7673,7 @@ index 000000000000..433fc4721c4e
 +			opts->showmeta = 1;
 +			break;
 +		case Opt_nls:
-+		case Opt_nls_alt:
-+			match_strlcpy(nls_name[token == Opt_nls_alt], &args[0],
-+				      sizeof(nls_name[0]));
++			match_strlcpy(nls_name, &args[0], sizeof(nls_name));
 +			break;
 +		case Opt_prealloc:
 +			opts->prealloc = 1;
@@ -7619,39 +7692,23 @@ index 000000000000..433fc4721c4e
 +	}
 +
 +out:
-+
-+	for (i = 0; i < ARRAY_SIZE(opts->nls); i++) {
-+		struct nls_table *nls;
-+
-+		if (nls_name[i][0]) {
-+			nls = load_nls(nls_name[i]);
-+			if (!nls) {
-+				ntfs_err(sb, "failed to load \"%s\"",
-+					 nls_name[i]);
-+				return -EINVAL;
-+			}
-+		} else {
-+			nls = load_nls_default();
-+			if (!nls) {
-+				ntfs_err(sb, "failed to load default nls");
-+				return -EINVAL;
-+			}
++	if (!strcmp(nls_name[0] ? nls_name : CONFIG_NLS_DEFAULT, "utf8")) {
++		/* For UTF-8 use utf16s_to_utf8s/utf8s_to_utf16s instead of nls */
++		nls = NULL;
++	} else if (nls_name[0]) {
++		nls = load_nls(nls_name);
++		if (!nls) {
++			ntfs_err(sb, "failed to load \"%s\"", nls_name);
++			return -EINVAL;
 +		}
-+
-+		opts->nls[i] = nls;
++	} else {
++		nls = load_nls_default();
++		if (!nls) {
++			ntfs_err(sb, "failed to load default nls");
++			return -EINVAL;
++		}
 +	}
-+
-+	/* unload alternative nls if it equals primary one */
-+	if (!strcmp(opts->nls[0]->charset, opts->nls[1]->charset)) {
-+		unload_nls(opts->nls[1]);
-+		opts->nls[1] = NULL;
-+	}
-+
-+	if (!strcmp(opts->nls[0]->charset, "utf8")) {
-+		/*use utf16s_to_utf8s/utf8s_to_utf16s instead of nls*/
-+		unload_nls(opts->nls[0]);
-+		opts->nls[0] = NULL;
-+	}
++	opts->nls = nls;
 +
 +	return 0;
 +}
@@ -7783,8 +7840,11 @@ index 000000000000..433fc4721c4e
 +	indx_clear(&sbi->security.index_sdh);
 +	indx_clear(&sbi->reparse.index_r);
 +	indx_clear(&sbi->objid.index_o);
-+	ntfs_free(sbi->compress.ctx);
-+
++	ntfs_free(sbi->compress.lznt);
++#ifdef CONFIG_NTFS3_LZX_XPRESS
++	xpress_free_decompressor(sbi->compress.xpress);
++	lzx_free_decompressor(sbi->compress.lzx);
++#endif
 +	clear_mount_options(&sbi->options);
 +
 +	ntfs_free(sbi);
@@ -7813,8 +7873,8 @@ index 000000000000..433fc4721c4e
 +	buf->f_blocks = wnd->nbits;
 +
 +	buf->f_bfree = buf->f_bavail = wnd_zeroes(wnd);
-+	buf->f_fsid.val[0] = (u32)sbi->volume.ser_num;
-+	buf->f_fsid.val[1] = (u32)(sbi->volume.ser_num >> 32);
++	buf->f_fsid.val[0] = sbi->volume.ser_num;
++	buf->f_fsid.val[1] = (sbi->volume.ser_num >> 32);
 +	buf->f_namelen = NTFS_NAME_LEN;
 +
 +	return 0;
@@ -7836,12 +7896,10 @@ index 000000000000..433fc4721c4e
 +		seq_printf(m, ",fmask=%04o", ~opts->fs_fmask_inv);
 +	if (opts->dmask)
 +		seq_printf(m, ",dmask=%04o", ~opts->fs_dmask_inv);
-+	if (opts->nls[0])
-+		seq_printf(m, ",nls=%s", opts->nls[0]->charset);
++	if (opts->nls)
++		seq_printf(m, ",nls=%s", opts->nls->charset);
 +	else
 +		seq_puts(m, ",nls=utf8");
-+	if (opts->nls[1])
-+		seq_printf(m, ",nls_alt=%s", opts->nls[1]->charset);
 +	if (opts->sys_immutable)
 +		seq_puts(m, ",sys_immutable");
 +	if (opts->discard)
@@ -7973,7 +8031,7 @@ index 000000000000..433fc4721c4e
 +{
 +	/* Do simple right 30 bit shift of 64 bit value */
 +	u64 kbytes = bytes >> 10;
-+	u32 kbytes32 = (u32)kbytes;
++	u32 kbytes32 = kbytes;
 +
 +	*mb = (100 * (kbytes32 & 0xfffff) + 0x7ffff) >> 20;
 +	if (*mb >= 100)
@@ -8239,13 +8297,6 @@ index 000000000000..433fc4721c4e
 +		goto out;
 +
 +	spin_lock_init(&sbi->compress.lock);
-+	if (sbi->cluster_size <= NTFS_LZNT_MAX_CLUSTER) {
-+		sbi->compress.ctx = get_compression_ctx(true);
-+		if (!sbi->compress.ctx) {
-+			err = -ENOMEM;
-+			goto out;
-+		}
-+	}
 +
 +	/*
 +	 * Load $Volume. This should be done before $LogFile
@@ -8710,21 +8761,24 @@ index 000000000000..433fc4721c4e
 +	int err;
 +
 +#ifdef NTFS3_INDEX_BINARY_SEARCH
-+	pr_notice("ntfs3: +index binary search");
++	pr_notice("ntfs3: +index binary search\n");
 +#endif
 +
 +#ifdef NTFS3_CHECK_FREE_CLST
-+	pr_notice("ntfs3: +check free clusters");
++	pr_notice("ntfs3: +check free clusters\n");
 +#endif
 +
 +#if NTFS_LINK_MAX < 0xffff
-+	pr_notice("ntfs3: max link count %u", NTFS_LINK_MAX);
++	pr_notice("ntfs3: max link count %u\n", NTFS_LINK_MAX);
 +#endif
 +
 +#ifdef NTFS3_64BIT_CLUSTER
-+	pr_notice("ntfs3: 64 bits per cluster");
++	pr_notice("ntfs3: 64 bits per cluster\n");
 +#else
-+	pr_notice("ntfs3: 32 bits per cluster");
++	pr_notice("ntfs3: 32 bits per cluster\n");
++#endif
++#ifdef CONFIG_NTFS3_LZX_XPRESS
++	pr_notice("ntfs3: read-only lzx/xpress compression included\n");
 +#endif
 +
 +	ntfs_inode_cachep = kmem_cache_create(
@@ -8761,3 +8815,7 @@ index 000000000000..433fc4721c4e
 +
 +module_init(init_ntfs_fs);
 +module_exit(exit_ntfs_fs);
+-- 
+2.25.4
+
+
