@@ -13,7 +13,7 @@ if [ "$1" = "-v" -o "$1" = "--verbose" ]; then
 	shift
 fi
 
-DESTINATION=/dev/sda
+DESTINATION=/dev/mmcblk2
 [ -n "$1" ] && DESTINATION="$1"
 
 if ! [ -b "$DESTINATION" ]; then
@@ -26,14 +26,18 @@ WARNING: This script will overwrite the entire disk $1
 Press Ctrl-C if you don't want this to happen. Use $0 /dev/whatever to
 select a different target device.
 
-In a default SynQuacer setup:
-	/dev/sda is the harddisk
-	/dev/mmcblk0 is the onboard MMC storage
-	/dev/sdb is the first USB storage device
+In a Pinebook Pro:
+	/dev/mmcblk1 is the SD card
+	/dev/mmcblk2 is the eMMC storage
+	/dev/nvme0n1 is the NVME SSD (not present in default PBPs)
 
 At the moment, this install script doesn't support installing alongside
 another OS on the same disk - but you can install manually using the commands
 in the script (skipping over partitioning and mounting steps).
+
+Note: If you're installing to an NVME drive, you may have to adjust the
+bootloader yourself, not all bootloaders in the Pinebook Pro support
+booting directly from NVMe.
 
 Press Enter to continue or Ctrl-C to abort.
 EOF
@@ -43,108 +47,82 @@ DISKSIZE="$(gdisk -l $DESTINATION |grep "^Disk /" |awk '{ print $3; }')"
 # gdisk output is in sectors of 512 bytes
 DISKSIZE=$((DISKSIZE*512))
 
+# We should really be using gdisk and a GPT partition table, but
+# the version of u-boot in the PBP SPI seems to dislike anything but
+# FAT on MBR for the extlinux configs it looks for.
 echo "Setting up partition table..."
-if [ "$DISKSIZE" -gt 100000000000 ]; then
-	# Disk is large enough for EFI/swap/root/home split
-
-	# Commands fed into gdisk:
-	#	o -- delete all partitions and create a new GPT partition table
-	#	y 	-- confirm o command
-	#	n -- Create new partition
-	#	1	-- partition number
-	#		-- keep default start sector
-	#	+256M	-- Size of EFI system partition (256 MB)
-	#	ef00	-- Partition type ef00 -- EFI system partition
-	#	n -- Create new partition
-	#	2	-- partition number
-	#		-- keep default start sector
-	#	+8G	-- Size of swap partition (8 GB)
-	#	8200	-- Partition type 8200 -- Linux Swap
-	#	n -- Create new partition
-	#	3	-- partition number
-	#		-- keep default start sector
-	#	+60G	-- Size of root partition (60 GB)
-	#	8305	-- Partition type 8305 -- Linux ARM64 root
-	#	n -- Create new partition
-	#	4	-- partition number
-	#		-- keep default start sector
-	#		-- keep default end sector (use rest of disk)
-	#	8302	-- Partition type 8302 -- Linux /home
-	#	w -- Write table to disk and exit
-	#	y 	-- confirm w command
-	gdisk $DESTINATION &>$TOOLOUTPUT <<EOF
+if [ "$DISKSIZE" -gt 150000000000 ]; then
+	# Disk is large enough for boot/swap/root/home split
+	# First partition starts at block 62500 because the earlier
+	# blocks are reserved for the bootloader
+	fdisk --wipe always --wipe-partitions always $DESTINATION &>$TOOLOUTPUT <<EOF
 o
-y
 n
+p
 1
-
-+256M
-ef00
+62500
+262143
+t
+c
 n
+p
 2
-
-+8G
-8200
+262144
+33816575
+t
+2
+82
 n
+p
 3
-
-+60G
-8305
+33816576
+201588735
+t
+3
+83
 n
+p
+201588736
+
+t
 4
-
-
-8302
+83
 w
-y
 EOF
-	UEFI=${DESTINATION}1
+	BOOT=${DESTINATION}1
 	SWAP=${DESTINATION}2
 	ROOT=${DESTINATION}3
 	HOME=${DESTINATION}4
 else
 	# Small disk (internal MMC storage?) -- let's try to get by with
-	# just an EFI partition and a root partition
-
-	# Commands fed into gdisk:
-	#	o -- delete all partitions and create a new GPT partition table
-	#	y 	-- confirm o command
-	#	n -- Create new partition
-	#	1	-- partition number
-	#		-- keep default start sector
-	#	+256M	-- Size of EFI system partition (256 MB)
-	#	ef00	-- Partition type ef00 -- EFI system partition
-	#	n -- Create new partition
-	#	2	-- partition number
-	#		-- keep default start sector
-	#		-- keep default end sector (use rest of disk)
-	#	8305	-- Partition type 8305 -- Linux ARM64 root
-	#	w -- Write table to disk and exit
-	#	y 	-- confirm w command
-	gdisk $DESTINATION &>$TOOLOUTPUT <<EOF
+	# just a boot partition and a root partition
+	fdisk --wipe always --wipe-partitions always $DESTINATION &>$TOOLOUTPUT <<EOF
 o
-y
 n
+p
 1
-
-+256M
-ef00
+62500
+262143
+t
+c
 n
+p
 2
+262144
 
-
-8305
+t
+2
+83
 w
-y
 EOF
-	UEFI=${DESTINATION}1
+	BOOT=${DESTINATION}1
 	ROOT=${DESTINATION}2
 	SWAP=""
 	HOME=""
 fi
 
-if [ -z "$UEFI" ]; then
-	echo "No UEFI partition - apparently partitioning went wrong."
+if [ -z "$BOOT" ]; then
+	echo "No BOOT partition - apparently partitioning went wrong."
 	exit 1
 fi
 if [ -z "$ROOT" ]; then
@@ -152,8 +130,10 @@ if [ -z "$ROOT" ]; then
 	exit 1
 fi
 
-if [ -n "$UEFI" -a ! -b "$UEFI" ]; then
-	echo "Device node for UEFI system partition $UEFI didn't get created."
+kpartx ${DESTINATION}
+
+if [ -n "$BOOT" -a ! -b "$BOOT" ]; then
+	echo "Device node for BOOT system partition $BOOT didn't get created."
 	echo "Apparently partitioning went wrong."
 	exit 1
 fi
@@ -173,8 +153,8 @@ if [ -n "$HOME" -a ! -b "$HOME" ]; then
 	exit 1
 fi
 
-echo "Formatting UEFI partition..."
-mkfs.vfat -n UEFI $UEFI &>$TOOLOUTPUT
+echo "Formatting BOOT partition..."
+mkfs.vfat -n BOOT $BOOT &>$TOOLOUTPUT
 if [ -n "$SWAP" ]; then
 	echo "Formatting swap partition..."
 	mkswap -f $SWAP &>$TOOLOUTPUT
@@ -189,9 +169,9 @@ fi
 
 mkdir -p /mnt/destination
 mount $ROOT /mnt/destination
-if [ -n "$UEFI" ]; then
-	mkdir -p /mnt/destination/boot/efi
-	mount $UEFI /mnt/destination/boot/efi
+if [ -n "$BOOT" ]; then
+	mkdir -p /mnt/destination/boot
+	mount $BOOT /mnt/destination/boot
 fi
 if [ -n "$HOME" ]; then
 	mkdir -p /mnt/destination/home
@@ -203,36 +183,28 @@ tar c --one-file-system -f - / | (cd /mnt/destination && tar x $VERBOSE -f -)
 
 echo "Setting up system files..."
 echo "$ROOT / ext4 defaults,noatime 0 1" >/mnt/destination/etc/fstab
+echo "$BOOT /boot vfat defaults,noatime 0 2" >>/mnt/destination/etc/fstab
 [ -n "$SWAP" ] && echo "$SWAP swap swap defaults 0 1" >>/mnt/destination/etc/fstab
-[ -n "$UEFI" ] && echo "$UEFI /boot/efi vfat defaults,noatime 0 2" >>/mnt/destination/etc/fstab
 [ -n "$HOME" ] && echo "$HOME /home ext4 defaults,noatime 0 2" >>/mnt/destination/etc/fstab
 
 if [ -n "$HOME" ]; then
 	cp -a /home/* /mnt/destination/home
 fi
 
-if [ -n "$UEFI" ]; then
-	echo "Copying bootup files..."
-	cp -ax /boot/efi/* /mnt/destination/boot/efi/
-	echo "Registering with UEFI bootloader"
-	mv /mnt/destination/boot/efi/startup.nsh /mnt/destination/boot/efi/openmandriva.nsh
-	sed -i -e "s,/dev/sdb2,$ROOT,g" /mnt/destination/boot/efi/openmandriva.nsh
-	efibootmgr --create -L 'OpenMandriva Lx 4' -l '\EFI\openmandriva\linux.efi' --unicode "root=$ROOT earlycon=pl011,0x2a400000,115200 rw rootwait initrd=\\EFI\\openmandriva\\initrd.img nouveau.config=NvClkMode=auto console=ttyAMA0,115200n8 console=tty1" -d "$DESTINATION" -p $(echo $UEFI |sed -e "s,$DESTINATION,,")
-	efibootmgr --create -L 'OpenMandriva Lx 4 (Text Mode)' -l '\EFI\openmandriva\linux.efi' --unicode "root=$ROOT earlycon=pl011,0x2a400000,115200 rw rootwait initrd=\\EFI\\openmandriva\\initrd.img nouveau.config=NvClkMode=auto console=ttyAMA0,115200n8 console=tty1 systemd.unit=multi-user.target" -d "$DESTINATION" -p $(echo $UEFI |sed -e "s,$DESTINATION,,")
-	echo "Rebuilding initrd"
-	for i in proc sys dev; do
-		mount --bind /$i /mnt/destination/$i
-	done
-	chroot /mnt/destination /usr/bin/dracut -f /boot/efi/EFI/openmandriva/initrd.img $(ls /lib/modules --sort=time |head -n1)
-	for i in proc sys dev; do
-		umount /mnt/destination/$i
-	done
-fi
+echo "Copying bootup files..."
+cp -ax /boot/* /mnt/destination/boot/
+sed -i -e "s,rootfstype=f2fs,rootfstype=ext4,g" /mnt/destination/boot/extlinux/extlinux.conf
+sed -i -e "s,/dev/mmcblk1p2,${ROOT},g" /mnt/destination/boot/extlinux/extlinux.conf
+sed -i -e "s,/dev/mmcblk1,${DESTINATION},g" /mnt/destination/boot/extlinux/extlinux.conf
+
+echo "Installing bootloader..."
+dd if=/boot/idbloader.img of=${DESTINATION} bs=512 seek=64 conv=notrunc
+dd if=/boot/u-boot.itb of=${DESTINATION} bs=512 seek=16384 conv=notrunc
 
 echo "Cleaning up..."
 rm -f /mnt/destination/home/omv/install-openmandriva
 [ -n "$HOME" ] && umount /mnt/destination/home
-[ -n "$UEFI" ] && umount /mnt/destination/boot/efi
+[ -n "$BOOT" ] && umount /mnt/destination/boot
 umount /mnt/destination
 
 echo "DONE! OpenMandriva should now be installed."
