@@ -1,17 +1,27 @@
 # https://developer.solid-run.com/knowledge-base/i-mx8m-atf-u-boot-and-linux-kernel/
-# says you have to use 7.9; newer versions up to 8.5 exist
+# says you have to use 7.9; newer versions up to 8.8 exist
+# firmware can be found at http://sources.buildroot.net/firmware-imx/
 # FIXME once everything is working, check if the newer firmware works
-IMX_FIRMWARE_VERSION=8.5
+IMX_FIRMWARE_VERSION=8.8
 
-[ -d arm-trusted-firmware ] || git clone --depth 1 https://source.codeaurora.org/external/imx/imx-atf.git -b imx_4.19.35_1.0.0 arm-trusted-firmware
-[ -d u-boot ] || git clone --depth 1 https://github.com/SolidRun/u-boot.git -b v2018.11-solidrun
-[ -e firmware-imx-${IMX_FIRMWARE_VERSION}.bin ] || wget https://www.nxp.com/lgfiles/NMG/MAD/YOCTO/firmware-imx-${IMX_FIRMWARE_VERSION}.bin
+#[ -d arm-trusted-firmware ] || git clone --depth 1 https://source.codeaurora.org/external/imx/imx-atf.git -b imx_4.19.35_1.0.0 arm-trusted-firmware
+[ -d arm-trusted-firmware ] || git clone --depth 1 https://source.codeaurora.org/external/imx/imx-atf.git -b imx_5.4.47_2.2.0 arm-trusted-firmware
+if ! [ -d u-boot ]; then
+	git clone --depth 1 https://github.com/SolidRun/u-boot.git -b v2018.11-solidrun
+	cd u-boot
+	git remote add upstream https://gitlab.denx.de/u-boot/u-boot.git
+	git fetch upstream
+	git cherry-pick 018921ee79d3f30893614b3b2b63b588d8544f73
+	cd ..
+fi
+[ -e firmware-imx-${IMX_FIRMWARE_VERSION}.bin ] || wget http://sources.buildroot.net/firmware-imx/firmware-imx-8.8.bin
 
 cd arm-trusted-firmware
 make PLAT=imx8mq bl31 CROSS_COMPILE=aarch64-linux-gnu-
 cp build/imx8mq/release/bl31.bin ../u-boot/
 cd ..
 
+rm -rf firmware-imx-${IMX_FIRMWARE_VERSION}
 sh firmware-imx-${IMX_FIRMWARE_VERSION}.bin --auto-accept
 cp firmware-imx-${IMX_FIRMWARE_VERSION}/firmware/hdmi/cadence/signed_hdmi_imx8m.bin u-boot/
 cp firmware-imx-${IMX_FIRMWARE_VERSION}/firmware/ddr/synopsys/lpddr4*.bin u-boot/
@@ -23,3 +33,39 @@ cp flash.bin $OURDIR/
 cd ..
 
 u-boot/tools/mkimage -A arm64 -O linux -T script -d $OURDIR/device/${TARGET}/boot.script $OURDIR/$ROOTDIR/boot/boot.scr
+
+pushd $OURDIR/$ROOTDIR
+MINSIZE=$(du -s --block-size=1048576 |awk '{ print $1; }')
+cd ..
+dd if=/dev/zero of=${SHORTTARGET}.img bs=1M count=$((MINSIZE+256))
+losetup -fP ${SHORTTARGET}.img
+LOOPDEV=$(losetup -j ${SHORTTARGET}.img |cut -d: -f1)
+# The data fed to gdisk below (blank lines are important! Don't remove them!)
+# creates a root partition at sector 8192, leaving space for the bootloader
+# where it needs to be put.
+gdisk $LOOPDEV <<'EOF'
+o
+y
+n
+1
+8192
+
+8305
+w
+y
+EOF
+set -x
+kpartx ${LOOPDEV}
+mkfs.ext4 -L OMVAA64 ${LOOPDEV}p1
+ROOTUUID=$(/sbin/blkid ${LOOPDEV}p1 |sed -e 's,.* UUID=",,;s,".*,,')
+rm -rf mnt
+mkdir mnt
+mount ${LOOPDEV}p1 mnt
+tar c -C ${ROOTDIR} --one-file-system -f - . | tar x -C mnt -f -
+cat >mnt/etc/fstab <<EOF
+UUID=${ROOTUUID}	/	ext4	defaults,noatime	0	1
+EOF
+umount mnt
+dd if=flash.bin of=${LOOPDEV} bs=1024 seek=33
+losetup -d ${LOOPDEV}
+popd

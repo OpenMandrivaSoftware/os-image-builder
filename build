@@ -236,7 +236,9 @@ if [ -n "$KERNEL" ]; then
 	fi
 	KERNELVERSION=$(cat include/config/kernel.release)
 	KERNELVERSION_NUM="$(echo $KERNELVERSION |cut -d- -f1)"
-	KERNELVERSION_EXTRA="$(echo $KERNELVERSION |cut -d- -f2- |sed -e 's,-,.,g')"
+	if echo $KERNELVERSION |grep -q -- -; then
+		KERNELVERSION_EXTRA="$(echo $KERNELVERSION |cut -d- -f2- |sed -e 's,-,.,g')"
+	fi
 	cd ..
 
 	rm -rf kernel-rpm
@@ -523,8 +525,15 @@ EOF
 		[ -f "$i" ] && rm -f "$i"
 	done
 	popd
-	run generate-bootimg
+else
+	# Mount relevant filesystems so generate-bootimg can use
+	# the likes of /dev/null and /dev/urandom in chroot
+	for mp in /proc /sys /dev /dev/pts; do
+		mkdir -p $OURDIR/$ROOTDIR$mp || :
+		mount --bind $mp $OURDIR/$ROOTDIR$mp
+	done
 fi
+run generate-bootimg
 # Stuff in virtual filesystems should not make it to
 # root filesystems...
 for mp in /proc /sys /dev/pts /dev; do

@@ -89,10 +89,17 @@ t
 83
 w
 EOF
-	BOOT=${DESTINATION}1
-	SWAP=${DESTINATION}2
-	ROOT=${DESTINATION}3
-	HOME=${DESTINATION}4
+	if echo ${DESTINATION} |grep '^/dev/sd'; then
+		BOOT=${DESTINATION}1
+		SWAP=${DESTINATION}2
+		ROOT=${DESTINATION}3
+		HOME=${DESTINATION}4
+	else
+		BOOT=${DESTINATION}p1
+		SWAP=${DESTINATION}p2
+		ROOT=${DESTINATION}p3
+		HOME=${DESTINATION}p4
+	fi
 else
 	# Small disk (internal MMC storage?) -- let's try to get by with
 	# just a boot partition and a root partition
@@ -115,8 +122,13 @@ t
 83
 w
 EOF
-	BOOT=${DESTINATION}1
-	ROOT=${DESTINATION}2
+	if echo ${DESTINATION} |grep '^/dev/sd'; then
+		BOOT=${DESTINATION}1
+		ROOT=${DESTINATION}2
+	else
+		BOOT=${DESTINATION}p1
+		ROOT=${DESTINATION}p2
+	fi
 	SWAP=""
 	HOME=""
 fi
