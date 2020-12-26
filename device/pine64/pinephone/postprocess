@@ -15,8 +15,6 @@ for i in mdmonitor rtkit-daemon remote-cryptsetup dnf-automatic-download \
 		dnfdaemon dnf-makecache nscd; do
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl disable $i
 done
-# plasma-mobile likes numeric passwords
-echo 'omv:1234' | chroot "$OURDIR/$ROOTDIR" /usr/sbin/chpasswd
 # Make sure some important bits and pieces are enabled
 for i in gpsd.socket gpsd.service geoclue iio-sensor-proxy \
 	usb-gadget plymouth-start modem ModemManager \

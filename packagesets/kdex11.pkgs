@@ -1,0 +1,4 @@
+#include kde
+kwin-x11
+plasma-workspace-x11
+kwindowsystem-x11

@@ -1,0 +1,6 @@
+#include kde
+kwin-wayland
+plasma-workspace-wayland
+kwindowsystem-wayland
+# Just for testing
+weston

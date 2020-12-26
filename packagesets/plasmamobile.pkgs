@@ -10,7 +10,8 @@ ${LIB}OpenVG0
 ${LIB}kms1
 simplelogin
 breeze-plymouth
-# NOT YET calligra-gemini
+calligra-gemini
+neochat
 smplayer
 mpv
 kdeplasma-addons
