@@ -1,10 +1,7 @@
 pushd $OURDIR/$ROOTDIR/boot
 cp -f $OURDIR/device/raspberry/pi3b+/firmware/*.{bin,txt,dat,elf} .
-cp -f $OURDIR/kernel/arch/arm64/boot/Image kernel8.img
-cp -f $OURDIR/kernel/arch/arm64/boot/dts/broadcom/*.dtb .
-mkdir -p overlays
-cp -f $OURDIR/kernel/arch/arm/boot/dts/overlays/*.dtb* overlays/
-cp -f $OURDIR/kernel/arch/arm/boot/dts/overlays/README overlays/
+cp -f vmlinuz-${KERNELVERSION} kernel8.img
+cp -f broadcom/*.dtb .
 tar cJf ../../bootfs-${SHORTTARGET}.tar.xz .
 cd ..
 rm -rf boot
