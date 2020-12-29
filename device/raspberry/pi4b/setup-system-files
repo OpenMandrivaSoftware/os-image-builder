@@ -1,0 +1,4 @@
+cat >$OURDIR/$ROOTDIR/etc/fstab <<EOF
+/dev/mmcblk0p2 / ext4 defaults,noatime 0 1
+/dev/mmcblk0p1 /boot vfat defaults,noatime 0 2
+EOF
