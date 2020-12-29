@@ -116,6 +116,8 @@ out. Some patches that are useful to multiple boards can be found in the top lev
 `kernel-patches` directory. To pull those in, symlink them into your device
 `kernel-patches` directory. Add board specific kernel patches directly as files in
 the device `kernel-patches` directory.
+Patches are applied in shell order - if you need to make sure B is applied
+before A, try renaming the files to e.g. 00-B.patch and 01-A.patch.
 
 Please submit any additional boards you're adding to the OpenMandriva project.
 
