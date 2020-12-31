@@ -191,7 +191,7 @@ if [ -n "$HOME" ]; then
 fi
 
 echo "Copying OS..."
-tar c --one-file-system -f - / | (cd /mnt/destination && tar x $VERBOSE -f -)
+cp -ax / /mnt/destination/
 
 echo "Setting up system files..."
 echo "$ROOT / ext4 defaults,noatime 0 1" >/mnt/destination/etc/fstab
@@ -204,7 +204,7 @@ if [ -n "$HOME" ]; then
 fi
 
 echo "Copying bootup files..."
-cp -ax /boot/* /mnt/destination/boot/
+cp -RLx /boot/* /mnt/destination/boot/
 sed -i -e "s,rootfstype=f2fs,rootfstype=ext4,g" /mnt/destination/boot/extlinux/extlinux.conf
 sed -i -e "s,/dev/mmcblk1p2,${ROOT},g" /mnt/destination/boot/extlinux/extlinux.conf
 sed -i -e "s,/dev/mmcblk1,${DESTINATION},g" /mnt/destination/boot/extlinux/extlinux.conf

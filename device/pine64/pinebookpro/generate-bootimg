@@ -1,11 +1,3 @@
-# Hack to allow calling from outside the build scripts
-# to test updated boot environments etc.
-[ -z "$OURDIR" ] && OURDIR=`pwd`
-[ -z "$ROOTDIR" ] && ROOTDIR=OpenMandriva-cooker-aarch64-root
-[ -z "$KERNELVERSION" ] && KERNELVERSION=5.8.0-gf66d3a85b
-
-# Real script starts here
-
 # Known good revision: e4c837568c8fe9fe3605326decc18a5a5e0565a5
 [ -d arm-trusted-firmware ] || git clone https://github.com/ARM-software/arm-trusted-firmware
 make -C arm-trusted-firmware CROSS_COMPILE=aarch64-linux-gnu- M0_CROSS_COMPILE=armv7hnl-linux-gnueabihf- PLAT=rk3399 DEBUG=1 bl31
