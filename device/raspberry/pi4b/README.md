@@ -1,4 +1,5 @@
-# Installing OpenMandriva Lx on Raspberry Pi 4B
+Installing OpenMandriva Lx on Raspberry Pi 4B
+=============================================
 To install OpenMandriva Lx on Raspberry Pi 4B
 
 * Get an SD card (and, if you don't have a built-in SD card reader in your
@@ -12,7 +13,8 @@ To install OpenMandriva Lx on Raspberry Pi 4B
 * Put the SD card into the Raspberry Pi and start it
 * Log in as user "omv" with password "omv"
 
-## Example: Create the bootable/installable USB storage device
+Example: Create the bootable/installable USB storage device
+-----------------------------------------------------------
 This is assuming you've downloaded the OpenMandriva Lx install tarballs to
 `~/Downloads`, and `/dev/sdc` is your SD card reader. (USB SD card readers
 will generally be /dev/sd*, builtin SD card readers are often /dev/mmcblk*)
@@ -242,7 +244,7 @@ $ sudo tar xf ~/Downloads/bootfs-pi4b.tar.xz
 ./broadcom/bcm2710-rpi-3-b-plus.dtb: Failed to set file flags
 ./broadcom/bcm2837-rpi-3-b-plus.dtb: Failed to set file flags
 tar: Error exit delayed from previous errors.
-$ cd
+$ cd -
 $ sudo umount /mnt
 $ sudo mount /dev/sdc2 /mnt
 $ cd /mnt
@@ -250,7 +252,7 @@ $ # If you created a separate /home partition on /dev/sdc3: sudo mkdir home; sud
 $ sudo tar xf ~/Downloads/rootfs-pi4b.tar.xz
 $ # If you created separate /home and/or swap partitions: vi etc/fstab and adjust the file
 $ # If you created a separate /home partition: sudo umount home
-$ cd
+$ cd -
 $ sudo umount /mnt
 $ sudo eject /dev/sdc
 $ sudo sync
