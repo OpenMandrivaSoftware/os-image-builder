@@ -1,4 +1,5 @@
-# Installing OpenMandriva Lx on Synquacer
+Installing OpenMandriva Lx on Synquacer
+---------------------------------------
 To install OpenMandriva Lx on Synquacer:
 
 * Insert a USB storage device on another machine
@@ -12,7 +13,8 @@ To install OpenMandriva Lx on Synquacer:
 * If you want to install OpenMandriva Lx to the harddisk or internal storage,
   run ./install-openmandriva from /home/omv
 
-## Example: Create the bootable/installable USB storage device
+Example: Create the bootable/installable USB storage device
+-----------------------------------------------------------
 This is assuming you've downloaded the OpenMandriva Lx install tarballs to
 `~/Downloads`, and `/dev/sdb` is your USB storage device.
 ```

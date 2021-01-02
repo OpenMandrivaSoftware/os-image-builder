@@ -34,17 +34,17 @@ rm -rf mnt
 mkdir mnt
 mount ${LOOPDEV}p1 mnt
 cd mnt
-cp ${OURDIR}/${ROOTDIR}/boot/rockchip/rk3399-pinebook-pro.dtb .
 cp -a ${OURDIR}/${ROOTDIR}/boot/rockchip .
+#cp ${OURDIR}/${ROOTDIR}/boot/${DTB}.dtb .
 cp ${OURDIR}/${ROOTDIR}/boot/vmlinuz-${KERNELVERSION} Image
+cp ${OURDIR}/${ROOTDIR}/boot/boot.scr .
 cp ${OURDIR}/${ROOTDIR}/boot/idbloader.img .
 cp ${OURDIR}/${ROOTDIR}/boot/u-boot.itb .
-cp ${OURDIR}/${ROOTDIR}/boot/boot.scr .
 mkdir extlinux
 cat >extlinux/extlinux.conf <<EOF
 label OpenMandriva
 	kernel /Image
-	fdt /rockchip/rk3399-pinebook-pro.dtb
+	fdt /${DTB}.dtb
 	append root=/dev/mmcblk1p2 rw rootwait rootfstype=f2fs init=/sbin/init console=tty1 console=ttyS2,1500000 video=eDP-1:1920x1080@60 video=HDMI-A-1:1920x1080@60
 EOF
 cd ..
