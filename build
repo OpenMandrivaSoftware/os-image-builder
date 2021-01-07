@@ -228,6 +228,11 @@ if [ -n "$KERNEL" ]; then
 	run download_kernel_extras
 
 	[ -e ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} ] && cp -f ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} arch/${KERNELARCH}/configs/
+	# Get rid of the "-dirty" name in localversion
+	cd kernel
+	git add -A || :
+	git commit -am "Apply OpenMandriva patches" || :
+	cd ..
 
 	if [ "$KERNEL_CLANG" = "yes" ]; then
 		make $SMPFLAGS ARCH=$KERNELARCH LLVM=1 $KERNEL_CONFIG include/config/kernel.release

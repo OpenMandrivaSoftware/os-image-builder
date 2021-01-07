@@ -19,6 +19,9 @@ CONFIG_SERIAL_PRESENT=y
 CONFIG_GZIP=y
 CONFIG_CMD_UNZIP=y
 EOF
+cd u-boot
+patch -p1 -b -z .drank~ <$OURDIR/device/$TARGET/u-boot-allwinner-dual-rank-dram.patch
+cd ..
 make -C u-boot CROSS_COMPILE=aarch64-linux-gnu- BL31=`pwd`/arm-trusted-firmware/build/sun50i_a64/debug/bl31.bin EXTRAVERSION="-OpenMandriva"
 
 #mkimage -A arm -O linux -T ramdisk -C gzip -d $OURDIR/$ROOTDIR/boot/initrd-$KERNELVERSION.img $OURDIR/$ROOTDIR/boot/uInitrd.img
