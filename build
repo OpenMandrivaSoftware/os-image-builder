@@ -349,7 +349,7 @@ if ! [ -d "$ROOTDIR" ]; then
 	curl -s -L $PKGS |grep '^<a' |cut -d'"' -f2 >PACKAGES
 	PRE_PACKAGES="distro-release-repos"
 	for i in $PRE_PACKAGES; do
-		P=`grep "^$i-[0-9].*" PACKAGES`
+		P=`grep "^$i-[0-9].*" PACKAGES |tail -n1`
 		if [ "$?" != "0" ]; then
 			echo "Can't find $i package for target" >&2
 			exit 1
