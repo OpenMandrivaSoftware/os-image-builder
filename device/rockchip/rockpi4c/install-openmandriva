@@ -26,17 +26,17 @@ WARNING: This script will overwrite the entire disk $1
 Press Ctrl-C if you don't want this to happen. Use $0 /dev/whatever to
 select a different target device.
 
-In a Pinebook Pro:
+On a Rock Pi 4C:
 	/dev/mmcblk1 is the SD card
 	/dev/mmcblk2 is the eMMC storage
-	/dev/nvme0n1 is the NVME SSD (not present in default PBPs)
+	/dev/nvme0n1 is the NVME SSD
 
 At the moment, this install script doesn't support installing alongside
 another OS on the same disk - but you can install manually using the commands
 in the script (skipping over partitioning and mounting steps).
 
 Note: If you're installing to an NVME drive, you may have to adjust the
-bootloader yourself, not all bootloaders in the Pinebook Pro support
+bootloader yourself, not all bootloaders in the Rock Pi 4C support
 booting directly from NVMe.
 
 Press Enter to continue or Ctrl-C to abort.
@@ -51,7 +51,7 @@ DISKSIZE=$((DISKSIZE*512))
 # the version of u-boot in the PBP SPI seems to dislike anything but
 # FAT on MBR for the extlinux configs it looks for.
 echo "Setting up partition table..."
-if [ "$DISKSIZE" -gt 150000000000 ]; then
+if [ "$DISKSIZE" -gt 120000000000 ]; then
 	# Disk is large enough for boot/swap/root/home split
 	# First partition starts at block 62500 because the earlier
 	# blocks are reserved for the bootloader
@@ -192,7 +192,7 @@ fi
 
 echo "Copying OS..."
 #tar c --one-file-system -f - / | (cd /mnt/destination && tar x $VERBOSE -f -)
-cp -ax /* /mnt/destination/
+cp -ax / /mnt/destination/
 
 echo "Setting up system files..."
 echo "$ROOT / ext4 defaults,noatime 0 1" >/mnt/destination/etc/fstab
