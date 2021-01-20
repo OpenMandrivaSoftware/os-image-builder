@@ -1,2 +1,5 @@
 Origin of various rk3399 DTS patches:
 https://github.com/armbian/build/tree/master/patch/kernel/rockchip64-current
+
+Origin of bootsplash patches:
+https://gitlab.manjaro.org/packages/core/linux510/-/tree/master

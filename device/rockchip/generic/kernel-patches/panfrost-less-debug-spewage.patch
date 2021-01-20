@@ -1,0 +1,12 @@
+diff -up kernel/drivers/gpu/drm/panfrost/panfrost_gem_shrinker.c.omv~ kernel/drivers/gpu/drm/panfrost/panfrost_gem_shrinker.c
+--- kernel/drivers/gpu/drm/panfrost/panfrost_gem_shrinker.c.omv~	2021-01-17 18:53:16.575467161 +0100
++++ kernel/drivers/gpu/drm/panfrost/panfrost_gem_shrinker.c	2021-01-17 18:53:27.448836828 +0100
+@@ -86,7 +86,7 @@ panfrost_gem_shrinker_scan(struct shrink
+ 	mutex_unlock(&pfdev->shrinker_lock);
+ 
+ 	if (freed > 0)
+-		pr_info_ratelimited("Purging %lu bytes\n", freed << PAGE_SHIFT);
++		pr_debug_ratelimited("Purging %lu bytes\n", freed << PAGE_SHIFT);
+ 
+ 	return freed;
+ }

@@ -226,6 +226,9 @@ if [ -n "$KERNEL" ]; then
 		[ -e "$i" ] && patch -p1 -b -z .b${PN}~ <$i
 		PN=$((PN+1))
 	done
+	for i in ${OURDIR}/device/${TARGET}/kernel-patches/*.gitpatch; do
+		[ -e "$i" ] && git apply $i
+	done
 	run download_kernel_extras
 
 	[ -e ${OURDIR}/device/${TARGET}/../generic/${KERNEL_CONFIG} ] && cp -f ${OURDIR}/device/${TARGET}/../generic/${KERNEL_CONFIG} arch/${KERNELARCH}/configs/
