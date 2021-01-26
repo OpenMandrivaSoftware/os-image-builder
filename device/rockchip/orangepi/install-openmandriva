@@ -207,7 +207,7 @@ fi
 echo "Copying bootup files..."
 cp -RLx /boot/* /mnt/destination/boot/
 sed -i -e "s,rootfstype=f2fs,rootfstype=ext4,g" /mnt/destination/boot/extlinux/extlinux.conf
-sed -i -e "s,root=[^ ]*,root=${ROOT},g" /mnt/destination/boot/extlinux/extlinux.conf
+sed -i -e "s,/dev/mmcblk1p2,${ROOT},g" /mnt/destination/boot/extlinux/extlinux.conf
 sed -i -e "s,/dev/mmcblk1,${DESTINATION},g" /mnt/destination/boot/extlinux/extlinux.conf
 
 echo "Installing bootloader..."

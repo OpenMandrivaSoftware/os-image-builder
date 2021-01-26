@@ -2,7 +2,7 @@
 DEV="$1"
 if ! [ -b "$DEV" ]; then
 	echo "Usage: $0 DEVICE"
-	echo "Where DEVICE is the device node of the EMMC card to write to,"
+	echo "Where DEVICE is the device node of the SD card to write to,"
 	echo "typically /dev/sdb or /dev/mmcblk0"
 	exit 1
 fi
@@ -32,7 +32,7 @@ echo "aren't sure this is what you want to do, press Ctrl-C"
 echo "now. Otherwise, press enter to continue."
 read
 
-dd if=rockpi4c-emmc.img of=$DEV bs=1M status=progress
+dd if=rockpi4c.img of=$DEV bs=1M status=progress
 udevadm settle -t 5
 SD="$(kpartx $DEV |tail -n1)"
 PART="$(echo $SD |cut -d' ' -f 1)"
