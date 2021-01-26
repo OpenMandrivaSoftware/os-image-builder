@@ -22,10 +22,5 @@ EOF
 make CROSS_COMPILE=aarch64-linux-gnu- BL31=`pwd`/arm-trusted-firmware/build/rk3399/debug/bl31/bl31.elf EXTRAVERSION="-OpenMandriva"
 cd ..
 
-#mkimage -A arm -O linux -T ramdisk -C gzip -d $OURDIR/$ROOTDIR/boot/initrd-$KERNELVERSION.img $OURDIR/$ROOTDIR/boot/uInitrd.img
-#ln -sf initrd-$KERNELVERSION.img $OURDIR/$ROOTDIR/boot/initrd.img
-ln -sf vmlinuz-$KERNELVERSION $OURDIR/$ROOTDIR/boot/vmlinuz
-mkimage -A arm64 -O linux -T script -C none -n "U-Boot boot script" -d $OURDIR/device/${TARGET}/boot.cmd $OURDIR/$ROOTDIR/boot/boot.scr
-
 cp u-boot/idbloader.img "$OURDIR/$ROOTDIR"/boot/
 cp u-boot/u-boot.itb "$OURDIR/$ROOTDIR"/boot/

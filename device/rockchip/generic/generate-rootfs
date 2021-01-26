@@ -62,3 +62,4 @@ dd if=u-boot/idbloader.img of=${LOOPDEV} bs=512 seek=64 conv=notrunc
 dd if=u-boot/u-boot.itb of=${LOOPDEV} bs=512 seek=16384 conv=notrunc
 losetup -d ${LOOPDEV}
 popd
+xz -9ef ${OURDIR}/${SHORTTARGET}.img

@@ -1,0 +1,6 @@
+. ${OURDIR}/device/rockchip/generic/config
+
+# The line below is not a typo.
+# As far as u-boot is concerned, 4B and 4C are identical.
+UBOOT_CONFIG="rock-pi-4c-rk3399_defconfig"
+DTB="rockchip/rk3399-rock-pi-4b"

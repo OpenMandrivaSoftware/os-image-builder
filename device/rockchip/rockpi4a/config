@@ -1,0 +1,4 @@
+. ${OURDIR}/device/rockchip/generic/config
+
+UBOOT_CONFIG="rock-pi-4-rk3399_defconfig"
+DTB="rockchip/rk3399-rock-pi-4a"
