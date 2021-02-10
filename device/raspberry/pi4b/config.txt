@@ -1,0 +1,25 @@
+# See
+# https://www.raspberrypi.org/documentation/configuration/config-txt
+arm_64bit=1
+kernel=kernel8.img
+dtoverlay=vc4-kms-v3d-pi4
+# Force the monitor to HDMI mode so that sound will be sent over HDMI cable
+hdmi_drive=2
+# Force monitor mode to DMT
+hdmi_group=2
+# Force monitor resolution (e.g. 16 = 1920x1080)
+#hdmi_mode=16
+# Some displays might have issues with text/pixels spilling off the screen.
+# If this affects you, uncomment the overscan_* settings and adjust the values
+#overscan_left=20
+#overscan_right=12
+#overscan_top=10
+#overscan_bottom=10
+# For i2c & spi
+dtparam=i2c_arm=on
+dtparam=spi=on
+# Memory reserved for the GPU (in MB)
+mem_gpu=256
+
+# Enable audio (loads snd_bcm2835)
+dtparam=audio=on

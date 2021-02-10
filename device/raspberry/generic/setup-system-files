@@ -1,0 +1,11 @@
+if [ -e "$OURDIR/$ROOTDIR"/etc/xdg/kwinrc ]; then
+	# The GPU (or at least its driver) is weak. XRender
+	# outperforms OpenGL.
+	sed -i -e '/Compositing/aBackend=XRender' "$OURDIR/$ROOTDIR"/etc/xdg/kwinrc
+	sed -i -e 's,^GLCore=true,GLCore=false,' "$OURDIR/$ROOTDIR"/etc/xdg/kwinrc
+fi
+
+cat >"$OURDIR/$ROOTDIR"/etc/fstab <<EOF
+/dev/mmcblk0p2 / ext4 defaults,noatime 0 1
+/dev/mmcblk0p1 /boot vfat defaults,noatime 0 2
+EOF

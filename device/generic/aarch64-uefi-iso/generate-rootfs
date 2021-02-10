@@ -1,0 +1,13 @@
+pushd "$OURDIR/$ROOTDIR"
+MINSIZE=$(du -s --block-size=1048576 |awk '{ print $1; }')
+cd ..
+
+chroot "$ROOTDIR" grub2-mkimage -C xz -O arm64-efi -p /boot/grub -o /boot/bootaa64.efi boot linux normal configfile part_gpt part_msdos btrfs fat iso9660 loopback test keystatus gfxmenu regexp efi_gop all_video gfxterm font echo read ls cat png jpeg halt
+mkfs.vfat -C boot.img $(( ($(stat -c %s "$ROOTDIR"/boot/bootaa64.efi) / 1024 + 511) / 32 * 32 ))
+mmd -i boot.img ::/efi
+mmd -i boot.img ::/efi/boot
+mmd -i boot.img ::/boot
+mmd -i boot.img ::/boot/grub
+mcopy -Q -i boot.img "$ROOTDIR"/boot/bootaa64.efi ::/efi/boot
+
+xorriso -as mkisofs -r -J -l -iso-level 3 -joliet-long -append_partition 2 0xef boot.img -partition_cyl_align all -o ${SHORTTARGET}.iso "$ROOTDIR"

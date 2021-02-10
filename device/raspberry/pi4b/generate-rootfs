@@ -1,9 +1,0 @@
-pushd $OURDIR/$ROOTDIR/boot
-cp -f $OURDIR/device/raspberry/pi4b/firmware/*.{bin,txt,dat,elf} .
-cp -f vmlinuz-${KERNELVERSION} kernel8.img
-cp -f broadcom/*.dtb .
-tar cJf ../../bootfs-${SHORTTARGET}.tar.xz .
-cd ..
-rm -rf boot
-tar cJf ../rootfs-${SHORTTARGET}.tar.xz .
-popd

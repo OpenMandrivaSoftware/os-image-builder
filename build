@@ -220,7 +220,7 @@ if [ -n "$KERNEL" ]; then
 	[ -z "$KERNEL_CONFIG" ] && KERNEL_CONFIG="defconfig"
 	[ -d kernel ] || git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel
 	cd kernel
-	sed -i -e "s,' ' -f 2,' ' -f 4," scripts/lld-version.sh
+	[ -e scripts/lld-version.sh ] && sed -i -e "s,' ' -f 2,' ' -f 4," scripts/lld-version.sh
 	PN=1
 	for i in ${OURDIR}/device/${TARGET}/kernel-patches/*.patch ${OURDIR}/device/${TARGET}/kernel-patches/*.diff; do
 		[ -e "$i" ] && patch -p1 -b -z .b${PN}~ <$i
@@ -239,10 +239,10 @@ if [ -n "$KERNEL" ]; then
 	git commit -am "Apply OpenMandriva patches" || :
 	cd ..
 
-	if [ "$KERNEL_CLANG" = "yes" ]; then
-		make $SMPFLAGS ARCH=$KERNELARCH LLVM=1 $KERNEL_CONFIG include/config/kernel.release
-	else
+	if [ "$KERNEL_GCC" = "yes" ]; then
 		make $SMPFLAGS ARCH=$KERNELARCH $KERNEL_CONFIG include/config/kernel.release
+	else
+		make $SMPFLAGS ARCH=$KERNELARCH LLVM=1 $KERNEL_CONFIG include/config/kernel.release
 	fi
 	KERNELVERSION=$(cat include/config/kernel.release)
 	KERNELVERSION_NUM="$(echo $KERNELVERSION |cut -d- -f1)"
@@ -290,18 +290,18 @@ kernel for $SHORTTARGET devices
 EOF
 
 	# CROSS_COMPILE_ARM32 is a Sony-ism, but doesn't hurt anywhere else, so we can specify it unconditionally
-	if [ "$KERNEL_CLANG" = "yes" ]; then
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
-	else
+	if [ "$KERNEL_GCC" = "yes" ]; then
 		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+	else
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
 		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
-	if [ "$KERNEL_CLANG" = "yes" ]; then
-		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
-	else
+	if [ "$KERNEL_GCC" = "yes" ]; then
 		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
+	else
+		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 

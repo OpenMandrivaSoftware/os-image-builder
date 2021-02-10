@@ -102,8 +102,8 @@ _KERNEL_CONFIG_. Use `--enable _option_`, `--disable _option_`,
 `NEED_INITRD=_yes_|_no_` Define whether or not an initrd/initramfs is needed
 to boot
 
-`KERNEL_CLANG=_yes_|_no_` Define whether or not to build the kernel with the
-clang toolchain (as opposed to gcc)
+`KERNEL_GCC=_yes_|_no_` Define whether or not to build the kernel with the
+gcc toolchain (default: use clang)
 
 In addition to the `config` file, you can override the default behavior by creating
 scriptlets called `generate-initrd`, `generate-rootfs`, `generate-bootimg`,

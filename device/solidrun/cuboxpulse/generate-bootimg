@@ -32,6 +32,7 @@ make flash.bin CROSS_COMPILE=aarch64-linux-gnu-
 cp flash.bin $OURDIR/
 cd ..
 
+sed -e "s,@DTB@,$DTB,g" $OURDIR/device/${TARGET}/boot.script.in >$OURDIR/device/${TARGET}/boot.script
 u-boot/tools/mkimage -A arm64 -O linux -T script -d $OURDIR/device/${TARGET}/boot.script $OURDIR/$ROOTDIR/boot/boot.scr
 
 pushd $OURDIR/$ROOTDIR

@@ -1,0 +1,13 @@
+# Generic x86_64 board with UEFI support
+ARCH="x86_64"
+# Let's use a current kernel, it usually has more hardware support
+HWPACKAGES="kernel-release"
+# Most boards have a PCIE-slot that may take a graphics card (so we
+# need radeon and nouveau), others have onboard graphics (typically
+# mali or adreno...)
+HWPACKAGES_gui="$HWPACKAGES_gui lib64dri-drivers-radeon lib64dri-drivers-nouveau"
+# Let's support what people might drop into those PCI-E slots...
+HWPACKAGES="$HWPACKAGES pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode"
+# (this is the default anyway)
+# NEED_INITRD=yes
+USE_UEFI=yes

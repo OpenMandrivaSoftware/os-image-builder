@@ -1,0 +1,25 @@
+search --no-floppy --label OMVZNVER1 --set=root
+insmod part_gpt
+insmod ext2
+insmod gfxmenu
+set gfxmode=auto,1680x1050,1300x768,1280x800,1024x768,1024x600,800x600,640x480
+load_video
+insmod gfxterm
+insmod gettext
+
+set timeout_style=menu
+set timeout=10
+
+menuentry 'OpenMandriva Lx' --class openmandriva --class gnu-linux --class gnu --class os {
+	linux /boot/vmlinuz-@KVERSION@ root=LABEL=OMVZNVER1 rw rootwait rd.timeout=120
+	initrd /boot/initrd-@KVERSION@.img
+}
+
+menuentry 'OpenMandriva Lx (text mode)' --class openmandriva --class gnu-linux --class gnu --class os {
+	linux /boot/vmlinuz-@KVERSION@ root=LABEL=OMVZNVER1 rw rootwait rd.timeout=120 systemd.unit=multi-user.target
+	initrd /boot/initrd-@KVERSION@.img
+}
+
+menuentry 'System setup' {
+	fwsetup
+}
