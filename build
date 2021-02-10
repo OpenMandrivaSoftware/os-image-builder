@@ -363,6 +363,9 @@ if ! [ -d "$ROOTDIR" ]; then
 		rpm -r $OURDIR/$ROOTDIR -Uvh --ignorearch --nodeps $P
 	done
 
+	# Don't use mirrors when creating the image
+	sed -i -e '/mirror.openmandriva.org/d;s,^	,baseurl=,' "$OURDIR/$ROOTDIR"/etc/yum.repos.d/*.repo
+
 	if ! $NATIVEBUILD; then
 		# Make sure we can run %post scripts in the chroot
 		mkdir -p $OURDIR/$ROOTDIR/usr/bin
@@ -543,6 +546,10 @@ else
 		mount --bind $mp $OURDIR/$ROOTDIR$mp
 	done
 fi
+
+# Reinstall distro-release-repos to get mirrors back
+dnf -y reinstall --installroot="$OURDIR/$ROOTDIR" --releasever=$OMV_VERSION --forcearch=$ARCH distro-release-repos
+
 run generate-bootimg
 # Stuff in virtual filesystems should not make it to
 # root filesystems...
