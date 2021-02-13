@@ -32,7 +32,7 @@ echo "aren't sure this is what you want to do, press Ctrl-C"
 echo "now. Otherwise, press enter to continue."
 read
 
-dd if=pinebookpro.img of=$DEV bs=1M status=progress
+xz -cd pinebookpro.img.xz |dd of=$DEV bs=1M status=progress
 udevadm settle -t 5
 SD="$(kpartx $DEV |tail -n1)"
 PART="$(echo $SD |cut -d' ' -f 1)"
