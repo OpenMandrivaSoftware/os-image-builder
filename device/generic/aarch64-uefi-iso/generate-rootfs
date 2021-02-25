@@ -12,4 +12,4 @@ mcopy -Q -i boot.img "$ROOTDIR"/boot/bootaa64.efi ::/efi/boot
 sed -e "s,@KVERSION@,${KERNELVERSION},g;s|@CMDLINE@|${CMDLINE}|g" $OURDIR/device/generic/aarch64-uefi/grub.cfg.in >$OURDIR/$ROOTDIR/boot/grub.cfg
 mcopy -Q -i boot.img "$ROOTDIR"/boot/grub.cfg ::/boot/grub
 
-xorriso -as mkisofs -r -J -l -iso-level 3 -joliet-long -V OMVAA64 -append_partition 2 0xef boot.img -partition_cyl_align all -o ${SHORTTARGET}.iso "$ROOTDIR"
+xorriso -as mkisofs -R -J -l -iso-level 3 -joliet-long -V OMVAA64 -append_partition 2 0xef boot.img -partition_cyl_align all -o ${SHORTTARGET}.iso "$ROOTDIR"
