@@ -1,3 +1,40 @@
 sed -i -e 's,zstd,gzip,g' $OURDIR/$ROOTDIR/usr/lib/dracut/dracut.conf.d/50-dracut-distro.conf
-chroot $OURDIR/$ROOTDIR /sbin/dracut --gzip -o ifcfg -o lvm -o mdraid -o aufs-mount -o network -o cifs -o dm -o crypt -o dmraid -o multipath -o multipath-hostonly --fstab --add-fstab /etc/fstab -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
+
+mkdir $OURDIR/$ROOTDIR/usr/lib/dracut/modules.d/99overlayfs
+cat >$OURDIR/$ROOTDIR/usr/lib/dracut/modules.d/99overlayfs/module-setup.sh <<'EOF'
+#!/bin/sh
+check() {
+	require_binaries /bin/mount
+}
+depends() {
+	return 0
+}
+installkernel() {
+	instmods overlay
+}
+install() {
+	dracut_install /bin/mount
+	inst_hook pre-pivot 10 "$moddir/mount-overlayfs.sh"
+}
+EOF
+cat >$OURDIR/$ROOTDIR/usr/lib/dracut/modules.d/99overlayfs/mount-overlayfs.sh <<'EOF'
+#!/bin/sh
+. /lib/dracut-lib.sh
+mkdir -p /run/sysroot
+mkdir -p /run/root-rw
+mount -t tmpfs none /run/root-rw
+mkdir -p /run/root-rw/root /run/root-rw/work
+mount --make-private $NEWROOT
+mount --make-private /
+mount --make-private /run
+mount --move $NEWROOT /run/sysroot
+mount -t overlay -o lowerdir=/run/sysroot,upperdir=/run/root-rw/root,workdir=/run/root-rw/work overlay $NEWROOT
+mkdir -p /sysroot/run/sysroot
+mkdir -p /sysroot/run/root-rw
+mount --move /run/sysroot /sysroot/run/sysroot
+mount --move /run/root-rw /sysroot/run/root-rw
+EOF
+chmod +x $OURDIR/$ROOTDIR/usr/lib/dracut/modules.d/99overlayfs/*.sh
+
+chroot $OURDIR/$ROOTDIR /sbin/dracut --gzip --add overlayfs -o ifcfg -o lvm -o mdraid -o aufs-mount -o network -o squash -o cifs -o dm -o crypt -o dmraid -o multipath -o multipath-hostonly --fstab --add-fstab /etc/fstab -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
 chmod 0644 $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img
