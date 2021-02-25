@@ -56,10 +56,12 @@ cd "$OURDIR"
 
 PACKAGES=""
 PACKAGESETS=""
+SERVICES="dbus-broker NetworkManager"
+WEAKDEPS=""
 addpackageset core
 
 OMV_VERSION=cooker
-while getopts "v:p:P:" opt; do
+while getopts "p:P:s:S:v:wW" opt; do
 	case $opt in
 	v)
 		OMV_VERSION=$OPTARG
@@ -69,6 +71,18 @@ while getopts "v:p:P:" opt; do
 		;;
 	P)
 		addpackageset ${OPTARG}
+		;;
+	s)
+		SERVICES="$SERVICES ${OPTARG}"
+		;;
+	S)
+		SERVICES="$(echo $SERVICES |sed -e "s,^${OPTARG} ,,;s, ${OPTARG} , ,;s,^${OPTARG}\$,,;s, ${OPTARG}\$,,")"
+		;;
+	w)
+		WEAKDEPS="--setopt=install_weak_deps=True"
+		;;
+	W)
+		WEAKDEPS="--setopt=install_weak_deps=False"
 		;;
 	*)
 		echo "Unknown option $opt" >&2
@@ -392,7 +406,7 @@ if ! [ -d "$ROOTDIR" ]; then
 		mount --bind $mp $OURDIR/$ROOTDIR$mp
 	done
 
-	if ! dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $PACKAGES $KERNELRPM; then
+	if ! dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $WEAKDEPS $PACKAGES $KERNELRPM; then
 		if [ -e $OURDIR/$ROOTDIR/bin/sh ]; then
 			cat >&2 <<EOF
 WARNING: dnf returned an error code, but it looks like installation finished.
@@ -525,10 +539,15 @@ EOF
 	else
 		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default multi-user.target
 	fi
-	[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/dbus-broker.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable dbus-broker
-	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/NetworkManager.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable NetworkManager
 	# At least while we're mostly dealing with headless boards
 	[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sshd.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sshd
+	for i in $SERVICES; do
+		if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/$i.service" ]; then
+			chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable $i
+		else
+			echo "WARNING: Service $i requested, but not installed" >&2
+		fi
+	done
 	pushd $OURDIR/$ROOTDIR
 	run postprocess
 	# There shouldn't be any files in the root filesystem. If there are any,

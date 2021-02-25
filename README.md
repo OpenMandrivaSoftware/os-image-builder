@@ -53,6 +53,20 @@ or to build a Raspberry Pi 4B image with KDE and audio support and vim-enhanced,
 
 `./build -P plasma -P audio -p vim-enhanced pi4b`
 
+Unless _-W_ is given, weak dependencies (Suggests:/Recommends:) are installed
+automatically.
+
+Selecting services
+==================
+If you wish to start extra systemd services (or disable standard services), you can
+pass _-s service_ to enable a service or _-S service_ to disable a service that would
+otherwise be enabled by default.
+
+For example, when building an image for running inside openstack, it may make sense
+to use
+
+`./build -p cloud-init -s cloud-init aarch64-uefi-iso`
+
 Using the right version
 =======================
 By default, _os-image-builder_ builds from _cooker_, the development repositories.

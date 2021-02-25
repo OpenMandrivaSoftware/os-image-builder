@@ -1,11 +1,7 @@
-search --no-floppy --label OMVAA64 --set=root
+insmod search
 insmod part_gpt
-insmod ext2
-insmod gfxmenu
-set gfxmode=auto,1680x1050,1300x768,1280x800,1024x768,1024x600,800x600,640x480
-load_video
-insmod gfxterm
-insmod gettext
+insmod iso9660
+search --no-floppy --label OMVAA64 --set=root
 
 set timeout_style=menu
 set timeout=10
