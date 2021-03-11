@@ -62,7 +62,7 @@ udevadm settle -t 5
 rmdir mnt || :
 mkdir mnt
 mount /dev/$PART mnt
-umount mnt
+umount -R mnt
 rmdir mnt
 resize.f2fs /dev/$PART
 eject $DEV
