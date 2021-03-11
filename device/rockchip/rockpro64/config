@@ -1,0 +1,4 @@
+. ${OURDIR}/device/rockchip/generic/config
+
+UBOOT_CONFIG="rockpro64-rk3399_defconfig"
+DTB="rockchip/rk3399-rockpro64-v2"

@@ -1,0 +1,223 @@
+#!/bin/bash
+if [ "$(id -u)" != "0" ]; then
+	echo "This script needs root access."
+	echo "The default root password of the live image is \"omv\"."
+	exec sudo $0 "$@"
+	exit 1
+fi
+
+TOOLOUTPUT=/dev/null
+if [ "$1" = "-v" ] || [ "$1" = "--verbose" ]; then
+	TOOLOUTPUT=/dev/stderr
+	VERBOSE=-v
+	shift
+fi
+
+DESTINATION=/dev/mmcblk2
+[ -n "$1" ] && DESTINATION="$1"
+
+if ! [ -b "$DESTINATION" ]; then
+	echo "Invalid destination device $DESTINATION"
+	exit 1
+fi
+
+cat <<EOF
+WARNING: This script will overwrite the entire disk $1
+Press Ctrl-C if you don't want this to happen. Use $0 /dev/whatever to
+select a different target device.
+
+On a RockPro64:
+	/dev/mmcblk1 is the SD card
+	/dev/mmcblk2 is the eMMC storage
+	/dev/nvme0n1 is the NVME SSD
+
+At the moment, this install script doesn't support installing alongside
+another OS on the same disk - but you can install manually using the commands
+in the script (skipping over partitioning and mounting steps).
+
+Note: If you're installing to an NVME drive, you may have to adjust the
+bootloader yourself, not all bootloaders in the RockPro64 support
+booting directly from NVMe.
+
+Press Enter to continue or Ctrl-C to abort.
+EOF
+read
+
+DISKSIZE="$(gdisk -l $DESTINATION |grep "^Disk /" |awk '{ print $3; }')"
+# gdisk output is in sectors of 512 bytes
+DISKSIZE=$((DISKSIZE*512))
+
+# We should really be using gdisk and a GPT partition table, but
+# the version of u-boot in the PBP SPI seems to dislike anything but
+# FAT on MBR for the extlinux configs it looks for.
+echo "Setting up partition table..."
+if [ "$DISKSIZE" -gt 120000000000 ]; then
+	# Disk is large enough for boot/swap/root/home split
+	# First partition starts at block 62500 because the earlier
+	# blocks are reserved for the bootloader
+	fdisk --wipe always --wipe-partitions always $DESTINATION &>$TOOLOUTPUT <<EOF
+o
+n
+p
+1
+62500
+262143
+t
+c
+n
+p
+2
+262144
+33816575
+t
+2
+82
+n
+p
+3
+33816576
+201588735
+t
+3
+83
+n
+p
+201588736
+
+t
+4
+83
+w
+EOF
+	if echo ${DESTINATION} |grep '^/dev/sd'; then
+		BOOT=${DESTINATION}1
+		SWAP=${DESTINATION}2
+		ROOT=${DESTINATION}3
+		HOME=${DESTINATION}4
+	else
+		BOOT=${DESTINATION}p1
+		SWAP=${DESTINATION}p2
+		ROOT=${DESTINATION}p3
+		HOME=${DESTINATION}p4
+	fi
+else
+	# Small disk (internal MMC storage?) -- let's try to get by with
+	# just a boot partition and a root partition
+	fdisk --wipe always --wipe-partitions always $DESTINATION &>$TOOLOUTPUT <<EOF
+o
+n
+p
+1
+62500
+262143
+t
+c
+n
+p
+2
+262144
+
+t
+2
+83
+w
+EOF
+	if echo ${DESTINATION} |grep '^/dev/sd'; then
+		BOOT=${DESTINATION}1
+		ROOT=${DESTINATION}2
+	else
+		BOOT=${DESTINATION}p1
+		ROOT=${DESTINATION}p2
+	fi
+	SWAP=""
+	HOME=""
+fi
+
+if [ -z "$BOOT" ]; then
+	echo "No BOOT partition - apparently partitioning went wrong."
+	exit 1
+fi
+if [ -z "$ROOT" ]; then
+	echo "No root partition - apparently partitioning went wrong."
+	exit 1
+fi
+
+kpartx ${DESTINATION}
+
+if [ -n "$BOOT" -a ! -b "$BOOT" ]; then
+	echo "Device node for BOOT system partition $BOOT didn't get created."
+	echo "Apparently partitioning went wrong."
+	exit 1
+fi
+if [ -n "$SWAP" -a ! -b "$SWAP" ]; then
+	echo "Device node for Swap partition $SWAP didn't get created."
+	echo "Apparently partitioning went wrong."
+	exit 1
+fi
+if [ -n "$ROOT" -a ! -b "$ROOT" ]; then
+	echo "Device node for Root partition $ROOT didn't get created."
+	echo "Apparently partitioning went wrong."
+	exit 1
+fi
+if [ -n "$HOME" -a ! -b "$HOME" ]; then
+	echo "Device node for Home partition $HOME didn't get created."
+	echo "Apparently partitioning went wrong."
+	exit 1
+fi
+
+echo "Formatting BOOT partition..."
+mkfs.vfat -n BOOT $BOOT &>$TOOLOUTPUT
+if [ -n "$SWAP" ]; then
+	echo "Formatting swap partition..."
+	mkswap -f $SWAP &>$TOOLOUTPUT
+	swapon $SWAP
+fi
+echo "Formatting / partition..."
+mkfs.ext4 -F -L/ $ROOT &>$TOOLOUTPUT
+if [ -n "$HOME" ]; then
+	echo "Formatting /home partition..."
+	mkfs.ext4 -F -L/home $HOME &>$TOOLOUTPUT
+fi
+
+mkdir -p /mnt/destination
+mount $ROOT /mnt/destination
+if [ -n "$BOOT" ]; then
+	mkdir -p /mnt/destination/boot
+	mount $BOOT /mnt/destination/boot
+fi
+if [ -n "$HOME" ]; then
+	mkdir -p /mnt/destination/home
+	mount $HOME /mnt/destination/home
+fi
+
+echo "Copying OS..."
+#tar c --one-file-system -f - / | (cd /mnt/destination && tar x $VERBOSE -f -)
+cp -ax / /mnt/destination/
+
+echo "Setting up system files..."
+echo "$ROOT / ext4 defaults,noatime 0 1" >/mnt/destination/etc/fstab
+echo "$BOOT /boot vfat defaults,noatime 0 2" >>/mnt/destination/etc/fstab
+[ -n "$SWAP" ] && echo "$SWAP swap swap defaults 0 1" >>/mnt/destination/etc/fstab
+[ -n "$HOME" ] && echo "$HOME /home ext4 defaults,noatime 0 2" >>/mnt/destination/etc/fstab
+
+if [ -n "$HOME" ]; then
+	cp -a /home/* /mnt/destination/home
+fi
+
+echo "Copying bootup files..."
+cp -RLx /boot/* /mnt/destination/boot/
+sed -i -e "s,rootfstype=f2fs,rootfstype=ext4,g" /mnt/destination/boot/extlinux/extlinux.conf
+sed -i -e "s,root=[^ ]*,root=${ROOT},g" /mnt/destination/boot/extlinux/extlinux.conf
+sed -i -e "s,/dev/mmcblk1,${DESTINATION},g" /mnt/destination/boot/extlinux/extlinux.conf
+
+echo "Installing bootloader..."
+dd if=/boot/idbloader.img of=${DESTINATION} bs=512 seek=64 conv=notrunc
+dd if=/boot/u-boot.itb of=${DESTINATION} bs=512 seek=16384 conv=notrunc
+
+echo "Cleaning up..."
+rm -f /mnt/destination/home/omv/install-openmandriva
+[ -n "$HOME" ] && umount /mnt/destination/home
+[ -n "$BOOT" ] && umount /mnt/destination/boot
+umount /mnt/destination
+
+echo "DONE! OpenMandriva should now be installed."
