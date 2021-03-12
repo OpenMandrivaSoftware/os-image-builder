@@ -17,15 +17,15 @@ parted --script "${LOOPDEV}" \
 dd if="$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/idbloader.img of=${LOOPDEV} seek=64
 
 # install u-boot binary data
-dd if="$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb of=${LOOPDEV}1
+dd if="$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb of=${LOOPDEV}p1
 
 # create partition for OMV
-mkfs.ext4 -L OMVAA64 ${LOOPDEV}3
-ROOTUUID=$(/sbin/blkid ${LOOPDEV}3 |sed -e 's,.* UUID=",,;s,".*,,')
+mkfs.ext4 -L OMVAA64 ${LOOPDEV}p3
+ROOTUUID=$(/sbin/blkid ${LOOPDEV}p3 |sed -e 's,.* UUID=",,;s,".*,,')
 
 # create partition for EFI
-mkfs.vfat -F 32 -n OMVBOOT ${LOOPDEV}2
-BOOTUUID=$(/sbin/blkid ${LOOPDEV}2 |sed -e 's,.* UUID=",,;s,".*,,')
+mkfs.vfat -F 32 -n OMVBOOT ${LOOPDEV}p2
+BOOTUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* UUID=",,;s,".*,,')
 
 sync
 
@@ -33,14 +33,14 @@ rm -rf mnt
 mkdir mnt
 
 # installing ouf EFI files on ESP
-mount ${LOOPDEV}1 mnt
+mount ${LOOPDEV}p1 mnt
 cd mnt
 tar xf ../boot-${SHORTTARGET}.tar.xz
 cd ..
 umount mnt
 
 # install OpenMandriva distribution
-mount ${LOOPDEV}3 mnt
+mount ${LOOPDEV}p3 mnt
 
 cp -a ${ROOTDIR}/* mnt/
 cat >mnt/etc/fstab <<EOF
