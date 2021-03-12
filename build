@@ -17,6 +17,7 @@ usage() {
 run() {
 	local SCRIPT="$1"
 	shift
+	printf '%s\n' "Running $SCRIPT"
 	if [ -e $OURDIR/device/$TARGET/$SCRIPT ]; then
 		. $OURDIR/device/$TARGET/$SCRIPT "$@"
 	else
@@ -583,7 +584,9 @@ else
 fi
 
 # Reinstall distro-release-repos to get mirrors back
-dnf -y reinstall --installroot="$OURDIR/$ROOTDIR" --releasever=$OMV_VERSION --forcearch=$ARCH distro-release-repos
+
+[ -z $KEEP_OLD_ROOT ] && dnf -y reinstall --installroot="$OURDIR/$ROOTDIR" --releasever=$OMV_VERSION --forcearch=$ARCH distro-release-repos
+[ -e "$OURDIR/$ROOTDIR/var/cache/dnf" ] && rm -rf "$OURDIR/$ROOTDIR/var/cache/dnf/*"
 
 run generate-bootimg
 # Stuff in virtual filesystems should not make it to

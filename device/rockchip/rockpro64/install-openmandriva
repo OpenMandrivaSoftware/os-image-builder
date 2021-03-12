@@ -144,22 +144,22 @@ fi
 
 kpartx ${DESTINATION}
 
-if [ -n "$BOOT" -a ! -b "$BOOT" ]; then
+if [ -n "$BOOT" ] && [ ! -b "$BOOT" ]; then
 	echo "Device node for BOOT system partition $BOOT didn't get created."
 	echo "Apparently partitioning went wrong."
 	exit 1
 fi
-if [ -n "$SWAP" -a ! -b "$SWAP" ]; then
+if [ -n "$SWAP" ] && [ ! -b "$SWAP" ]; then
 	echo "Device node for Swap partition $SWAP didn't get created."
 	echo "Apparently partitioning went wrong."
 	exit 1
 fi
-if [ -n "$ROOT" -a ! -b "$ROOT" ]; then
+if [ -n "$ROOT" ] && [ ! -b "$ROOT" ]; then
 	echo "Device node for Root partition $ROOT didn't get created."
 	echo "Apparently partitioning went wrong."
 	exit 1
 fi
-if [ -n "$HOME" -a ! -b "$HOME" ]; then
+if [ -n "$HOME" ] && [ ! -b "$HOME" ]; then
 	echo "Device node for Home partition $HOME didn't get created."
 	echo "Apparently partitioning went wrong."
 	exit 1

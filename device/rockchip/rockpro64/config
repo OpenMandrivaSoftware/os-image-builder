@@ -1,5 +1,4 @@
 ARCH="aarch64"
-HWPACKAGES="f2fs-tools kernel-release-server"
-NEED_INITRD=no
-UBOOT_CONFIG="rockpro64-rk3399_defconfig"
-DTB="rockchip/rk3399-rockpro64-v2"
+HWPACKAGES="f2fs-tools kernel-release-server efibootmgr pciutils kernel-firmware kernel-firmware-extra uboot-images-armv8"
+USE_UEFI=yes
+CMDLINE="earlycon=pl011,0x2a400000,115200 console=tty1 console=ttyS2,1500000 no_console_suspend earlycon=uart,mmio32,0x01c28000 panic=10 consoleblank=0 loglevel=1 cma=256M"
