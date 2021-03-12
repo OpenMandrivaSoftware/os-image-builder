@@ -1,4 +1,4 @@
-if [ "$ARCH" = "x86_64" -o "$ARCH" = "znver1" -o "$ARCH" = "i686" ]; then
+if [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "znver1" ] || [ "$ARCH" = "i686" ]; then
 	chroot $OURDIR/$ROOTDIR /sbin/dracut --xz -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
 else
 	# Loading Intel or AMD microcode doesn't seem to be useful on

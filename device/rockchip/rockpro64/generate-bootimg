@@ -1,0 +1,4 @@
+sed -e "s,@KVERSION@,${KERNELVERSION},g;s|@CMDLINE@|${CMDLINE}|g" $OURDIR/device/generic/aarch64-uefi/grub.cfg.in >$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+cd $OURDIR/$ROOTDIR/boot/efi
+    tar cJf $OURDIR/boot-${SHORTTARGET}.tar.xz *
+cd ..
