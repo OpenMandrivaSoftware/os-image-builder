@@ -6,7 +6,7 @@ if ! [ -b "$DEV" ]; then
 	echo "typically /dev/sdb or /dev/mmcblk0"
 	exit 1
 fi
-if [ "`id -u`" != 0 ]; then
+if [ "$(id -u) != 0 ]; then
 	echo "This script needs root access to write to the SD card"
 	echo "directly, reload partition tables, etc."
 	exec sudo $0 "$@"

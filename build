@@ -336,9 +336,9 @@ cp arch/$KERNELARCH/boot/$KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
 /lib/modules/*
 EOF
 	cd kernel-rpm
-	rpmbuild -bb --target $ARCH --define "_sourcedir `pwd`" --define "_specdir `pwd`" --define "_srcrpmdir `pwd`/SRPMS" --define "_rpmdir `pwd`/RPMS"  kernel-$SHORTTARGET.spec
+	rpmbuild -bb --target $ARCH --define "_sourcedir $(pwd)" --define "_specdir $(pwd)" --define "_srcrpmdir $(pwd)/SRPMS" --define "_rpmdir $(pwd)/RPMS"  kernel-$SHORTTARGET.spec
 	cd ..
-	KERNELRPM="`ls $OURDIR/kernel-rpm/RPMS/*/*.rpm`"
+	KERNELRPM="$(ls $OURDIR/kernel-rpm/RPMS/*/*.rpm)"
 else
 	echo "KERNEL not specified in $TARGET config - assuming packaged kernel"
 fi
@@ -487,7 +487,7 @@ EOF
 				done
 			fi
 		fi
-		if [ -z "$NO_AUTOLOGIN" -a -n "$SDDMSESSION" -a -e $OURDIR/$ROOTDIR/etc/sddm.conf ]; then
+		if [ -z "$NO_AUTOLOGIN" ] && [ -n "$SDDMSESSION" ] && [ -e $OURDIR/$ROOTDIR/etc/sddm.conf ]; then
 			sed -i -e "s,^User=,User=omv,;s,^Session=,Session=$SDDMSESSION," $OURDIR/$ROOTDIR/etc/sddm.conf
 		fi
 	fi
@@ -503,7 +503,7 @@ EOF
 	done
 
 	run setup-system-files
-	if [ "$NEED_INITRD" != "no" -o "$USE_UEFI" = "yes" -a -n "$KERNELVERSION" ]; then
+	if [ "$NEED_INITRD" != "no" ] || [ "$USE_UEFI" = "yes" ] && [ -n "$KERNELVERSION" ]; then
 		if [ "$NEED_INITRD" != "no" ]; then
 			run generate-initrd
 		fi
@@ -522,7 +522,7 @@ EOF
 	for i in "$OURDIR/$ROOTDIR"/lib/systemd/system-preset/*.preset; do
 		while read r; do
 			TYPE="$(echo $r |awk '{ print $1; }')"
-			if [ "$TYPE" = "enable" -o "$TYPE" = "disable" ]; then
+			if [ "$TYPE" = "enable" ] || [ "$TYPE" = "disable" ]; then
 				[ "$(echo "$r" |awk '{ print $2; }')" = '*' ] && continue
 				chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl $r || :
 			fi
@@ -545,7 +545,7 @@ EOF
 	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
 	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/simplelogin.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable simplelogin
 	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/sddm.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
-	if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" -o -e "$OURDIR/$ROOTDIR/lib/systemd/system/simplelogin.service" ]; then
+	if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ] || [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/simplelogin.service" ]; then
 		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
 	else
 		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default multi-user.target
