@@ -208,7 +208,7 @@ if [ -n "$KERNEL" ]; then
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
 # vim-common is for xxd, used to decode EDID information for pinebookpro
-HOSTDEPS="$HOSTDEPS curl make clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common"
+HOSTDEPS="$HOSTDEPS curl make clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build"
 
 if [ -n "$HOSTDEPS" ]; then
 	if ! dnf -y --refresh --nogpgcheck install $HOSTDEPS; then
