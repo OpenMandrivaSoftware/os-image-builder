@@ -205,9 +205,15 @@ done
 if [ -n "$KERNEL" ]; then
 	# We aren't using a packaged kernel, so we need the right toolchain...
 	HOSTDEPS="$HOSTDEPS cross-$TRIPLET-gcc"
+	if [ "$ARCH" = "aarch64" ]; then
+		# Many aarch64 kernels (e.g. rk3399) need a 32-bit ARM compiler
+		# to target a helper Cortex-M0 etc.
+		HOSTDEPS="$HOSTDEPS cross-armv7hnl-openmandriva-linux-gnu-gcc"
+	fi
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
-HOSTDEPS="$HOSTDEPS curl make gcc dtc glibc-devel bison flex lib64openssl-devel hostname"
+# vim-common is for xxd, used to decode EDID information for pinebookpro
+HOSTDEPS="$HOSTDEPS curl make clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build"
 
 if [ -n "$HOSTDEPS" ]; then
 	if ! dnf -y --refresh --nogpgcheck install $HOSTDEPS; then
