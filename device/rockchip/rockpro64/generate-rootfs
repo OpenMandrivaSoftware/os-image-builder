@@ -24,7 +24,7 @@ dd if="$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/idbloader.img of="${LO
 dd if="$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb of="${LOOPDEV}p1"
 
 # create partition for OMV
-mkfs.ext4 -L OMVAA64 "${LOOPDEV}p3"
+mkfs.f2fs -l OMVAA64 "${LOOPDEV}p3"
 ROOTUUID=$(/sbin/blkid "${LOOPDEV}p3" |sed -e 's,.* UUID=",,;s,".*,,')
 
 # create partition for EFI
@@ -48,7 +48,7 @@ mount ${LOOPDEV}p3 mnt
 
 cp -a ${ROOTDIR}/* mnt/
 cat >mnt/etc/fstab <<EOF
-UUID=${ROOTUUID}	/		ext4	defaults,noatime	0	1
+UUID=${ROOTUUID}	/		f2fs	defaults,noatime	0	1
 UUID=${BOOTUUID}	/efi	vfat	umask=0077	0	2
 EOF
 umount mnt
