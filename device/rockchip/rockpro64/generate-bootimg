@@ -1,4 +1,3 @@
-sed -e "s,@KVERSION@,${KERNELVERSION},g;s|@CMDLINE@|${CMDLINE}|g" $OURDIR/device/rockchip/rockpro64/grub.cfg.in >$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
-cd $OURDIR/$ROOTDIR/boot/efi
+cd $OURDIR/$ROOTDIR/efi
     tar cJf $OURDIR/boot-${SHORTTARGET}.tar.xz *
 cd ..
