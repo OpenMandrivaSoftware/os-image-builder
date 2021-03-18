@@ -550,7 +550,7 @@ default $MACH_ID-$KVER.conf
 timeout 10
 EOF
 			sed -i -e 's,efi\/,\/,g' "$OURDIR/$ROOTDIR"/efi/loader/entries/$MACH_ID-$KVER.conf
-			if [ -n ${DTB} ] && ! grep -q devicetree $OURDIR/$ROOTDIR/efi/loader/entries/$MACH_ID-$KVER.conf; then
+			if [ -n ${DTB} ] && ! grep -q devicetree $OURDIR/$ROOTDIR/efi/loader/entries/$MACH_ID/$KVER.conf; then
 			    install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KVER/${DTB}.dtb" "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER/dtb/${DTB}.dtb"
 			    printf '%s\n' "devicetree "/$MACH_ID-$KVER"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/efi/loader/entries/$MACH_ID-$KVER.conf
 			fi
