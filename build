@@ -538,13 +538,14 @@ EOF
 			    done
 			fi
 
+#			chroot "$OURDIR/$ROOTDIR" SYSTEMD_RELAX_ESP_CHECKS=1 bootctl install --esp-path=/efi
 			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-bootaa64.efi $OURDIR/$ROOTDIR/efi/EFI/BOOT/BOOTAA64.efi
 			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-bootaa64.efi $OURDIR/$ROOTDIR/efi/EFI/systemd
 			KVER="$(ls --sort=time "$OURDIR/$ROOTDIR"/boot/vmlinuz-* 2>/dev/null|head -n1 |sed -e 's,.*vmlinuz-,,')"
 			MACH_ID=$(chroot $OURDIR/$ROOTDIR systemd-machine-id-setup --print)
 			mkdir -p "$OURDIR/$ROOTDIR/efi/$MACH_ID"
 			chroot "$OURDIR/$ROOTDIR" kernel-install -v add "$KVER" "/boot/vmlinuz-$KVER"
-			cat >$OURDIR/$ROOTDIR/efi/loader.conf<<EOF
+			cat >$OURDIR/$ROOTDIR/efi/loader/loader.conf<<EOF
 default $MACH_ID-$KVER.conf
 timeout 10
 EOF
@@ -554,6 +555,7 @@ EOF
 			    printf '%s\n' "devicetree "/$MACH_ID-$KVER"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/efi/loader/entries/$MACH_ID-$KVER.conf
 			fi
 			dd if=/dev/random of="$OURDIR/$ROOTDIR/efi/loader/"random-seed bs=512 count=1
+			chmod +x -R $OURDIR/$ROOTDIR/efi
 		fi
 
 	fi
@@ -607,7 +609,7 @@ EOF
 	pushd $OURDIR/$ROOTDIR
 	run postprocess
 	# Before removing make sure bind mounts are unmounted
-	for mp in /proc /sys /dev; do
+	for mp in /proc /sys /dev/pts /dev; do
 	    echo 'Try umount "$OURDIR/$ROOTDIR$mp"'
 	    [ -e "$OURDIR/$ROOTDIR$mp" ] && umount -Rq "$OURDIR/$ROOTDIR$mp" || :
 	done
@@ -630,12 +632,12 @@ fi
 # Reinstall distro-release-repos to get mirrors back
 
 [ -z $KEEP_OLD_ROOT ] && dnf -y reinstall --installroot="$OURDIR/$ROOTDIR" --releasever=$OMV_VERSION --forcearch=$ARCH distro-release-repos
-[ -e "$OURDIR/$ROOTDIR/var/cache/dnf" ] && rm -rf "$OURDIR/$ROOTDIR/var/cache/dnf/*"
+[ -d "$OURDIR/$ROOTDIR/var/cache/dnf" ] && rm -rf "$OURDIR/$ROOTDIR/var/cache/dnf/*"
 
 run generate-bootimg
 # Stuff in virtual filesystems should not make it to
 # root filesystems...
-for mp in /proc /sys /dev; do
+for mp in /proc /sys /dev/pts /dev; do
     [ -e "$OURDIR/$ROOTDIR$mp" ] && umount -Rq "$OURDIR/$ROOTDIR$mp" || :
 done
 run generate-rootfs
