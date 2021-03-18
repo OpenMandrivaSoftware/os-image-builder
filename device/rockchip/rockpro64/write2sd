@@ -64,6 +64,6 @@ mkdir mnt
 mount /dev/$PART mnt
 umount -R mnt
 rmdir mnt
-fsck.f2fs /dev/$PART
 resize.f2fs /dev/$PART
+fsck.f2fs /dev/$PART
 eject $DEV
