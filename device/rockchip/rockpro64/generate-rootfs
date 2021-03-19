@@ -1,60 +1,68 @@
-MINSIZE=$(du -s --block-size=1048576 "$OURDIR/$ROOTDIR" |awk '{ print $1; }')
-dd if=/dev/zero of=${OURDIR}/${SHORTTARGET}.img bs=1M count=$((MINSIZE+1024))
-losetup -D
-losetup -fP ${OURDIR}/${SHORTTARGET}.img
-LOOPDEV=$(losetup -j ${OURDIR}/${SHORTTARGET}.img |cut -d: -f1)
+if [ "$USE_SYSTEMD_UEFI" = 'no' ] || [ -z "$USE_SYSTEMD_UEFI" ]; then
+    export KERNELVERSION="$(ls --sort=time "$OURDIR/$ROOTDIR"/boot/vmlinuz-* 2>/dev/null|head -n1 |sed -e 's,.*vmlinuz-,,')"
+
+    [ ! -e "${OURDIR}/${ROOTDIR}"/dtb/${DTB} ] && install -D -m644  "${OURDIR}/${ROOTDIR}"/boot/dtb-*/${DTB}.dtb "${OURDIR}/${ROOTDIR}"/boot/${DTB}.dtb
+    . ${OURDIR}/device/rockchip/generic/generate-rootfs
+else
+    MINSIZE=$(du -s --block-size=1048576 "$OURDIR/$ROOTDIR" |awk '{ print $1; }')
+    dd if=/dev/zero of=${OURDIR}/${SHORTTARGET}.img bs=1M count=$((MINSIZE+1024))
+    losetup -D
+    losetup -fP ${OURDIR}/${SHORTTARGET}.img
+    LOOPDEV=$(losetup -j ${OURDIR}/${SHORTTARGET}.img |cut -d: -f1)
 
 # create initial paritions layout based on this http://opensource.rock-chips.com/wiki_Partitions
-parted --script "${LOOPDEV}" \
-    mklabel gpt \
-    mkpart 1 ext4 8MiB 12MiB \
-    mkpart 2 fat32 12MiB 140MiB \
-    mkpart 3 ext4 140MiB 100% \
-    set 2 esp on
+    parted --script "${LOOPDEV}" \
+	mklabel gpt \
+	mkpart 1 ext4 8MiB 12MiB \
+	mkpart 2 fat32 12MiB 140MiB \
+	mkpart 3 ext4 140MiB 100% \
+	set 2 esp on
 
-sync
+    sync
 
 # install u-boot loader
-dd if="$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/idbloader.img of="${LOOPDEV}" seek=64
+    dd if="$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/idbloader.img of="${LOOPDEV}" seek=64
 
 # install u-boot binary data
-dd if="$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb of="${LOOPDEV}p1"
+    dd if="$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb of="${LOOPDEV}p1"
 
 # create partition for OMV
-mkfs.f2fs -l OMVAA64 "${LOOPDEV}p3"
-ROOTUUID=$(/sbin/blkid "${LOOPDEV}p3" |sed -e 's,.* UUID=",,;s,".*,,')
+    mkfs.f2fs -l OMVAA64 "${LOOPDEV}p3"
+    ROOTUUID=$(/sbin/blkid "${LOOPDEV}p3" |sed -e 's,.* UUID=",,;s,".*,,')
 
 # create partition for EFI
-mkfs.vfat -F 32 -n OMVBOOT "${LOOPDEV}p2"
-BOOTUUID=$(/sbin/blkid "${LOOPDEV}p2" |sed -e 's,.* UUID=",,;s,".*,,')
+    mkfs.vfat -F 32 -n OMVBOOT "${LOOPDEV}p2"
+    BOOTUUID=$(/sbin/blkid "${LOOPDEV}p2" |sed -e 's,.* UUID=",,;s,".*,,')
 
-sync
-sleep 1
+    sync
+    sleep 1
 
-[ -d ${OURDIR}/mnt ] && umount -Rq ${OURDIR}/mnt
-[ -d ${OURDIR}/mnt ] && rm -rf ${OURDIR}/mnt
-mkdir ${OURDIR}/mnt
+    [ -d ${OURDIR}/mnt ] && umount -Rq ${OURDIR}/mnt
+    [ -d ${OURDIR}/mnt ] && rm -rf ${OURDIR}/mnt
+    mkdir ${OURDIR}/mnt
 
 # installing ouf EFI files on ESP
-printf '%s\n' "Installing ESP files."
-mount "${LOOPDEV}p2" ${OURDIR}/mnt
-cd ${OURDIR}/mnt
-    tar xf ${OURDIR}/boot-${SHORTTARGET}.tar.xz
-cd ..
-umount -R ${OURDIR}/mnt
-sync
-sleep 5
+    printf '%s\n' "Installing ESP files."
+    mount "${LOOPDEV}p2" ${OURDIR}/mnt
+    cd ${OURDIR}/mnt
+	tar xf ${OURDIR}/boot-${SHORTTARGET}.tar.xz
+    cd ..
+    umount -R ${OURDIR}/mnt
+    sync
+    sleep 5
 
 # install OpenMandriva distribution
-mount ${LOOPDEV}p3 mnt
-printf '%s\n' "Installing ROOT files."
-cp -a ${ROOTDIR}/* ${OURDIR}/mnt/
-cat >${OURDIR}/mnt/etc/fstab <<EOF
-UUID=${ROOTUUID}	/		f2fs	defaults,noatime	0	1
-UUID=${BOOTUUID}	/efi	vfat	umask=0077	0	2
+    mount ${LOOPDEV}p3 mnt
+    printf '%s\n' "Installing ROOT files."
+    cp -a ${ROOTDIR}/* ${OURDIR}/mnt/
+    cat >${OURDIR}/mnt/etc/fstab <<EOF
+    UUID=${ROOTUUID}		/		f2fs	defaults,noatime	0	1
+    UUID=${BOOTUUID}		/efi	vfat	umask=0077	0	2
 EOF
-umount ${OURDIR}/mnt
-losetup -d ${LOOPDEV}
-printf '%s\' "Compressing final image."
-sync
-xz -9ef ${OURDIR}/${SHORTTARGET}.img
+    umount ${OURDIR}/mnt
+    losetup -d ${LOOPDEV}
+    printf '%s\' "Compressing final image."
+    sync
+    xz -9ef ${OURDIR}/${SHORTTARGET}.img
+
+fi
