@@ -55,14 +55,15 @@ else
     mount ${LOOPDEV}p3 mnt
     printf '%s\n' "Installing ROOT files."
     cp -a ${ROOTDIR}/* ${OURDIR}/mnt/
+# EFI is already on separate partition, remove it after copy
+    [ -d ${OURDIR}/mnt/efi ] && ${OURDIR}/mnt/efi/* ||:
     cat >${OURDIR}/mnt/etc/fstab <<EOF
     UUID=${ROOTUUID}		/		f2fs	defaults,noatime	0	1
     UUID=${BOOTUUID}		/efi	vfat	umask=0077	0	2
 EOF
     umount ${OURDIR}/mnt
     losetup -d ${LOOPDEV}
-    printf '%s\' "Compressing final image."
+    printf '%s\n' "Compressing final image."
     sync
     xz -9ef ${OURDIR}/${SHORTTARGET}.img
-
 fi

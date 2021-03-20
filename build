@@ -545,6 +545,10 @@ EOF
 			MACH_ID=$(chroot $OURDIR/$ROOTDIR systemd-machine-id-setup --print)
 			mkdir -p "$OURDIR/$ROOTDIR/efi/$MACH_ID"
 			chroot "$OURDIR/$ROOTDIR" kernel-install -v add "$KVER" "/boot/vmlinuz-$KVER"
+# tricky part, looks like uboot does not support gziped kernel image in UEFI mode
+# so lets gunzip it
+			mv "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER"/linux "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER"/linux.gz
+			gunzip "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER"/linux.gz
 			cat >$OURDIR/$ROOTDIR/efi/loader/loader.conf<<EOF
 default $MACH_ID-$KVER.conf
 timeout 10
