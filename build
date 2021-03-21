@@ -557,7 +557,7 @@ EOF
 			if [ -n ${DTB} ] && ! grep -q devicetree $OURDIR/$ROOTDIR/efi/loader/entries/$MACH_ID/$KVER.conf; then
 			    install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KVER/${DTB}.dtb" "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER/dtb/${DTB}.dtb"
 			    install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KVER/${DTB}.dtb" "$OURDIR/$ROOTDIR/efi/dtb/${DTB}.dtb"
-			    printf '%s\n' "devicetree "/$MACH_ID-$KVER"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/efi/loader/entries/$MACH_ID-$KVER.conf
+			    printf '%s\n' "devicetree "/$MACH_ID/$KVER"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/efi/loader/entries/$MACH_ID-$KVER.conf
 			fi
 			dd if=/dev/random of="$OURDIR/$ROOTDIR/efi/loader/"random-seed bs=512 count=1
 			chmod +x -R $OURDIR/$ROOTDIR/efi
