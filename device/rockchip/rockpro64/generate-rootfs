@@ -5,7 +5,7 @@ if [ "$USE_SYSTEMD_UEFI" = 'no' ] || [ -z "$USE_SYSTEMD_UEFI" ]; then
     . ${OURDIR}/device/rockchip/generic/generate-rootfs
 else
     MINSIZE=$(du -s --block-size=1048576 "$OURDIR/$ROOTDIR" |awk '{ print $1; }')
-    dd if=/dev/zero of=${OURDIR}/${SHORTTARGET}.img bs=1M count=$((MINSIZE+1024))
+    dd if=/dev/zero of=${OURDIR}/${SHORTTARGET}.img bs=1M count=$((MINSIZE+512))
     losetup -D
     losetup -fP ${OURDIR}/${SHORTTARGET}.img
     LOOPDEV=$(losetup -j ${OURDIR}/${SHORTTARGET}.img |cut -d: -f1)
@@ -54,6 +54,7 @@ else
 # install OpenMandriva distribution
     mount ${LOOPDEV}p3 mnt
     printf '%s\n' "Installing ROOT files."
+    [ -d ${ROOTDIR}/var/cache/dnf ] && ${ROOTDIR}/var/cache/dnf* ||:
     cp -a ${ROOTDIR}/* ${OURDIR}/mnt/
 # EFI is already on separate partition, remove it after copy
     [ -d ${OURDIR}/mnt/efi ] && ${OURDIR}/mnt/efi/* ||:
