@@ -63,7 +63,7 @@ WEAKDEPS=""
 addpackageset core
 
 OMV_VERSION=cooker
-while getopts "K:p:P:s:S:v:wW" opt; do
+while getopts "K:p:P:s:S:v:w:W" opt; do
 	case $opt in
 	v)
 		OMV_VERSION=$OPTARG
@@ -215,7 +215,7 @@ $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
 # vim-common is for xxd, used to decode EDID information for pinebookpro
 HOSTDEPS="$HOSTDEPS curl make clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build"
 
-if [ -n "$HOSTDEPS" ]; then
+if [ -n "$HOSTDEPS" ] && [ -z "$KEEP_OLD_ROOT" ]; then
 	if ! dnf -y --refresh --nogpgcheck install $HOSTDEPS; then
 		for i in $HOSTDEPS; do
 			if ! rpm -q $i &>/dev/null; then
@@ -413,6 +413,10 @@ if [ ! -d "$ROOTDIR" ]; then
 	if [ "$USE_UEFI" = "yes" ]; then
 		PACKAGES="$PACKAGES efibootmgr grub2-efi"
 	fi
+	if [ "$USE_SYSTEMD_UEFI" = "yes" ]; then
+		PACKAGES="$PACKAGES efibootmgr systemd-boot"
+	fi
+
 	PACKAGES="$PACKAGES $HWPACKAGES"
 
 	# Mount relevant filesystems so %post scripts can access
@@ -510,14 +514,55 @@ EOF
 	done
 
 	run setup-system-files
-	if [ "$NEED_INITRD" != "no" ] || [ "$USE_UEFI" = "yes" ] && [ -n "$KERNELVERSION" ]; then
+	if [ "$NEED_INITRD" != "no" ] || [ "$USE_UEFI" = "yes" ] || [ "$USE_SYSTEMD_UEFI" != "yes" ] && [ -n "$KERNELVERSION" ]; then
 		if [ "$NEED_INITRD" != "no" ]; then
 			run generate-initrd
 		fi
 		if [ "$USE_UEFI" = "yes" ]; then
+			printf '%s\n' "Creating ESP for GRUB."
 			mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
 			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxterm_menu test all_video loadenv exfat ext2
 		fi
+
+		if [ "$USE_SYSTEMD_UEFI" = "yes" ]; then
+			printf '%s\n' "Creating ESP for systemd-boot."
+			mkdir -p $OURDIR/$ROOTDIR/efi
+			# create ESP directory scheme for systemd-boot
+			for i in "$OURDIR/$ROOTDIR/efi/EFI/BOOT" "$OURDIR/$ROOTDIR/efi/EFI/Linux" "$OURDIR/$ROOTDIR/efi/EFI/systemd" "$OURDIR/$ROOTDIR/efi/loader/entries"; do
+			    mkdir -p $i
+			done
+
+			if [ ! -s "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline ]; then
+			    for i in ${CMDLINE[@]}; do
+				printf '%s\n' "$i" >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
+			    done
+			fi
+
+#			chroot "$OURDIR/$ROOTDIR" SYSTEMD_RELAX_ESP_CHECKS=1 bootctl install --esp-path=/efi
+			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-bootaa64.efi $OURDIR/$ROOTDIR/efi/EFI/BOOT/BOOTAA64.efi
+			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-bootaa64.efi $OURDIR/$ROOTDIR/efi/EFI/systemd
+			KVER="$(ls --sort=time "$OURDIR/$ROOTDIR"/boot/vmlinuz-* 2>/dev/null|head -n1 |sed -e 's,.*vmlinuz-,,')"
+			MACH_ID=$(chroot $OURDIR/$ROOTDIR systemd-machine-id-setup --print)
+			mkdir -p "$OURDIR/$ROOTDIR/efi/$MACH_ID"
+			chroot "$OURDIR/$ROOTDIR" kernel-install -v add "$KVER" "/boot/vmlinuz-$KVER"
+# tricky part, looks like uboot does not support gziped kernel image in UEFI mode
+# so lets gunzip it
+			mv "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER"/linux "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER"/linux.gz
+			gunzip "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER"/linux.gz
+			cat >$OURDIR/$ROOTDIR/efi/loader/loader.conf<<EOF
+default $MACH_ID-$KVER.conf
+timeout 10
+EOF
+			sed -i -e 's,efi\/,\/,g' "$OURDIR/$ROOTDIR"/efi/loader/entries/$MACH_ID-$KVER.conf
+			if [ -n ${DTB} ] && ! grep -q devicetree $OURDIR/$ROOTDIR/efi/loader/entries/$MACH_ID/$KVER.conf; then
+			    install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KVER/${DTB}.dtb" "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER/dtb/${DTB}.dtb"
+			    install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KVER/${DTB}.dtb" "$OURDIR/$ROOTDIR/efi/dtb/${DTB}.dtb"
+			    printf '%s\n' "devicetree "/$MACH_ID/$KVER"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/efi/loader/entries/$MACH_ID-$KVER.conf
+			fi
+			dd if=/dev/random of="$OURDIR/$ROOTDIR/efi/loader/"random-seed bs=512 count=1
+			chmod +x -R $OURDIR/$ROOTDIR/efi
+		fi
+
 	fi
 
 	# Initialize the random seed to something, systemd might hang forever on
@@ -569,7 +614,7 @@ EOF
 	pushd $OURDIR/$ROOTDIR
 	run postprocess
 	# Before removing make sure bind mounts are unmounted
-	for mp in /proc /sys /dev; do
+	for mp in /proc /sys /dev/pts /dev; do
 	    echo 'Try umount "$OURDIR/$ROOTDIR$mp"'
 	    [ -e "$OURDIR/$ROOTDIR$mp" ] && umount -Rq "$OURDIR/$ROOTDIR$mp" || :
 	done
@@ -592,12 +637,12 @@ fi
 # Reinstall distro-release-repos to get mirrors back
 
 [ -z $KEEP_OLD_ROOT ] && dnf -y reinstall --installroot="$OURDIR/$ROOTDIR" --releasever=$OMV_VERSION --forcearch=$ARCH distro-release-repos
-[ -e "$OURDIR/$ROOTDIR/var/cache/dnf" ] && rm -rf "$OURDIR/$ROOTDIR/var/cache/dnf/*"
+[ -d "$OURDIR/$ROOTDIR/var/cache/dnf" ] && rm -rf "$OURDIR/$ROOTDIR/var/cache/dnf/*"
 
 run generate-bootimg
 # Stuff in virtual filesystems should not make it to
 # root filesystems...
-for mp in /proc /sys /dev; do
+for mp in /proc /sys /dev/pts /dev; do
     [ -e "$OURDIR/$ROOTDIR$mp" ] && umount -Rq "$OURDIR/$ROOTDIR$mp" || :
 done
 run generate-rootfs

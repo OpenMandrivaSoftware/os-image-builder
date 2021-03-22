@@ -1,4 +1,8 @@
-sed -e "s,@KVERSION@,${KERNELVERSION},g;s|@CMDLINE@|${CMDLINE}|g" $OURDIR/device/rockchip/rockpro64/grub.cfg.in >$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
-cd $OURDIR/$ROOTDIR/boot/efi
-    tar cJf $OURDIR/boot-${SHORTTARGET}.tar.xz *
-cd ..
+if [ "$USE_SYSTEMD_UEFI" = 'yes' ]; then
+    cd $OURDIR/$ROOTDIR/efi
+	tar cJf $OURDIR/boot-${SHORTTARGET}.tar.xz *
+    cd ..
+else
+    cp "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/idbloader.img "$OURDIR/$ROOTDIR"/boot/
+    cp "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb "$OURDIR/$ROOTDIR"/boot/
+fi

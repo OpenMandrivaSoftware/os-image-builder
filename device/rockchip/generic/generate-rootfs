@@ -57,9 +57,10 @@ cat >mnt/etc/fstab <<EOF
 UUID=$ROOTUUID / f2fs defaults,noatime 0 1
 UUID=$BOOTUUID /boot vfat defaults,noatime 0 2
 EOF
+[ -d mnt/var/cache/dnf ] && rm -rf mnt/var/cache/dnf/*
 umount mnt
-dd if=u-boot/idbloader.img of=${LOOPDEV} bs=512 seek=64 conv=notrunc
-dd if=u-boot/u-boot.itb of=${LOOPDEV} bs=512 seek=16384 conv=notrunc
+dd if="${OURDIR}/${ROOTDIR}/boot/idbloader.img" of=${LOOPDEV} bs=512 seek=64 conv=notrunc
+dd if="${OURDIR}/${ROOTDIR}/boot/u-boot.itb" of=${LOOPDEV} bs=512 seek=16384 conv=notrunc
 losetup -d ${LOOPDEV}
 popd
 sync
