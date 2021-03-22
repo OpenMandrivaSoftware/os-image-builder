@@ -208,7 +208,7 @@ if [ -n "$KERNEL" ]; then
 	if [ "$ARCH" = "aarch64" ]; then
 		# Many aarch64 kernels (e.g. rk3399) need a 32-bit ARM compiler
 		# to target a helper Cortex-M0 etc.
-		HOSTDEPS="$HOSTDEPS cross-armv7hnl-openmandriva-linux-gnu-gcc"
+		HOSTDEPS="$HOSTDEPS cross-armv7hnl-openmandriva-linux-gnueabihf-gcc"
 	fi
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
