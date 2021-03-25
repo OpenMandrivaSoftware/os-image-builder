@@ -213,7 +213,7 @@ if [ -n "$KERNEL" ]; then
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
 # vim-common is for xxd, used to decode EDID information for pinebookpro
-HOSTDEPS="$HOSTDEPS curl make clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build"
+HOSTDEPS="$HOSTDEPS bc curl make clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build"
 
 if [ -n "$HOSTDEPS" ] && [ -z "$KEEP_OLD_ROOT" ]; then
 	if ! dnf -y --refresh --nogpgcheck install $HOSTDEPS; then
@@ -455,7 +455,7 @@ EOF
 	    --keymap="us" \
 	    --timezone="Europe/London" \
 	    --hostname="omv-$(printf '%s\n' ${TARGET} | cut -d '/' -f 2)" \
-	    --root-password-hashed="$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0"
+	    --root-password-hashed="$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0" \
 	    --force
 	
 	if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
