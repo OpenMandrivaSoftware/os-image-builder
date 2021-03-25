@@ -46,6 +46,25 @@ addpackageset() {
 		fi
 	done < <(cat "$OURDIR/packagesets/$1.pkgs")
 }
+isnative() {
+	local CPU=$(echo $1 |cut -d- -f1)
+	local ABI=$(echo $1 |rev |cut -d- -f1 |rev)
+	local NATIVECPU=$(uname -m)
+	local NATIVEABI=gnu
+	if ldd /bin/sh |grep -q musl; then
+		NATIVEABI=musl
+	fi
+	if echo $NATIVECPU |grep -q ^arm; then
+		NATIVEABI="${NATIVEABI}eabihf"
+		NATIVECPU="armv7hnl"
+	fi
+	[ "$CPU" = "znver1" ] && CPU=x86_64
+	if [ "$CPU" = "$NATIVECPU" -a "$ABI" = "$NATIVEABI" ]; then
+		return 0
+	else
+		return 1
+	fi
+}
 
 if [ "$(id -u)" != "0" ]; then
 	echo "Need root privileges to set ownership of extracted files."
@@ -204,7 +223,11 @@ done
 
 if [ -n "$KERNEL" ]; then
 	# We aren't using a packaged kernel, so we need the right toolchain...
-	HOSTDEPS="$HOSTDEPS cross-$TRIPLET-gcc"
+	if isnative $TRIPLET; then
+		HOSTDEPS="$HOSTDEPS gcc"
+	else
+		HOSTDEPS="$HOSTDEPS cross-$TRIPLET-gcc"
+	fi
 	if [ "$ARCH" = "aarch64" ]; then
 		# Many aarch64 kernels (e.g. rk3399) need a 32-bit ARM compiler
 		# to target a helper Cortex-M0 etc.
