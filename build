@@ -356,7 +356,7 @@ fi
 
 # First of all let's find the right repo list...
 
-ROOTDIR=OpenMandriva-$OMV_VERSION-$ARCH-root
+ROOTDIR="OpenMandriva-$OMV_VERSION-$ARCH-root"
 
 if [ -z "$KEEP_OLD_ROOT" ]; then
 	# Before removing make sure bind mounts are unmounted
@@ -454,7 +454,7 @@ EOF
 	    --locale="en_US.UTF-8" \
 	    --keymap="us" \
 	    --timezone="Europe/London" \
-	    --hostname="omv-$(printf '%s\n' ${TARGET} | cut -d '/' -f 2" \
+	    --hostname="omv-$(printf '%s\n' ${TARGET} | cut -d '/' -f 2)" \
 	    --root-password-hashed="$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0"
 	    --force
 	
@@ -600,7 +600,7 @@ EOF
 			echo "WARNING: Service $i requested, but not installed" >&2
 		fi
 	done
-	pushd $OURDIR/$ROOTDIR
+	cd $OURDIR/$ROOTDIR
 	run postprocess
 	# Before removing make sure bind mounts are unmounted
 	for mp in /proc /sys /dev/pts /dev; do
@@ -613,7 +613,7 @@ EOF
 	for i in *; do
 		[ -f "$i" ] && rm -f "$i"
 	done
-	popd
+	cd ..
 else
 	# Mount relevant filesystems so generate-bootimg can use
 	# the likes of /dev/null and /dev/urandom in chroot
