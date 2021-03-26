@@ -260,6 +260,12 @@ fi
 SMPFLAGS="-j$(getconf _NPROCESSORS_ONLN)"
 [ "$SMPFLAGS" = "-j" ] && SMPFLAGS="-j8"
 
+if isnative $TRIPLET; then
+	CCOMP=""
+else
+	CCOMP="CROSS_COMPILE=/usr/bin/$TRIPLET-"
+fi
+
 if [ -n "$KERNEL" ]; then
 	echo "Building $TARGET kernel"
 	KERNELREPO="$(echo $KERNEL |cut -d'#' -f1)"
@@ -339,26 +345,26 @@ EOF
 
 	# CROSS_COMPILE_ARM32 is a Sony-ism, but doesn't hurt anywhere else, so we can specify it unconditionally
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
 		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 
 %install
 # Install kernel modules, if any
-make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf-
+make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf-
 # And DTBs -- allow failure here because old kernels (onyx08 and friends)
 # don't have the dtbs_install target
-make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- || :
+make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- || :
 cp arch/$KERNELARCH/boot/$KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
 
 %files
