@@ -450,7 +450,7 @@ if [ ! -d "$ROOTDIR" ]; then
 
 	# Mount relevant filesystems so %post scripts can access
 	# the likes of /dev/null and /dev/urandom
-	for mp in /proc /sys /dev/pts /dev; do
+	for mp in /proc /sys /dev /dev/pts; do
 		mkdir -p "$OURDIR/$ROOTDIR$mp" || :
 		mount --bind $mp "$OURDIR/$ROOTDIR$mp"
 	done
