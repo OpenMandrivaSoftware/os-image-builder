@@ -21,10 +21,10 @@ else
     sync
 
 # install u-boot loader
-    dd if="$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/idbloader.img of="${LOOPDEV}" seek=64
+    dd if="$OURDIR/$ROOTDIR"/boot/idbloader.img of="${LOOPDEV}" seek=64
 
 # install u-boot binary data
-    dd if="$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb of="${LOOPDEV}p1"
+    dd if="$OURDIR/$ROOTDIR"/boot/u-boot.itb of="${LOOPDEV}p1"
 
 # create partition for OMV
     mkfs.f2fs -l OMVAA64 "${LOOPDEV}p3"
@@ -54,10 +54,10 @@ else
 # install OpenMandriva distribution
     mount ${LOOPDEV}p3 mnt
     printf '%s\n' "Installing ROOT files."
-    [ -d ${ROOTDIR}/var/cache/dnf ] && ${ROOTDIR}/var/cache/dnf* ||:
+    [ -d ${ROOTDIR}/var/cache/dnf ] && rm -rf ${ROOTDIR}/var/cache/dnf* ||:
     cp -a ${ROOTDIR}/* ${OURDIR}/mnt/
 # EFI is already on separate partition, remove it after copy
-    [ -d ${OURDIR}/mnt/efi ] && ${OURDIR}/mnt/efi/* ||:
+    [ -d ${OURDIR}/mnt/efi ] && rm -rf ${OURDIR}/mnt/efi/* ||:
     cat >${OURDIR}/mnt/etc/fstab <<EOF
     UUID=${ROOTUUID}		/		f2fs	defaults,noatime	0	1
     UUID=${BOOTUUID}		/efi	vfat	umask=0077	0	2

@@ -2,7 +2,9 @@ if [ "$USE_SYSTEMD_UEFI" = 'yes' ]; then
     cd $OURDIR/$ROOTDIR/efi
 	tar cJf $OURDIR/boot-${SHORTTARGET}.tar.xz *
     cd ..
-else
-    cp "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/idbloader.img "$OURDIR/$ROOTDIR"/boot/
-    cp "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb "$OURDIR/$ROOTDIR"/boot/
 fi
+
+[ ! -e "$OURDIR/$ROOTDIR"/boot//idbloader.img ] && cp "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/idbloader.img "$OURDIR/$ROOTDIR"/boot/
+[ ! -e "$OURDIR/$ROOTDIR"/boot/u-boot.itb ] && cp "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb "$OURDIR/$ROOTDIR"/boot/
+# do not bloat the image
+[ -f "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb ] && chroot "$OURDIR/$ROOTDIR" /bin/sh -c 'dnf --assumeyes remove $(rpm -qf /usr/share/uboot/rockpro64-rk3399/u-boot.itb)' ||:
