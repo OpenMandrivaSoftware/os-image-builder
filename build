@@ -46,6 +46,25 @@ addpackageset() {
 		fi
 	done < <(cat "$OURDIR/packagesets/$1.pkgs")
 }
+isnative() {
+	local CPU=$(echo $1 |cut -d- -f1)
+	local ABI=$(echo $1 |rev |cut -d- -f1 |rev)
+	local NATIVECPU=$(uname -m)
+	local NATIVEABI=gnu
+	if ldd /bin/sh |grep -q musl; then
+		NATIVEABI=musl
+	fi
+	if echo $NATIVECPU |grep -q ^arm; then
+		NATIVEABI="${NATIVEABI}eabihf"
+		NATIVECPU="armv7hnl"
+	fi
+	[ "$CPU" = "znver1" ] && CPU=x86_64
+	if [ "$CPU" = "$NATIVECPU" -a "$ABI" = "$NATIVEABI" ]; then
+		return 0
+	else
+		return 1
+	fi
+}
 
 if [ "$(id -u)" != "0" ]; then
 	echo "Need root privileges to set ownership of extracted files."
@@ -204,16 +223,20 @@ done
 
 if [ -n "$KERNEL" ]; then
 	# We aren't using a packaged kernel, so we need the right toolchain...
-	HOSTDEPS="$HOSTDEPS cross-$TRIPLET-gcc"
+	if isnative $TRIPLET; then
+		HOSTDEPS="$HOSTDEPS gcc"
+	else
+		HOSTDEPS="$HOSTDEPS cross-$TRIPLET-gcc"
+	fi
 	if [ "$ARCH" = "aarch64" ]; then
 		# Many aarch64 kernels (e.g. rk3399) need a 32-bit ARM compiler
 		# to target a helper Cortex-M0 etc.
-		HOSTDEPS="$HOSTDEPS cross-armv7hnl-openmandriva-linux-gnu-gcc"
+		HOSTDEPS="$HOSTDEPS cross-armv7hnl-openmandriva-linux-gnueabihf-gcc"
 	fi
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
 # vim-common is for xxd, used to decode EDID information for pinebookpro
-HOSTDEPS="$HOSTDEPS curl make clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build"
+HOSTDEPS="$HOSTDEPS bc curl make clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build kpartx util-linux gptfdisk"
 
 if [ -n "$HOSTDEPS" ] && [ -z "$KEEP_OLD_ROOT" ]; then
 	if ! dnf -y --refresh --nogpgcheck install $HOSTDEPS; then
@@ -236,6 +259,12 @@ fi
 
 SMPFLAGS="-j$(getconf _NPROCESSORS_ONLN)"
 [ "$SMPFLAGS" = "-j" ] && SMPFLAGS="-j8"
+
+if isnative $TRIPLET; then
+	CCOMP=""
+else
+	CCOMP="CROSS_COMPILE=/usr/bin/$TRIPLET-"
+fi
 
 if [ -n "$KERNEL" ]; then
 	echo "Building $TARGET kernel"
@@ -316,26 +345,26 @@ EOF
 
 	# CROSS_COMPILE_ARM32 is a Sony-ism, but doesn't hurt anywhere else, so we can specify it unconditionally
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
 		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- CROSS_COMPILE=/usr/bin/$TRIPLET- CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 
 %install
 # Install kernel modules, if any
-make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf-
+make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf-
 # And DTBs -- allow failure here because old kernels (onyx08 and friends)
 # don't have the dtbs_install target
-make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH CROSS_COMPILE=/usr/bin/$TRIPLET- INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- || :
+make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- || :
 cp arch/$KERNELARCH/boot/$KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
 
 %files
@@ -356,7 +385,7 @@ fi
 
 # First of all let's find the right repo list...
 
-ROOTDIR=OpenMandriva-$OMV_VERSION-$ARCH-root
+ROOTDIR="OpenMandriva-$OMV_VERSION-$ARCH-root"
 
 if [ -z "$KEEP_OLD_ROOT" ]; then
 	# Before removing make sure bind mounts are unmounted
@@ -421,7 +450,7 @@ if [ ! -d "$ROOTDIR" ]; then
 
 	# Mount relevant filesystems so %post scripts can access
 	# the likes of /dev/null and /dev/urandom
-	for mp in /proc /sys /dev/pts /dev; do
+	for mp in /proc /sys /dev /dev/pts; do
 		mkdir -p "$OURDIR/$ROOTDIR$mp" || :
 		mount --bind $mp "$OURDIR/$ROOTDIR$mp"
 	done
@@ -449,6 +478,15 @@ EOF
 		ln -sf xldd $OURDIR/$ROOTDIR/usr/bin/ldd
 	fi
 
+# set up system environment, default root password is omv
+	systemd-firstboot --root="$OURDIR/$ROOTDIR" \
+	    --locale="en_US.UTF-8" \
+	    --keymap="us" \
+	    --timezone="Europe/London" \
+	    --hostname="omv-$(printf '%s\n' ${TARGET} | cut -d '/' -f 2)" \
+	    --root-password-hashed="$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0" \
+	    --force
+	
 	if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
 		# Create omv user (password omv)
 		echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
@@ -460,26 +498,6 @@ EOF
 		done
 		cp -a $OURDIR/$ROOTDIR/etc/skel $OURDIR/$ROOTDIR/home/omv
 		chown -R 1001:1001 $OURDIR/$ROOTDIR/home/omv
-		# Set some reasonable defaults...
-		cat >$OURDIR/$ROOTDIR/etc/locale.conf <<'EOF'
-LANG=en_US.utf8
-LC_ADDRESS=en_US.utf8
-LC_IDENTIFICATION=en_US.utf8
-LC_MEASUREMENT=en_US.utf8
-LC_MONETARY=en_US.utf8
-LC_NAME=en_US.utf8
-LC_NUMERIC=en_US.utf8
-LC_PAPER=en_US.utf8
-LC_TELEPHONE=en_US.utf8
-LC_TIME=en_US.utf8
-EOF
-		cat >$OURDIR/$ROOTDIR/etc/vconsole.conf <<'EOF'
-KEYMAP=us
-FONT=latarcyrheb-sun16
-EOF
-
-		# Unlock root account (also password omv)
-		sed -i -e 's,^root:.:,root:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:,' $OURDIR/$ROOTDIR/etc/shadow
 
 		# If sddm is installed, set it up to autologin as omv
 		if [ -z "$SDDMSESSION" ]; then
@@ -611,7 +629,7 @@ EOF
 			echo "WARNING: Service $i requested, but not installed" >&2
 		fi
 	done
-	pushd $OURDIR/$ROOTDIR
+	cd $OURDIR/$ROOTDIR
 	run postprocess
 	# Before removing make sure bind mounts are unmounted
 	for mp in /proc /sys /dev/pts /dev; do
@@ -624,7 +642,7 @@ EOF
 	for i in *; do
 		[ -f "$i" ] && rm -f "$i"
 	done
-	popd
+	cd ..
 else
 	# Mount relevant filesystems so generate-bootimg can use
 	# the likes of /dev/null and /dev/urandom in chroot
