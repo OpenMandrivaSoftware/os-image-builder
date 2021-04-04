@@ -22,8 +22,6 @@ qtbluetooth5
 bluez-qt
 bluedevil
 maliit-keyboard
-# Used by the Plasma Mobile Camera app
-gstreamer1.0-plugins-bad
 # ofono doesn't work, let's use something else
 om-phone
 # Better not rely on gstreamer crap to drive the flash
@@ -36,3 +34,8 @@ geoclue
 gpsd
 # Needed to set up cameras at least on PinePhone
 v4l-utils
+# For now, until we can figure out why libmpv is painfully slow on wayland
+# and/or until plasma-camera gets rid of gstreamer junk
+megapixels
+imagemagick
+dcraw
