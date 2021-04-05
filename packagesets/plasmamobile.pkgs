@@ -34,3 +34,5 @@ geoclue
 gpsd
 # Needed to set up cameras at least on PinePhone
 v4l-utils
+# Most Plasma Mobile devices should have LTE
+networkmanager-wwan
