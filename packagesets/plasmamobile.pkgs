@@ -25,6 +25,8 @@ pulseaudio-module-bluetooth
 maliit-keyboard
 # ofono doesn't work, let's use something else
 om-phone
+# For now, until the pinephone camera works with plasma-camera
+megapixels
 # Better not rely on gstreamer crap to drive the flash
 ledcontrol
 # Used by qt5-qtsensors to read the accelerometer
