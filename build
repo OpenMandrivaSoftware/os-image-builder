@@ -272,7 +272,15 @@ if [ -n "$KERNEL" ]; then
 	KERNELBRANCH="$(echo $KERNEL |cut -d'#' -f2-)"
 	[ -n "$KERNELBRANCH" ] && KERNELBRANCH="-b $KERNELBRANCH"
 	[ -z "$KERNEL_CONFIG" ] && KERNEL_CONFIG="defconfig"
-	[ -d kernel ] || git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel
+	if ! [ -d kernel ]; then
+		if ! git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel; then
+			# KERNELBRANCH is a tag or commit hash, not a branch
+			git clone $KERNELREPO kernel
+			cd kernel
+			git checkout -b $KERNELBRANCH $KERNELBRANCH
+			cd ..
+		fi
+	fi
 	cd kernel
 	[ -e scripts/lld-version.sh ] && sed -i -e "s,' ' -f 2,' ' -f 4," scripts/lld-version.sh
 	PN=1
