@@ -57,10 +57,10 @@ else
     [ -d ${ROOTDIR}/var/cache/dnf ] && rm -rf ${ROOTDIR}/var/cache/dnf* ||:
     cp -a ${ROOTDIR}/* ${OURDIR}/mnt/
 # EFI is already on separate partition, remove it after copy
-    [ -d ${OURDIR}/mnt/efi ] && rm -rf ${OURDIR}/mnt/efi/* ||:
+    [ -d ${OURDIR}/mnt//boot/efi ] && rm -rf ${OURDIR}/mnt/boot/efi/* ||:
     cat >${OURDIR}/mnt/etc/fstab <<EOF
     UUID=${ROOTUUID}		/		f2fs	defaults,noatime	0	1
-    UUID=${BOOTUUID}		/efi	vfat	umask=0077	0	2
+    UUID=${BOOTUUID}		/boot/efi	vfat	umask=0077	0	2
 EOF
     umount ${OURDIR}/mnt
     losetup -d ${LOOPDEV}

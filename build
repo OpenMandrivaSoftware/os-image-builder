@@ -552,9 +552,9 @@ EOF
 
 		if [ "$USE_SYSTEMD_UEFI" = "yes" ]; then
 			printf '%s\n' "Creating ESP for systemd-boot."
-			mkdir -p $OURDIR/$ROOTDIR/efi
+			mkdir -p $OURDIR/$ROOTDIR/boot/efi
 			# create ESP directory scheme for systemd-boot
-			for i in "$OURDIR/$ROOTDIR/efi/EFI/BOOT" "$OURDIR/$ROOTDIR/efi/EFI/Linux" "$OURDIR/$ROOTDIR/efi/EFI/systemd" "$OURDIR/$ROOTDIR/efi/loader/entries"; do
+			for i in "$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT" "$OURDIR/$ROOTDIR/boot/efi/EFI/Linux" "$OURDIR/$ROOTDIR/boot/efi/EFI/systemd" "$OURDIR/$ROOTDIR/boot/efi/loader/entries"; do
 			    mkdir -p $i
 			done
 
@@ -564,29 +564,28 @@ EOF
 			    done
 			fi
 
-#			chroot "$OURDIR/$ROOTDIR" SYSTEMD_RELAX_ESP_CHECKS=1 bootctl install --esp-path=/efi
-			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-bootaa64.efi $OURDIR/$ROOTDIR/efi/EFI/BOOT/BOOTAA64.efi
-			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-bootaa64.efi $OURDIR/$ROOTDIR/efi/EFI/systemd
+#			chroot "$OURDIR/$ROOTDIR" SYSTEMD_RELAX_ESP_CHECKS=1 bootctl install --esp-path=/boot/efi
+			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-bootaa64.efi $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/BOOTAA64.efi
+			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-bootaa64.efi $OURDIR/$ROOTDIR/boot/efi/EFI/systemd
 			KVER="$(ls --sort=time "$OURDIR/$ROOTDIR"/boot/vmlinuz-* 2>/dev/null|head -n1 |sed -e 's,.*vmlinuz-,,')"
 			MACH_ID=$(chroot $OURDIR/$ROOTDIR systemd-machine-id-setup --print)
-			mkdir -p "$OURDIR/$ROOTDIR/efi/$MACH_ID"
+			mkdir -p "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID"
 			chroot "$OURDIR/$ROOTDIR" kernel-install -v add "$KVER" "/boot/vmlinuz-$KVER"
 # tricky part, looks like uboot does not support gziped kernel image in UEFI mode
 # so lets gunzip it
-			mv "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER"/linux "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER"/linux.gz
-			gunzip "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER"/linux.gz
-			cat >$OURDIR/$ROOTDIR/efi/loader/loader.conf<<EOF
+			mv "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KVER"/linux "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KVER"/linux.gz
+			gunzip "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KVER"/linux.gz
+			cat >$OURDIR/$ROOTDIR/boot/efi/loader/loader.conf<<EOF
 default $MACH_ID-$KVER.conf
 timeout 10
 EOF
-			sed -i -e 's,efi\/,\/,g' "$OURDIR/$ROOTDIR"/efi/loader/entries/$MACH_ID-$KVER.conf
-			if [ -n ${DTB} ] && ! grep -q devicetree $OURDIR/$ROOTDIR/efi/loader/entries/$MACH_ID-$KVER.conf; then
-			    install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KVER/${DTB}.dtb" "$OURDIR/$ROOTDIR/efi/$MACH_ID/$KVER/dtb/${DTB}.dtb"
-			    install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KVER/${DTB}.dtb" "$OURDIR/$ROOTDIR/efi/dtb/${DTB}.dtb"
-			    printf '%s\n' "devicetree "/$MACH_ID/$KVER"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/efi/loader/entries/$MACH_ID-$KVER.conf
+			sed -i -e 's,efi\/,\/,g' "$OURDIR/$ROOTDIR"/boot/efi/loader/entries/$MACH_ID-$KVER.conf
+			if [ -n ${DTB} ] && ! grep -q devicetree $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KVER.conf; then
+			    install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KVER/${DTB}.dtb" "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KVER/dtb/${DTB}.dtb"
+			    printf '%s\n' "devicetree "/$MACH_ID/$KVER"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KVER.conf
 			fi
-			dd if=/dev/random of="$OURDIR/$ROOTDIR/efi/loader/"random-seed bs=512 count=1
-			chmod +x -R $OURDIR/$ROOTDIR/efi
+			dd if=/dev/random of="$OURDIR/$ROOTDIR/boot/efi/loader/"random-seed bs=512 count=1
+			chmod +x -R $OURDIR/$ROOTDIR/boot/efi
 		fi
 
 	fi
