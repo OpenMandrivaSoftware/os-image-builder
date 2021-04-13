@@ -35,6 +35,7 @@ iio-sensor-proxy
 qt5-qtpositioning
 geoclue
 gpsd
+AmbientLight
 # Needed to set up cameras at least on PinePhone
 v4l-utils
 # Most Plasma Mobile devices should have LTE
