@@ -3,4 +3,4 @@ HWPACKAGES="f2fs-tools kernel-release-server pciutils kernel-firmware kernel-fir
 HWPACKAGES_gui="lib64dri-drivers-panfrost"
 CMDLINE="root=LABEL=OMVAA64 rw rootwait rootfstype=f2fs video=eDP-1:1920x1080@60 video=HDMI-A-1:1920x1080@60 console=tty1 console=ttyS2,115200 no_console_suspend earlycon=uart8250,mmio32,0x01c28000 panic=10 consoleblank=0 loglevel=1 cma=256M"
 DTB=rockchip/rk3399-rockpro64
-USE_SYSTEMD_UEFI=yes
+USE_SYSTEMD_UEFI=no
