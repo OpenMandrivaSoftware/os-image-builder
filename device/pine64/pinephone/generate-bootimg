@@ -1,6 +1,6 @@
 # Hack to allow calling from outside the build scripts
 # to test updated boot environments etc.
-[ -z "$OURDIR" ] && OURDIR=`pwd`
+[ -z "$OURDIR" ] && OURDIR=$(pwd)
 [ -z "$ROOTDIR" ] && ROOTDIR=OpenMandriva-cooker-aarch64-root
 [ -z "$KERNELVERSION" ] && KERNELVERSION=5.8.0-gf66d3a85b
 
@@ -22,7 +22,7 @@ EOF
 cd u-boot
 patch -p1 -b -z .drank~ <$OURDIR/device/$TARGET/u-boot-allwinner-dual-rank-dram.patch
 cd ..
-make -C u-boot CROSS_COMPILE=aarch64-linux-gnu- BL31=`pwd`/arm-trusted-firmware/build/sun50i_a64/debug/bl31.bin EXTRAVERSION="-OpenMandriva"
+make -C u-boot CROSS_COMPILE=aarch64-linux-gnu- BL31=$(pwd)/arm-trusted-firmware/build/sun50i_a64/debug/bl31.bin EXTRAVERSION="-OpenMandriva"
 
 #mkimage -A arm -O linux -T ramdisk -C gzip -d $OURDIR/$ROOTDIR/boot/initrd-$KERNELVERSION.img $OURDIR/$ROOTDIR/boot/uInitrd.img
 #ln -sf initrd-$KERNELVERSION.img $OURDIR/$ROOTDIR/boot/initrd.img
