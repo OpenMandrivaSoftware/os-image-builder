@@ -380,7 +380,7 @@ cp arch/$KERNELARCH/boot/$KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
 /lib/modules/*
 EOF
 	cd kernel-rpm
-	rpmbuild -bb --target $ARCH --define "_sourcedir $(pwd)" --define "_specdir $(pwd)" --define "_srcrpmdir $(pwd)/SRPMS" --define "_rpmdir $(pwd)/RPMS"  kernel-$SHORTTARGET.spec
+	rpmbuild -bb --target $ARCH --define "_sourcedir $(pwd)" --define "_specdir $(pwd)" --define "_srcrpmdir $(pwd)/SRPMS" --define "_rpmdir $(pwd)/RPMS"  kernel-$SHORTTARGET.spec 2>&1 |tee $OURDIR/kernelbuild.log
 	cd ..
 	KERNELRPM="$(ls $OURDIR/kernel-rpm/RPMS/*/*.rpm)"
 else
