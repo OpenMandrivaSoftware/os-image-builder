@@ -21,11 +21,12 @@ bluez
 qtbluetooth5
 bluez-qt
 bluedevil
+pulseaudio-module-bluetooth
 maliit-keyboard
-# Used by the Plasma Mobile Camera app
-gstreamer1.0-plugins-bad
 # ofono doesn't work, let's use something else
 om-phone
+# For now, until the pinephone camera works with plasma-camera
+megapixels
 # Better not rely on gstreamer crap to drive the flash
 ledcontrol
 # Used by qt5-qtsensors to read the accelerometer
@@ -34,5 +35,8 @@ iio-sensor-proxy
 qt5-qtpositioning
 geoclue
 gpsd
+AmbientLight
 # Needed to set up cameras at least on PinePhone
 v4l-utils
+# Most Plasma Mobile devices should have LTE
+networkmanager-wwan

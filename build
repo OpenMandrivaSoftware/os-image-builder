@@ -272,7 +272,15 @@ if [ -n "$KERNEL" ]; then
 	KERNELBRANCH="$(echo $KERNEL |cut -d'#' -f2-)"
 	[ -n "$KERNELBRANCH" ] && KERNELBRANCH="-b $KERNELBRANCH"
 	[ -z "$KERNEL_CONFIG" ] && KERNEL_CONFIG="defconfig"
-	[ -d kernel ] || git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel
+	if ! [ -d kernel ]; then
+		if ! git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel; then
+			# KERNELBRANCH is a tag or commit hash, not a branch
+			git clone $KERNELREPO kernel
+			cd kernel
+			git checkout -b $KERNELBRANCH $KERNELBRANCH
+			cd ..
+		fi
+	fi
 	cd kernel
 	[ -e scripts/lld-version.sh ] && sed -i -e "s,' ' -f 2,' ' -f 4," scripts/lld-version.sh
 	PN=1
@@ -372,7 +380,7 @@ cp arch/$KERNELARCH/boot/$KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
 /lib/modules/*
 EOF
 	cd kernel-rpm
-	rpmbuild -bb --target $ARCH --define "_sourcedir $(pwd)" --define "_specdir $(pwd)" --define "_srcrpmdir $(pwd)/SRPMS" --define "_rpmdir $(pwd)/RPMS"  kernel-$SHORTTARGET.spec
+	rpmbuild -bb --target $ARCH --define "_sourcedir $(pwd)" --define "_specdir $(pwd)" --define "_srcrpmdir $(pwd)/SRPMS" --define "_rpmdir $(pwd)/RPMS"  kernel-$SHORTTARGET.spec 2>&1 |tee $OURDIR/kernelbuild.log
 	cd ..
 	KERNELRPM="$(ls $OURDIR/kernel-rpm/RPMS/*/*.rpm)"
 else

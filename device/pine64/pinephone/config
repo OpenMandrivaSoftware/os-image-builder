@@ -11,7 +11,8 @@ HWPACKAGES_gui="lib64dri-drivers-lima"
 # Known good revisions:
 # 9422c45f7b9fb598a4d65ecc6e524e8022f2cb3a (5.7.10 based)
 # 762fb69450b4a7f3fb61724427938561b66a1a02 (5.10-rc based)
-KERNEL="https://github.com/megous/linux.git#orange-pi-5.10"
+# 4ce8bf182f5560242f90a6032ff947424ad38b17 (5.12-rc3 based)
+KERNEL="https://github.com/megous/linux.git#orange-pi-5.12"
 KERNEL_CONFIG="pinephone_defconfig"
 #KERNEL="https://gitlab.com/pine64-org/linux.git#pine64-kernel-5.7.y"
 #KERNEL_CONFIG="pine64_defconfig" #for kernel from gitlab.org/pine64-org
@@ -20,7 +21,7 @@ DTB="allwinner/sun50i-a64-pinephone-1.2"
 # Make sure we have what the hardware needs...
 KERNEL_EXTRACONFIG="--enable TOUCHSCREEN_GOODIX --enable VIDEO_OV5640 --enable LEDS_SGM3140 --enable DRM_PANEL_XINGBANGDA_XBD599 --enable RTL8723CS --enable BT_HCIUART_RTL --enable USB_NET_QMI_WWAN --enable USB_SERIAL_OPTION --enable IIO_ST_MAGN_3AXIS --enable STK3310 --enable INV_MPU6050_I2C --enable INPUT_GPIO_VIBRA --enable LEDS_GPIO --enable KEYBOARD_SUN4I_LRADC --enable INPUT_AXP20X_PEK --enable BATTERY_AXP20X --set-val EXTRA_FIRMWARE_DIR \"`pwd`/kernel/linux-firmware\""
 # Some basic configs
-KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable MODULE_FORCE_LOAD --enable MODVERSIONS --enable MODULE_COMPRESS --disable MODULE_COMPRESS_GZIP --enable MODULE_COMPRESS_XZ --module NTFS3_FS --enable NTFS3_LZX_XPRESS --enable NTFS3_POSIX_ACL --disable NTFS3_64BIT_CLUSTER"
+KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable MODULE_FORCE_LOAD --enable MODVERSIONS --enable MODULE_COMPRESS --disable MODULE_COMPRESS_GZIP --enable MODULE_COMPRESS_XZ --module NTFS3_FS --enable NTFS3_LZX_XPRESS --enable NTFS3_FS_POSIX_ACL --disable NTFS3_64BIT_CLUSTER"
 # Make IWD great again...
 KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable KEY_DH_OPERATIONS"
 CMDLINE="console=tty1 console=ttyS0,115200 no_console_suspend earlycon=uart,mmio32,0x01c28000 panic=10 consoleblank=0 loglevel=1 cma=256M quiet splash"
