@@ -14,27 +14,18 @@ else
     parted --script "${LOOPDEV}" \
 	mklabel gpt \
 	mkpart 1 ext4 8MiB 12MiB \
-	mkpart 2 fat32 12MiB 140MiB \
-	mkpart 3 ext4 140MiB 100% \
+	mkpart 2 fat32 12MiB 256MiB \
+	mkpart 3 ext4 256MiB 100% \
 	set 2 esp on
-
-    sync
-
-# install u-boot loader
-    dd if="$OURDIR/$ROOTDIR"/boot/idbloader.img of="${LOOPDEV}" seek=64
-
-# install u-boot binary data
-    dd if="$OURDIR/$ROOTDIR"/boot/u-boot.itb of="${LOOPDEV}p1"
-
-# create partition for OMV
-    mkfs.f2fs -l OMVAA64 "${LOOPDEV}p3"
-    ROOTUUID=$(/sbin/blkid "${LOOPDEV}p3" |sed -e 's,.* UUID=",,;s,".*,,')
 
 # create partition for EFI
     mkfs.vfat -F 32 -n OMVBOOT "${LOOPDEV}p2"
     BOOTUUID=$(/sbin/blkid "${LOOPDEV}p2" |sed -e 's,.* UUID=",,;s,".*,,')
 
-    sync
+# create partition for OMV
+    mkfs.f2fs -l OMVAA64 "${LOOPDEV}p3"
+    ROOTUUID=$(/sbin/blkid "${LOOPDEV}p3" |sed -e 's,.* UUID=",,;s,".*,,')
+
     sleep 1
 
     [ -d ${OURDIR}/mnt ] && umount -Rq ${OURDIR}/mnt
@@ -48,7 +39,6 @@ else
 	tar xf ${OURDIR}/boot-${SHORTTARGET}.tar.xz
     cd ..
     umount -R ${OURDIR}/mnt
-    sync
     sleep 5
 
 # install OpenMandriva distribution
@@ -62,9 +52,16 @@ else
     UUID=${ROOTUUID}		/		f2fs	defaults,noatime	0	1
     UUID=${BOOTUUID}		/boot/efi	vfat	umask=0077	0	2
 EOF
+
+# install u-boot loader
+    dd if="$OURDIR/$ROOTDIR"/boot/idbloader.img of="${LOOPDEV}" bs=512 seek=64 conv=notrunc
+
+# install u-boot binary data
+    dd if="$OURDIR/$ROOTDIR"/boot/u-boot.itb of="${LOOPDEV}p1" bs=512 conv=notrunc
+
     umount ${OURDIR}/mnt
     losetup -d ${LOOPDEV}
-    printf '%s\n' "Compressing final image."
     sync
-    xz -9ef ${OURDIR}/${SHORTTARGET}.img
 fi
+    printf '%s\n' "Compressing final image."
+    xz -9ef ${OURDIR}/${SHORTTARGET}.img
