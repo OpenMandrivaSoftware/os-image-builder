@@ -15,7 +15,7 @@ else
 	mklabel gpt \
 	mkpart 1 ext4 8MiB 12MiB \
 	mkpart 2 fat32 12MiB 256MiB \
-	mkpart 3 ext4 256MiB 100% \
+	mkpart 3 f2fs 256MiB 100% \
 	set 2 esp on
 
 # create partition for EFI
