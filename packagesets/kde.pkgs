@@ -2,6 +2,7 @@
 task-plasma-minimal
 falkon
 sddm
+sddm-theme-breeze
 ${LIB}GLESv1_CM1
 ${LIB}GLESv2_2
 ${LIB}OpenGL0

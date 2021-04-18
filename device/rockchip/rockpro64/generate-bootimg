@@ -1,5 +1,5 @@
 if [ "$USE_SYSTEMD_UEFI" = 'yes' ]; then
-    cd $OURDIR/$ROOTDIR/efi
+    cd $OURDIR/$ROOTDIR/boot/efi
 	tar cJf $OURDIR/boot-${SHORTTARGET}.tar.xz *
     cd ..
 fi
