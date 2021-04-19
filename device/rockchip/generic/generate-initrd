@@ -1,7 +1,7 @@
 sed -i -e '/^add_drivers/d' $OURDIR/$ROOTDIR/usr/lib/dracut/dracut.conf.d/50-dracut-distro.conf
 sed -i -e 's,zstd,gzip,g' $OURDIR/$ROOTDIR/usr/lib/dracut/dracut.conf.d/50-dracut-distro.conf
 if [ ! -e "$OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img" ]; then
-	if [ -e "$OURDIR/$ROOTDIR/etc/fstab ]; then
+	if [ -e "$OURDIR/$ROOTDIR"/etc/fstab ]; then
 		FSTAB_ARGS="--fstab --add-fstab /etc/fstab"
 	else
 		FSTAB_ARGS=""
