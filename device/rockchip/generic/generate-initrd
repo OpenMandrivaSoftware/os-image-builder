@@ -1,10 +1,15 @@
 sed -i -e '/^add_drivers/d' $OURDIR/$ROOTDIR/usr/lib/dracut/dracut.conf.d/50-dracut-distro.conf
 sed -i -e 's,zstd,gzip,g' $OURDIR/$ROOTDIR/usr/lib/dracut/dracut.conf.d/50-dracut-distro.conf
 if [ ! -e "$OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img" ]; then
-    chroot $OURDIR/$ROOTDIR /sbin/dracut --gzip -o ifcfg -o lvm -o mdraid -o aufs-mount -o network -o cifs -o dm -o crypt -o dmraid -o multipath -o multipath-hostonly --fstab --add-fstab /etc/fstab -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
-    chmod 0644 $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img
-    if [ -e "$OURDIR/$ROOTDIR"/boot/initrd-${KERNELVERSION}.img ] && [ -e "$OURDIR/$ROOTDIR"/usr/bin/mkimage ] || [ -z "$SYSTEMD_USE_UEFI" ]  || [ -z "$USE_UEFI" ]; then
-# generate uInitrd image in case we may use it in near future
-	chroot $OURDIR/$ROOTDIR mkimage -A arm64 -O linux -T ramdisk -C gzip -n uInitrd -d /boot/initrd-${KERNELVERSION}.img /boot/uIntrd
-    fi
+	if [ -e "$OURDIR/$ROOTDIR/etc/fstab ]; then
+		FSTAB_ARGS="--fstab --add-fstab /etc/fstab"
+	else
+		FSTAB_ARGS=""
+	fi
+	chroot $OURDIR/$ROOTDIR /sbin/dracut --gzip -o ifcfg -o lvm -o mdraid -o aufs-mount -o network -o cifs -o dm -o crypt -o dmraid -o multipath -o multipath-hostonly $FSTAB_ARGS -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
+	chmod 0644 $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img
+	if [ -e "$OURDIR/$ROOTDIR"/boot/initrd-${KERNELVERSION}.img ] && [ -e "$OURDIR/$ROOTDIR"/usr/bin/mkimage ] || [ -z "$SYSTEMD_USE_UEFI" ]  || [ -z "$USE_UEFI" ]; then
+		# generate uInitrd image in case we may use it in near future
+		chroot $OURDIR/$ROOTDIR mkimage -A arm64 -O linux -T ramdisk -C gzip -n uInitrd -d /boot/initrd-${KERNELVERSION}.img /boot/uIntrd
+	fi
 fi
