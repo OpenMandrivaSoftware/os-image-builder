@@ -680,6 +680,9 @@ if [ "$ABF" = "1" ]; then
 	cd "$OURDIR"
 	rm -rf "$ROOTDIR" kernel device LICENSE PACKAGES *.rpm
 	rm -f build
+	# Apparently abf looks in results/ now...
+	mkdir results
+	mv * results/
 fi
 
 printf '%s\n' 'Building has finished.'
