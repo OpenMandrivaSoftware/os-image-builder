@@ -238,6 +238,10 @@ $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
 # vim-common is for xxd, used to decode EDID information for pinebookpro
 HOSTDEPS="$HOSTDEPS bc curl make clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build kpartx util-linux gptfdisk f2fs-tools"
 
+if [ -n "$UBOOT_CONFIG" ]; then
+	HOSTDEPS="$HOSTDEPS uboot-tools"
+fi
+
 if [ -n "$HOSTDEPS" ] && [ -z "$KEEP_OLD_ROOT" ]; then
 	if ! dnf -y --refresh --nogpgcheck install $HOSTDEPS; then
 		for i in $HOSTDEPS; do
