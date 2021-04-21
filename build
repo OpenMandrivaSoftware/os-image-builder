@@ -691,10 +691,10 @@ if [ "$ABF" = "1" ]; then
 	# ABF packages everything in $HOME/output
 	# but it frequently forgets to remove what a previous
 	# run put there
-	mv "$HOME"/output/iso_build.log .
+	mv "$HOME"/output/iso_build.log . || :
 	rm -rf "$HOME"/output
 	mkdir "$HOME"/output
-	mv iso_build.log "$HOME"/output
+	mv iso_build.log "$HOME"/output || :
 	# Pull in the README file
 	[ -e device/${TARGET}/README.md ] && cp device/${TARGET}/README.md "$HOME"/output
 	# All of the following are allowed to fail because not
