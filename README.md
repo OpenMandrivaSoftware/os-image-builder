@@ -56,6 +56,14 @@ or to build a Raspberry Pi 4B image with KDE and audio support and vim-enhanced,
 Unless _-W_ is given, weak dependencies (Suggests:/Recommends:) are installed
 automatically.
 
+Additional repositories
+=======================
+If you wish to include packages from repositories other than _main_ (such as
+_unsupported_, _restricted_ or _non-free_), use -r to enable those repositories.
+For example, to build an image that has x264 included, use
+
+`./build -P plasma -r restricted -p x264 rockpi4c`
+
 Selecting services
 ==================
 If you wish to start extra systemd services (or disable standard services), you can
