@@ -82,7 +82,7 @@ WEAKDEPS=""
 addpackageset core
 
 OMV_VERSION=cooker
-while getopts "K:p:P:s:S:v:w:W" opt; do
+while getopts "K:p:P:r:s:S:v:w:W" opt; do
 	case $opt in
 	v)
 		OMV_VERSION=$OPTARG
@@ -92,6 +92,9 @@ while getopts "K:p:P:s:S:v:w:W" opt; do
 		;;
 	P)
 		addpackageset ${OPTARG}
+		;;
+	r)
+		EXTRA_REPOS="$EXTRA_REPOS ${OPTARG}"
 		;;
 	s)
 		SERVICES="$SERVICES ${OPTARG}"
@@ -402,8 +405,8 @@ ROOTDIR="OpenMandriva-$OMV_VERSION-$ARCH-root"
 if [ -z "$KEEP_OLD_ROOT" ]; then
 	# Before removing make sure bind mounts are unmounted
 	for mp in /proc /sys /dev/pts /dev; do
-	    echo "Checking for $ROOTDIR$mp"
-	    [ -e "$ROOTDIR$mp" ] && umount -Rq "$ROOTDIR$mp" ||:
+		echo "Checking for $ROOTDIR$mp"
+		[ -e "$ROOTDIR$mp" ] && umount -Rq "$ROOTDIR$mp" ||:
 	done
 	rm -rf "$ROOTDIR"
 fi
@@ -437,6 +440,12 @@ if [ ! -d "$ROOTDIR" ]; then
 	# Don't use mirrors when creating the image
 	sed -i -e '/mirror.openmandriva.org/d;s,^	,baseurl=,' "$OURDIR/$ROOTDIR"/etc/yum.repos.d/*.repo
 
+	if [ -n "$EXTRA_REPOS" ]; then
+		for i in $EXTRA_REPOS; do
+			dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-enabled $OMV_VERSION-$ARCH-$i
+		done
+	fi
+
 	if ! $NATIVEBUILD; then
 		# Make sure we can run %post scripts in the chroot
 		mkdir -p $OURDIR/$ROOTDIR/usr/bin
@@ -468,18 +477,18 @@ if [ ! -d "$ROOTDIR" ]; then
 	done
 
 	if [ -z $KEEP_OLD_ROOT ]; then
-	    if ! dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $WEAKDEPS $PACKAGES $KERNELRPM; then
-		    if [ -e $OURDIR/$ROOTDIR/bin/sh ]; then
-			cat >&2 <<EOF
+		if ! dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $WEAKDEPS $PACKAGES $KERNELRPM; then
+			if [ -e $OURDIR/$ROOTDIR/bin/sh ]; then
+				cat >&2 <<EOF
 WARNING: dnf returned an error code, but it looks like installation finished.
 This is likely something (relatively) harmless like a package's post-install
 script failing - but you may want to double-check.
 EOF
-		    else
-			echo "ERROR: dnf failed without installing what looks like a workable system."
-			exit 1
-		    fi
-	    fi
+			else
+				echo "ERROR: dnf failed without installing what looks like a workable system."
+				exit 1
+			fi
+		fi
 	fi
 
 	# FIXME (continued) workaround for ldd being
@@ -492,12 +501,12 @@ EOF
 
 # set up system environment, default root password is omv
 	systemd-firstboot --root="$OURDIR/$ROOTDIR" \
-	    --locale="en_US.UTF-8" \
-	    --keymap="us" \
-	    --timezone="Europe/London" \
-	    --hostname="omv-$(printf '%s\n' ${TARGET} | cut -d '/' -f 2)" \
-	    --root-password-hashed='$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0' \
-	    --force
+		--locale="en_US.UTF-8" \
+		--keymap="us" \
+		--timezone="Europe/London" \
+		--hostname="omv-$(printf '%s\n' ${TARGET} | cut -d '/' -f 2)" \
+		--root-password-hashed='$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0' \
+		--force
 	
 	if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
 		# Create omv user (password omv)
@@ -559,14 +568,14 @@ EOF
 			mkdir -p $OURDIR/$ROOTDIR/boot/efi
 			# create ESP directory scheme for systemd-boot
 			for i in "$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT" "$OURDIR/$ROOTDIR/boot/efi/EFI/Linux" "$OURDIR/$ROOTDIR/boot/efi/EFI/systemd" "$OURDIR/$ROOTDIR/boot/efi/loader/entries"; do
-			    mkdir -p $i
+				mkdir -p $i
 			done
 
 			if [ ! -s "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline ]; then
-			    printf '%s\n' 'root=LABEL=OMVAA64' >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
-			    for i in ${CMDLINE[@]}; do
-				printf '%s\n' "$i" >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
-			    done
+				printf '%s\n' 'root=LABEL=OMVAA64' >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
+				for i in ${CMDLINE[@]}; do
+					printf '%s\n' "$i" >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
+				done
 			fi
 
 #			chroot "$OURDIR/$ROOTDIR" SYSTEMD_RELAX_ESP_CHECKS=1 bootctl install --esp-path=/boot/efi
@@ -585,8 +594,8 @@ timeout 10
 EOF
 			sed -i -e 's,boot\/efi\/,\/,g' "$OURDIR/$ROOTDIR"/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf
 			if [ -n ${DTB} ] && ! grep -q devicetree $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf; then
-			    install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KERNELVERSION/${DTB}.dtb" "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KERNELVERSION/dtb/${DTB}.dtb"
-			    printf '%s\n' "devicetree "/$MACH_ID/$KERNELVERSION"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf
+				install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KERNELVERSION/${DTB}.dtb" "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KERNELVERSION/dtb/${DTB}.dtb"
+				printf '%s\n' "devicetree "/$MACH_ID/$KERNELVERSION"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf
 			fi
 			dd if=/dev/random of="$OURDIR/$ROOTDIR/boot/efi/loader/"random-seed bs=512 count=1
 			chmod +x -R $OURDIR/$ROOTDIR/boot/efi
@@ -644,8 +653,8 @@ EOF
 	run postprocess
 	# Before removing make sure bind mounts are unmounted
 	for mp in /proc /sys /dev/pts /dev; do
-	    echo 'Try umount "$OURDIR/$ROOTDIR$mp"'
-	    [ -e "$OURDIR/$ROOTDIR$mp" ] && umount -Rq "$OURDIR/$ROOTDIR$mp" || :
+		echo 'Try umount "$OURDIR/$ROOTDIR$mp"'
+		[ -e "$OURDIR/$ROOTDIR$mp" ] && umount -Rq "$OURDIR/$ROOTDIR$mp" || :
 	done
 	# There shouldn't be any files in the root filesystem. If there are any,
 	# they're probably core dump files generated by qemu while running systemctl
@@ -680,7 +689,7 @@ if [ "$ABF" = "1" ]; then
 	# ABF packages everything in $HOME/output
 	# but it frequently forgets to remove what a previous
 	# run put there
-	mv "$HOME"/iso_build.log .
+	mv "$HOME"/output/iso_build.log .
 	rm -rf "$HOME"/output
 	mkdir "$HOME"/output
 	mv iso_build.log "$HOME"/output
