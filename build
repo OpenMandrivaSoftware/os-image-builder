@@ -686,6 +686,8 @@ done
 run generate-rootfs
 
 if [ "$ABF" = "1" ]; then
+	# ABF looks in /home/omv, but sets HOME to /root
+	export HOME="/home/omv"
 	# ABF packages everything in $HOME/output
 	# but it frequently forgets to remove what a previous
 	# run put there
