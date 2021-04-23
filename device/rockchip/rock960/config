@@ -2,12 +2,11 @@ ARCH="aarch64"
 # Let's support what people might drop into those PCI-E slots...
 #HWPACKAGES="pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr"
 # kernel-firmware-extra is needed for the USB-C DisplayPort module (rockchip/dptx.bin)
-# Since we default to f2fs...
-HWPACKAGES="f2fs-tools wpa_supplicant kernel-firmware-extra"
+HWPACKAGES="wpa_supplicant kernel-firmware-extra"
 HWPACKAGES_gui="lib64dri-drivers-lima"
 #KERNEL="https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v5.11-rc1"
 #KERNEL_CONFIG="defconfig"
-KERNEL="https://github.com/megous/linux.git#orange-pi-5.10"
+KERNEL="https://github.com/megous/linux.git#orange-pi-5.12"
 # Not quite, but close enough...
 KERNEL_CONFIG="pinebook_pro_defconfig"
 UBOOT_CONFIG="rock960-rk3399_defconfig"

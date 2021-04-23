@@ -1,0 +1,157 @@
+diff -up linux-5.12-rc6/drivers/video/fbdev/core/bitblit.c.48~ linux-5.12-rc6/drivers/video/fbdev/core/bitblit.c
+--- linux-5.12-rc6/drivers/video/fbdev/core/bitblit.c.48~	2021-04-04 23:15:36.000000000 +0200
++++ linux-5.12-rc6/drivers/video/fbdev/core/bitblit.c	2021-04-05 22:07:24.599356821 +0200
+@@ -234,7 +234,7 @@ static void bit_clear_margins(struct vc_
+ }
+ 
+ static void bit_cursor(struct vc_data *vc, struct fb_info *info, int mode,
+-		       int fg, int bg)
++		       int softback_lines, int fg, int bg)
+ {
+ 	struct fb_cursor cursor;
+ 	struct fbcon_ops *ops = info->fbcon_par;
+@@ -247,6 +247,15 @@ static void bit_cursor(struct vc_data *v
+ 
+ 	cursor.set = 0;
+ 
++	if (softback_lines) {
++		if (y + softback_lines >= vc->vc_rows) {
++			mode = CM_ERASE;
++			ops->cursor_flash = 0;
++			return;
++		} else
++			y += softback_lines;
++	}
++
+  	c = scr_readw((u16 *) vc->vc_pos);
+ 	attribute = get_attribute(info, c);
+ 	src = vc->vc_font.data + ((c & charmask) * (w * vc->vc_font.height));
+diff -up linux-5.12-rc6/drivers/video/fbdev/core/fbcon.c.48~ linux-5.12-rc6/drivers/video/fbdev/core/fbcon.c
+--- linux-5.12-rc6/drivers/video/fbdev/core/fbcon.c.48~	2021-04-04 23:15:36.000000000 +0200
++++ linux-5.12-rc6/drivers/video/fbdev/core/fbcon.c	2021-04-05 22:38:13.121421754 +0200
+@@ -384,7 +384,7 @@ static void fb_flashcursor(struct work_s
+ 	c = scr_readw((u16 *) vc->vc_pos);
+ 	mode = (!ops->cursor_flash || ops->cursor_state.enable) ?
+ 		CM_ERASE : CM_DRAW;
+-	ops->cursor(vc, info, mode, get_color(vc, info, c, 1),
++	ops->cursor(vc, info, mode, 0, get_color(vc, info, c, 1),
+ 		    get_color(vc, info, c, 0));
+ 	console_unlock();
+ }
+@@ -1336,7 +1336,7 @@ static void fbcon_cursor(struct vc_data
+ 	if (!ops->cursor)
+ 		return;
+ 
+-	ops->cursor(vc, info, mode, get_color(vc, info, c, 1),
++	ops->cursor(vc, info, mode, 0, get_color(vc, info, c, 1),
+ 		    get_color(vc, info, c, 0));
+ }
+ 
+diff -up linux-5.12-rc6/drivers/video/fbdev/core/fbcon_ccw.c.48~ linux-5.12-rc6/drivers/video/fbdev/core/fbcon_ccw.c
+--- linux-5.12-rc6/drivers/video/fbdev/core/fbcon_ccw.c.48~	2021-04-04 23:15:36.000000000 +0200
++++ linux-5.12-rc6/drivers/video/fbdev/core/fbcon_ccw.c	2021-04-05 22:07:24.602690140 +0200
+@@ -219,7 +219,7 @@ static void ccw_clear_margins(struct vc_
+ }
+ 
+ static void ccw_cursor(struct vc_data *vc, struct fb_info *info, int mode,
+-		       int fg, int bg)
++		       int softback_lines, int fg, int bg)
+ {
+ 	struct fb_cursor cursor;
+ 	struct fbcon_ops *ops = info->fbcon_par;
+@@ -236,6 +236,15 @@ static void ccw_cursor(struct vc_data *v
+ 
+ 	cursor.set = 0;
+ 
++	if (softback_lines) {
++		if (y + softback_lines >= vc->vc_rows) {
++			mode = CM_ERASE;
++			ops->cursor_flash = 0;
++			return;
++		} else
++			y += softback_lines;
++	}
++
+  	c = scr_readw((u16 *) vc->vc_pos);
+ 	attribute = get_attribute(info, c);
+ 	src = ops->fontbuffer + ((c & charmask) * (w * vc->vc_font.width));
+diff -up linux-5.12-rc6/drivers/video/fbdev/core/fbcon_cw.c.48~ linux-5.12-rc6/drivers/video/fbdev/core/fbcon_cw.c
+--- linux-5.12-rc6/drivers/video/fbdev/core/fbcon_cw.c.48~	2021-04-04 23:15:36.000000000 +0200
++++ linux-5.12-rc6/drivers/video/fbdev/core/fbcon_cw.c	2021-04-05 22:07:24.602690140 +0200
+@@ -202,7 +202,7 @@ static void cw_clear_margins(struct vc_d
+ }
+ 
+ static void cw_cursor(struct vc_data *vc, struct fb_info *info, int mode,
+-		      int fg, int bg)
++		      int softback_lines, int fg, int bg)
+ {
+ 	struct fb_cursor cursor;
+ 	struct fbcon_ops *ops = info->fbcon_par;
+@@ -219,6 +219,15 @@ static void cw_cursor(struct vc_data *vc
+ 
+ 	cursor.set = 0;
+ 
++	if (softback_lines) {
++		if (y + softback_lines >= vc->vc_rows) {
++			mode = CM_ERASE;
++			ops->cursor_flash = 0;
++			return;
++		} else
++			y += softback_lines;
++	}
++
+  	c = scr_readw((u16 *) vc->vc_pos);
+ 	attribute = get_attribute(info, c);
+ 	src = ops->fontbuffer + ((c & charmask) * (w * vc->vc_font.width));
+diff -up linux-5.12-rc6/drivers/video/fbdev/core/fbcon.h.48~ linux-5.12-rc6/drivers/video/fbdev/core/fbcon.h
+--- linux-5.12-rc6/drivers/video/fbdev/core/fbcon.h.48~	2021-04-04 23:15:36.000000000 +0200
++++ linux-5.12-rc6/drivers/video/fbdev/core/fbcon.h	2021-04-05 22:07:24.602690140 +0200
+@@ -62,7 +62,7 @@ struct fbcon_ops {
+ 	void (*clear_margins)(struct vc_data *vc, struct fb_info *info,
+ 			      int color, int bottom_only);
+ 	void (*cursor)(struct vc_data *vc, struct fb_info *info, int mode,
+-		       int fg, int bg);
++		       int softback_lines, int fg, int bg);
+ 	int  (*update_start)(struct fb_info *info);
+ 	int  (*rotate_font)(struct fb_info *info, struct vc_data *vc);
+ 	struct fb_var_screeninfo var;  /* copy of the current fb_var_screeninfo */
+diff -up linux-5.12-rc6/drivers/video/fbdev/core/fbcon_ud.c.48~ linux-5.12-rc6/drivers/video/fbdev/core/fbcon_ud.c
+--- linux-5.12-rc6/drivers/video/fbdev/core/fbcon_ud.c.48~	2021-04-04 23:15:36.000000000 +0200
++++ linux-5.12-rc6/drivers/video/fbdev/core/fbcon_ud.c	2021-04-05 22:07:24.602690140 +0200
+@@ -249,7 +249,7 @@ static void ud_clear_margins(struct vc_d
+ }
+ 
+ static void ud_cursor(struct vc_data *vc, struct fb_info *info, int mode,
+-		      int fg, int bg)
++		      int softback_lines, int fg, int bg)
+ {
+ 	struct fb_cursor cursor;
+ 	struct fbcon_ops *ops = info->fbcon_par;
+@@ -267,6 +267,15 @@ static void ud_cursor(struct vc_data *vc
+ 
+ 	cursor.set = 0;
+ 
++	if (softback_lines) {
++		if (y + softback_lines >= vc->vc_rows) {
++			mode = CM_ERASE;
++			ops->cursor_flash = 0;
++			return;
++		} else
++			y += softback_lines;
++	}
++
+  	c = scr_readw((u16 *) vc->vc_pos);
+ 	attribute = get_attribute(info, c);
+ 	src = ops->fontbuffer + ((c & charmask) * (w * vc->vc_font.height));
+diff -up linux-5.12-rc6/drivers/video/fbdev/core/tileblit.c.48~ linux-5.12-rc6/drivers/video/fbdev/core/tileblit.c
+--- linux-5.12-rc6/drivers/video/fbdev/core/tileblit.c.48~	2021-04-04 23:15:36.000000000 +0200
++++ linux-5.12-rc6/drivers/video/fbdev/core/tileblit.c	2021-04-05 22:07:24.602690140 +0200
+@@ -80,7 +80,7 @@ static void tile_clear_margins(struct vc
+ }
+ 
+ static void tile_cursor(struct vc_data *vc, struct fb_info *info, int mode,
+-			int fg, int bg)
++			int softback_lines, int fg, int bg)
+ {
+ 	struct fb_tilecursor cursor;
+ 	int use_sw = vc->vc_cursor_type & CUR_SW;

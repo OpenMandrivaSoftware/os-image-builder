@@ -1,0 +1,20 @@
+diff -up linux-5.11/drivers/tty/sysrq.c.58~ linux-5.11/drivers/tty/sysrq.c
+--- linux-5.11/drivers/tty/sysrq.c.58~	2021-02-14 23:32:24.000000000 +0100
++++ linux-5.11/drivers/tty/sysrq.c	2021-02-25 16:29:31.252204062 +0100
+@@ -51,6 +51,7 @@
+ #include <linux/syscalls.h>
+ #include <linux/of.h>
+ #include <linux/rcupdate.h>
++#include <linux/bootsplash.h>
+ 
+ #include <asm/ptrace.h>
+ #include <asm/irq_regs.h>
+@@ -119,6 +120,8 @@ static void sysrq_handle_SAK(int key)
+ {
+ 	struct work_struct *SAK_work = &vc_cons[fg_console].SAK_work;
+ 	schedule_work(SAK_work);
++
++	bootsplash_disable();
+ }
+ static const struct sysrq_key_op sysrq_SAK_op = {
+ 	.handler	= sysrq_handle_SAK,

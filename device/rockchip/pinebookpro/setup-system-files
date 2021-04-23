@@ -1,5 +1,5 @@
 cp -a device/${TARGET}/install-openmandriva $OURDIR/$ROOTDIR/home/omv/
 cat >$OURDIR/$ROOTDIR/etc/fstab <<EOF
-/dev/mmcblk1p2 / f2fs defaults,noatime 0 1
+/dev/mmcblk1p2 / ext4 defaults,noatime 0 1
 /dev/mmcblk1p1 /boot vfat defaults,noatime 0 2
 EOF

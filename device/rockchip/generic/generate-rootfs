@@ -28,7 +28,7 @@ w
 EOF
 kpartx ${LOOPDEV}
 mkfs.vfat ${LOOPDEV}p1
-mkfs.f2fs -l OMVAA64 ${LOOPDEV}p2
+mkfs.ext4 -L OMVAA64 ${LOOPDEV}p2
 BOOTUUID=$(/sbin/blkid ${LOOPDEV}p1 |sed -e 's,.* UUID=",,;s,".*,,')
 ROOTUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* UUID=",,;s,".*,,')
 ROOTPUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* PARTUUID=",,;s,".*,,')
@@ -58,7 +58,7 @@ mount ${LOOPDEV}p2 ${OURDIR}/mnt
 cp -a ${ROOTDIR}/* ${OURDIR}/mnt/
 mkdir -p ${OURDIR}/mnt/boot/uboot
 cat >${OURDIR}/mnt/etc/fstab <<EOF
-UUID=$ROOTUUID / f2fs defaults,noatime 0 1
+UUID=$ROOTUUID / ext4 defaults,noatime 0 1
 UUID=$BOOTUUID /boot/uboot vfat defaults,noatime 0 2
 EOF
 [ -d ${OURDIR}/mnt/var/cache/dnf ] && rm -rf ${OURDIR}/mnt/var/cache/dnf/*

@@ -2,14 +2,13 @@ ARCH="aarch64"
 # Let's support what people might drop into those PCI-E slots...
 #HWPACKAGES="pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr"
 # kernel-firmware-extra is needed for the USB-C DisplayPort module (rockchip/dptx.bin)
-# Since we default to f2fs...
-HWPACKAGES="f2fs-tools wpa_supplicant kernel-firmware-extra"
+HWPACKAGES="wpa_supplicant kernel-firmware-extra"
 HWPACKAGES_gui="lib64dri-drivers-panfrost"
 # Known good revision: db16c398a809ac303e7693f2f46ad20fad11d39a (5.10-rc based)
 # For 5.11 branch (rc3 based): 0db7492ba3743b3a2ced77a94dfb9d23a1368bc0 (ok-ish, but known to crash occasionally)
-KERNEL="https://github.com/megous/linux.git#orange-pi-5.10"
+KERNEL="https://github.com/megous/linux.git#orange-pi-5.12"
 KERNEL_CONFIG="rk3399_defconfig"
-UBOOT_VERSION="v2021.04-rc4"
+UBOOT_VERSION="v2021.04"
 KERNELTARGET=Image
 CMDLINE="console=tty1 console=ttyS2,1500000 no_console_suspend earlycon=uart,mmio32,0x01c28000 panic=10 consoleblank=0 loglevel=1 cma=256M root=/dev/mmcblk1p2 quiet splash plymouth.ignore-serial-consoles"
 #NEED_INITRD=no
