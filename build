@@ -82,10 +82,22 @@ WEAKDEPS=""
 addpackageset core
 
 OMV_VERSION=cooker
-while getopts "K:p:P:r:s:S:v:w:W" opt; do
+[ -z "$FINAL" ] && FINAL=false
+OS_VERSION=""
+IDENTIFIER=""
+while getopts "Fi:K:o:p:P:r:s:S:v:w:W" opt; do
 	case $opt in
+	F)
+		FINAL=true
+		;;
+	i)
+		IDENTIFIER="$OPTARG"
+		;;
 	v)
-		OMV_VERSION=$OPTARG
+		OMV_VERSION="$OPTARG"
+		;;
+	o)
+		OS_VERSION="$OPTARG"
 		;;
 	p)
 		PACKAGES="$PACKAGES $OPTARG"
@@ -123,6 +135,19 @@ shift $((OPTIND-1))
 if [ -z "$1" ]; then
 	usage
 	exit 1
+fi
+
+if [ -z "$OS_VERSION" ]; then
+	[ -n "$IDENTIFIER" ] && OS_VERSION="$IDENTIFIER-"
+	OS_VERSION="$OS_VERSION$OMV_VERSION"
+	if [ "$FINAL" = "false" ]; then
+		# BUILD_ID is set by abf
+		if [ -n "${BUILD_ID}" ]; then
+			OS_VERSION="${OS_VERSION}-${BUILD_ID}"
+		else
+			OS_VERSION="${OS_VERSION}-$(date +%Y%m%d)"
+		fi
+	fi
 fi
 
 TARGET="$1"
@@ -678,6 +703,11 @@ fi
 
 [ -z $KEEP_OLD_ROOT ] && dnf -y reinstall --installroot="$OURDIR/$ROOTDIR" --releasever=$OMV_VERSION --forcearch=$ARCH distro-release-repos
 [ -d "$OURDIR/$ROOTDIR/var/cache/dnf" ] && rm -rf "$OURDIR/$ROOTDIR/var/cache/dnf/*"
+BASENAME="OpenMandriva-Lx-${SHORTTARGET}-${OS_VERSION}"
+
+# generate-bootimg and generate-rootfs can write to results.
+# Wipe it clean and make sure it exists
+rm -rf results ; mkdir results
 
 run generate-bootimg
 # Stuff in virtual filesystems should not make it to
@@ -687,14 +717,25 @@ for mp in /proc /sys /dev/pts /dev; do
 done
 run generate-rootfs
 
-xz -9ef *.img || :
+xz -9ef results/*.img || :
 
-mkdir results
 # All of the following are allowed to fail because not
 # every board needs/produces every one of them
-mv *.img* results/ || :
-mv *.tar* results/ || :
-cp -a device/${TARGET}/README.md results/ || :
-cp -a device/${TARGET}/write2sd results/ || :
+mv *.img* results/ 2>/dev/null || :
+mv *.tar* results/ 2>/dev/null || :
+cp -a device/${TARGET}/*.md results/ 2>/dev/null || :
+cp -a device/${TARGET}/write2sd results/ 2>/dev/null || :
+
+for i in device/${TARGET}/*.md.in device/${TARGET}/write2sd.in; do
+	[ -e "$i" ] || continue
+	r="results/$(basename $i .in)"
+	sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BASENAME@,${BASENAME},g" $i >"$r"
+	[ -x "$i" ] && chmod 0755 "$r"
+done
+
+if [ "$ABF" = "1" ]; then
+	# Make sure the remaining scripts have sufficient access
+	chown -R omv:omv results
+fi
 
 printf '%s\n' 'Building has finished.'

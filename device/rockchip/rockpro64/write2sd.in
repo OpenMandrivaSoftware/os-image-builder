@@ -32,30 +32,37 @@ echo "aren't sure this is what you want to do, press Ctrl-C"
 echo "now. Otherwise, press enter to continue."
 read
 
-dd if=cuboxpulse.img of=$DEV bs=1M status=progress
+xz -cd @BASENAME@.img.xz |dd of=$DEV bs=512 status=progress
 udevadm settle -t 5
 SD="$(kpartx $DEV |tail -n1)"
 PART="$(echo $SD |cut -d' ' -f 1)"
 START="$(echo $SD |cut -d' ' -f 6)"
-gdisk $DEV <<EOF
-o
-y
+# We need to preserve the disk identifier since
+# the bootloader references PARTUUID (which is generated
+# from it)
+IDENT="$(LC_ALL=C fdisk -l $DEV |grep identifier |cut -d' ' -f3)"
+fdisk --wipe never --wipe-partitions never $DEV <<EOF
+d
+2
 n
-1
-8192
+p
+2
+$START
 
-8305
+x
+i
+$IDENT
+r
 w
-y
 EOF
 udevadm settle -t 5
 partx -u $DEV
+udevadm settle -t 5
 # We need to mount the image to get it maked clean
 rmdir mnt || :
 mkdir mnt
 mount /dev/$PART mnt
-umount mnt
+umount -R mnt
 rmdir mnt
-e2fsck -f /dev/$PART
 resize2fs /dev/$PART
 eject $DEV

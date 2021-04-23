@@ -6,7 +6,7 @@ if ! [ -b "$DEV" ]; then
 	echo "typically /dev/sdb or /dev/mmcblk0"
 	exit 1
 fi
-if [ "$(id -u) != 0 ]; then
+if [ "$(id -u)" != 0 ]; then
 	echo "This script needs root access to write to the SD card"
 	echo "directly, reload partition tables, etc."
 	exec sudo $0 "$@"
@@ -32,20 +32,21 @@ echo "aren't sure this is what you want to do, press Ctrl-C"
 echo "now. Otherwise, press enter to continue."
 read
 
-xz -cd pinebookpro.img.xz |dd of=$DEV bs=1M status=progress
+xzcat @BASENAME@.img |dd of=$DEV bs=1M status=progress
 udevadm settle -t 5
 SD="$(kpartx $DEV |tail -n1)"
 PART="$(echo $SD |cut -d' ' -f 1)"
 START="$(echo $SD |cut -d' ' -f 6)"
-fdisk --wipe never --wipe-partitions never $DEV <<EOF
-d
-2
+gdisk $DEV <<EOF
+o
+y
 n
-p
-2
-$START
+1
+8192
 
+8305
 w
+y
 EOF
 udevadm settle -t 5
 partx -u $DEV
@@ -55,5 +56,6 @@ mkdir mnt
 mount /dev/$PART mnt
 umount mnt
 rmdir mnt
+e2fsck -f /dev/$PART
 resize2fs /dev/$PART
 eject $DEV

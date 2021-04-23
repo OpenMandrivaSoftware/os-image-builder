@@ -5,10 +5,10 @@ if [ "$USE_SYSTEMD_UEFI" = 'no' ] || [ -z "$USE_SYSTEMD_UEFI" ]; then
     . ${OURDIR}/device/rockchip/generic/generate-rootfs
 else
     MINSIZE=$(du -s --block-size=1048576 "$OURDIR/$ROOTDIR" |awk '{ print $1; }')
-    dd if=/dev/zero of=${OURDIR}/${SHORTTARGET}.img bs=1M count=$((MINSIZE+512))
+    dd if=/dev/zero of=${OURDIR}/results/${BASENAME}.img bs=1M count=$((MINSIZE+512))
     losetup -D
-    losetup -fP ${OURDIR}/${SHORTTARGET}.img
-    LOOPDEV=$(losetup -j ${OURDIR}/${SHORTTARGET}.img |cut -d: -f1)
+    losetup -fP ${OURDIR}/results/${BASENAME}.img
+    LOOPDEV=$(losetup -j ${OURDIR}/results/${BASENAME}.img |cut -d: -f1)
 
 # create initial paritions layout based on this http://opensource.rock-chips.com/wiki_Partitions
     parted --script "${LOOPDEV}" \
@@ -64,4 +64,4 @@ EOF
     sync
 fi
     printf '%s\n' "Compressing final image."
-    xz -9ef ${OURDIR}/${SHORTTARGET}.img
+    xz -9ef ${OURDIR}/results/${BASENAME}.img

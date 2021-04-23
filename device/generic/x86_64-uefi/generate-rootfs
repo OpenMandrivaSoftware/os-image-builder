@@ -1,9 +1,9 @@
 pushd $OURDIR/$ROOTDIR
 MINSIZE=$(du -s --block-size=1048576 |awk '{ print $1; }')
 cd ..
-dd if=/dev/zero of=${SHORTTARGET}.img bs=1M count=$((MINSIZE+2048))
-losetup -fP ${SHORTTARGET}.img
-LOOPDEV=$(losetup -j ${SHORTTARGET}.img |cut -d: -f1)
+dd if=/dev/zero of=results/${BASENAME}.img bs=1M count=$((MINSIZE+2048))
+losetup -fP results/${BASENAME}.img
+LOOPDEV=$(losetup -j results/${BASENAME}.img |cut -d: -f1)
 # The data fed to gdisk below (blank lines are important! Don't remove them!)
 # create 2 partitions -- a 32 MB UEFI system partition and a root FS spanning
 # the rest of the disk

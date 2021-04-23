@@ -1,3 +1,3 @@
 cd $OURDIR/$ROOTDIR
-    tar cJf ../rootfs-${SHORTTARGET}.tar.xz .
+tar cJf ../results/${BASENAME}-rootfs.tar.xz .
 cd ..

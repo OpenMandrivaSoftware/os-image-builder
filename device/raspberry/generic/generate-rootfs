@@ -12,9 +12,9 @@ popd
 pushd "$OURDIR/$ROOTDIR"
 MINSIZE=$(du -s --block-size=1048576 |awk '{ print $1; }')
 cd ..
-dd if=/dev/zero of=${SHORTTARGET}.img bs=1M count=$((MINSIZE+1024))
-losetup -fP ${SHORTTARGET}.img
-LOOPDEV=$(losetup -j ${SHORTTARGET}.img |tail -n1 |cut -d: -f1)
+dd if=/dev/zero of=results/${BASENAME}.img bs=1M count=$((MINSIZE+1024))
+losetup -fP results/${BASENAME}.img
+LOOPDEV=$(losetup -j results/${BASENAME}.img |tail -n1 |cut -d: -f1)
 # The data fed to fdisk below (blank lines are important! Don't remove them!)
 # create 2 partitions -- a 256 MB bootpartition and a root FS spanning
 # the rest of the disk
@@ -54,4 +54,4 @@ umount mnt
 losetup -d ${LOOPDEV}
 popd
 sync
-xz -9ef ${OURDIR}/${SHORTTARGET}.img
+xz -9ef ${OURDIR}/results/${BASENAME}.img

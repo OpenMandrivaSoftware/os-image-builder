@@ -32,15 +32,11 @@ echo "aren't sure this is what you want to do, press Ctrl-C"
 echo "now. Otherwise, press enter to continue."
 read
 
-xz -cd pi4b.img.xz |dd of=$DEV bs=1M status=progress
+xzcat @BASENAME@.img |dd of=$DEV bs=1M status=progress
 udevadm settle -t 5
 SD="$(kpartx $DEV |tail -n1)"
 PART="$(echo $SD |cut -d' ' -f 1)"
 START="$(echo $SD |cut -d' ' -f 6)"
-# We need to preserve the disk identifier since
-# the bootloader references PARTUUID (which is generated
-# from it)
-IDENT="$(LC_ALL=C fdisk -l $DEV |grep identifier |cut -d' ' -f3)"
 fdisk --wipe never --wipe-partitions never $DEV <<EOF
 d
 2
@@ -53,7 +49,11 @@ w
 EOF
 udevadm settle -t 5
 partx -u $DEV
-udevadm settle -t 5
-e2fsck -f /dev/$PART
+# We need to mount the image to get it maked clean
+rmdir mnt || :
+mkdir mnt
+mount /dev/$PART mnt
+umount mnt
+rmdir mnt
 resize2fs /dev/$PART
 eject $DEV
