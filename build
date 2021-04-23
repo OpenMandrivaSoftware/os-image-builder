@@ -689,22 +689,12 @@ run generate-rootfs
 
 xz -9ef *.img || :
 
-if [ "$ABF" = "1" ]; then
-	# ABF looks in /home/omv, but sets HOME to /root
-	export HOME="/home/omv"
-	# ABF packages everything in $HOME/output
-	# but it frequently forgets to remove what a previous
-	# run put there
-	mkdir -p "$HOME"/output
-	# Pull in the README file
-	[ -e device/${TARGET}/README.md ] && cp device/${TARGET}/README.md "$HOME"/output
-	[ -e device/${TARGET}/write2sd ] && cp device/${TARGET}/README.md "$HOME"/output
-	# All of the following are allowed to fail because not
-	# every board needs/produces every one of them
-	mv *.img* "$HOME"/output || :
-	mv *.tar* "$HOME"/output || :
-	# Clean up, we're no longer needed [looks like abf takes care of this]
-	# rm -rf "$OURDIR"
-fi
+mkdir results
+# All of the following are allowed to fail because not
+# every board needs/produces every one of them
+mv *.img* results/ || :
+mv *.tar* results/ || :
+cp -a device/${TARGET}/README.md results/ || :
+cp -a device/${TARGET}/write2sd results/ || :
 
 printf '%s\n' 'Building has finished.'
