@@ -325,7 +325,7 @@ if [ -n "$KERNEL" ]; then
 	rm -rf kernel-rpm
 	mkdir kernel-rpm
 	tar cf kernel-rpm/kernel.tar kernel
-	zstd -22 --ultra --rm kernel-rpm/kernel.tar
+	zstd -T0 -22 --ultra --rm kernel-rpm/kernel.tar
 	cat >kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 %define debug_package %{nil}
 
