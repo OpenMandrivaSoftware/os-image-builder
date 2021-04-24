@@ -1,8 +1,10 @@
 Installing on PinePhone
 =======================
 Write the generated pinephone.img to an SD card using the
-write2sd tool (it uses dd to 
-Insert the SD card and boot the phone
+write2sd tool (it uses dd to duplicate the image to the SD
+card, then does some postprocessing to make use of the full
+size of the SD card).
+Insert the SD card and boot the phone.
 
 u-boot special commands
 =======================

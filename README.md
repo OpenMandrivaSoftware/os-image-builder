@@ -80,11 +80,15 @@ Using the right version
 By default, _os-image-builder_ builds from _cooker_, the development repositories.
 If you wish to use the _rolling_ repository or a released version, add `-v _version_`
 
+Output
+======
+Generated images are put into the `results` directory.
+
 Adding new packagesets
 ======================
 Simply create a new file in the packagesets directory. The format is just a list of
 package names; in addition, you can use `#include xyz` to include another package set.
-You ${LIB} expands to lib or lib64, depending on the CPU architecture.
+${LIB} expands to lib or lib64, depending on the CPU architecture.
 
 Adding new target devices
 =========================
