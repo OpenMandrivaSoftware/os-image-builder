@@ -1,6 +1,6 @@
 ARCH="aarch64"
 # Used by PinePhone u-boot
-HOSTDEPS="$HOSTDEPS swig"
+HOSTDEPS="$HOSTDEPS swig python-devel"
 HWPACKAGES="$HWPACKAGES pinephone-tools kernel-firmware-pinephone qmi-tools"
 # usb-gadget is more useful than host USB on a phone
 HWPACKAGES="$HWPACKAGES usb-gadget"
