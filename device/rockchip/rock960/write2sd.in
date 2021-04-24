@@ -49,11 +49,6 @@ w
 EOF
 udevadm settle -t 5
 partx -u $DEV
-# We need to mount the image to get it maked clean
-rmdir mnt || :
-mkdir mnt
-mount /dev/$PART mnt
-umount mnt
-rmdir mnt
+fsck -f /dev/$PART
 resize2fs /dev/$PART
 eject $DEV
