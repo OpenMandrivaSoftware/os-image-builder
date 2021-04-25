@@ -1,9 +1,9 @@
 ARCH="aarch64"
 HWPACKAGES="kernel-firmware kernel-firmware-extra"
 HWPACKAGES_gui="lib64dri-drivers-vc4"
-KERNEL="https://github.com/raspberrypi/linux.git#rpi-5.10.y"
+KERNEL="https://github.com/raspberrypi/linux.git#rpi-5.12.y"
 KERNEL_CONFIG="bcm2711_defconfig"
-KERNEL_EXTRACONFIG="--module NTFS3_FS --enable NTFS3_LZX_XPRESS --enable NTFS3_POSIX_ACL --disable NTFS3_64BIT_CLUSTER"
+KERNEL_EXTRACONFIG="--module NTFS3_FS --enable NTFS3_LZX_XPRESS --enable NTFS3_FS_POSIX_ACL --disable NTFS3_64BIT_CLUSTER"
 DTB="broadcom/bcm2711-rpi-4-b"
 CMDLINE="dwc_otg.lpm_enable=0 console=ttyS0,115200 console=tty1 root=/dev/mmcblk0p2 rootfstype=ext4 elevator=deadline fsck.repair=yes rootwait"
 NEED_INITRD=no

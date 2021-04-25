@@ -531,7 +531,7 @@ EOF
 		--locale="en_US.UTF-8" \
 		--keymap="us" \
 		--timezone="Europe/London" \
-		--hostname="omv-$(printf '%s\n' ${TARGET} | cut -d '/' -f 2)" \
+		--hostname="omv-$(printf '%s\n' ${TARGET} | cut -d '/' -f 2 |sed -e 's,+,,g')" \
 		--root-password-hashed='$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0' \
 		--force
 	
