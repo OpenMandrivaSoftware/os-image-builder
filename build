@@ -538,7 +538,13 @@ EOF
 		--hostname="omv-$(printf '%s\n' ${TARGET} | cut -d '/' -f 2 |sed -e 's,+,,g')" \
 		--root-password-hashed='$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0' \
 		--force
-	
+
+# set up dirs
+	systemd-tmpfiles --root="$OURDIR/$ROOTDIR" --create
+
+# set up users
+	systemd-sysusers --root="$OURDIR/$ROOTDIR"
+
 	if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
 		# Create omv user (password omv)
 		echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
@@ -680,6 +686,31 @@ EOF
 			echo "WARNING: Service $i requested, but not installed" >&2
 		fi
 	done
+
+	if [ -x "$OURDIR/$ROOTDIR"/usr/bin/fc-cache ]; then
+	    # set the timestamp on the directories to be a whole second
+	    # fc-cache looks at the nano second portion which will otherwise be
+	    # non-zero as we are on ext4, but then it will compare against the stamps
+	    # on the squashfs live image, squashfs only has second level timestamp resolution
+	    FCTIME=$(date +%Y%m%d%H%M.%S)
+	    chroot "$OURDIR/$ROOTDIR" find /usr/share/fonts -type d -exec touch -t "$FCTIME" {} \;
+	    chroot "$OURDIR/$ROOTDIR" fc-cache -rf
+	    chroot "$OURDIR/$ROOTDIR" /bin/mkdir -p /root/.cache/fontconfig/
+	    chroot "$OURDIR/$ROOTDIR" /bin/mkdir -p /home/omv/.cache/fontconfig/
+	fi
+
+	# Rebuild man-db
+	[ -x "$OURDIR/$ROOTDIR"/usr/bin/mandb ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/mandb --quiet
+
+	# Rebuild mime database
+	[ -x "$OURDIR/$ROOTDIR"/usr/bin/update-mime-database ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/update-mime-database /usr/share/mime
+
+	chroot "$CHROOTNAME" /sbin/ldconfig
+
+	for i in etc var; do
+	    printf "%s\n" 'File created by os-image-builder. See systemd-update-done.service(8).' > "$OURDIR/$ROOTDIR/$i"/.updated
+	done
+
 	cd $OURDIR/$ROOTDIR
 	run postprocess
 	cleanup
