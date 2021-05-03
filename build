@@ -545,6 +545,10 @@ EOF
 # set up users
 	systemd-sysusers --root="$OURDIR/$ROOTDIR"
 
+	# Remove anything created by systemd-tmpfiles and friends that will
+	# be hidden by tmpfs mounts anyway
+	rm -rf "$OURDIR/$ROOTDIR/run/* $OURDIR/$ROOTDIR/tmp/*"
+
 	if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
 		# Create omv user (password omv)
 		echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
