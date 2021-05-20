@@ -540,10 +540,14 @@ EOF
 		--force
 
 # set up dirs
-	systemd-tmpfiles --root="$OURDIR/$ROOTDIR" -E --create
+	systemd-tmpfiles --root="$OURDIR/$ROOTDIR" -E --remove
 
 # set up users
-	systemd-sysusers --root="$OURDIR/$ROOTDIR"
+	systemd-sysusers --root="$OURDIR/$ROOTDIR" || :
+
+	# Remove anything created by systemd-tmpfiles and friends that will
+	# be hidden by tmpfs mounts anyway
+	rm -rf "$OURDIR/$ROOTDIR/run/* $OURDIR/$ROOTDIR/tmp/*"
 
 	# Remove anything created by systemd-tmpfiles and friends that will
 	# be hidden by tmpfs mounts anyway
