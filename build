@@ -540,7 +540,7 @@ EOF
 		--force
 
 # set up dirs
-	systemd-tmpfiles --root="$OURDIR/$ROOTDIR" --create
+	systemd-tmpfiles --root="$OURDIR/$ROOTDIR" -E --create
 
 # set up users
 	systemd-sysusers --root="$OURDIR/$ROOTDIR"
@@ -709,13 +709,13 @@ EOF
 	# Rebuild mime database
 	[ -x "$OURDIR/$ROOTDIR"/usr/bin/update-mime-database ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/update-mime-database /usr/share/mime
 
-	chroot "$CHROOTNAME" /sbin/ldconfig
+	chroot "$OURDIR/$ROOTDIR" /sbin/ldconfig
 
 	for i in etc var; do
 	    printf "%s\n" 'File created by os-image-builder. See systemd-update-done.service(8).' > "$OURDIR/$ROOTDIR/$i"/.updated
 	done
 
-	cd $OURDIR/$ROOTDIR
+	cd "$OURDIR/$ROOTDIR"
 	run postprocess
 	cleanup
 	# There shouldn't be any files in the root filesystem. If there are any,

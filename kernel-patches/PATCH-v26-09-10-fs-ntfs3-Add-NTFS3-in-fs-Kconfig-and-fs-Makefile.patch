@@ -1,0 +1,22 @@
+diff -up linux-5.12/fs/Kconfig.86~ linux-5.12/fs/Kconfig
+--- linux-5.12/fs/Kconfig.86~	2021-04-25 22:49:08.000000000 +0200
++++ linux-5.12/fs/Kconfig	2021-04-30 18:27:01.871154249 +0200
+@@ -145,6 +145,7 @@ menu "DOS/FAT/EXFAT/NT Filesystems"
+ source "fs/fat/Kconfig"
+ source "fs/exfat/Kconfig"
+ source "fs/ntfs/Kconfig"
++source "fs/ntfs3/Kconfig"
+ 
+ endmenu
+ endif # BLOCK
+diff -up linux-5.12/fs/Makefile.86~ linux-5.12/fs/Makefile
+--- linux-5.12/fs/Makefile.86~	2021-04-30 18:27:01.871154249 +0200
++++ linux-5.12/fs/Makefile	2021-04-30 18:27:45.622797377 +0200
+@@ -99,6 +99,7 @@ obj-$(CONFIG_SYSV_FS)		+= sysv/
+ obj-$(CONFIG_CIFS)		+= cifs/
+ obj-$(CONFIG_HPFS_FS)		+= hpfs/
+ obj-$(CONFIG_NTFS_FS)		+= ntfs/
++obj-$(CONFIG_NTFS3_FS)		+= ntfs3/
+ obj-$(CONFIG_UFS_FS)		+= ufs/
+ obj-$(CONFIG_EFS_FS)		+= efs/
+ obj-$(CONFIG_JFFS2_FS)		+= jffs2/
