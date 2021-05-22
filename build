@@ -85,8 +85,11 @@ OMV_VERSION=cooker
 [ -z "$FINAL" ] && FINAL=false
 OS_VERSION=""
 IDENTIFIER=""
-while getopts "Fi:K:o:p:P:r:s:S:v:w:W" opt; do
+while getopts "d:Fi:K:o:p:P:r:s:S:v:w:W" opt; do
 	case $opt in
+	d)
+		SDDMSESSION="$OPTARG"
+		;;
 	F)
 		FINAL=true
 		;;
@@ -582,8 +585,11 @@ EOF
 				done
 			fi
 		fi
-		if [ -z "$NO_AUTOLOGIN" ] && [ -n "$SDDMSESSION" ] && [ -e $OURDIR/$ROOTDIR/etc/sddm.conf ]; then
-			sed -i -e "s,^User=,User=omv,;s,^Session=,Session=$SDDMSESSION," $OURDIR/$ROOTDIR/etc/sddm.conf
+		if [ -z "$NO_AUTOLOGIN" ] && [ -e "$OURDIR/$ROOTDIR/etc/sddm.conf" ]; then
+			sed -i -e "s,^User=,User=omv," $OURDIR/$ROOTDIR/etc/sddm.conf
+		fi
+		if [ -n "$SDDMSESSION" ] && [ -e "$OURDIR/$ROOTDIR/etc/sddm.conf" ]; then
+			sed -i -e "s,^Session=,Session=$SDDMSESSION," $OURDIR/$ROOTDIR/etc/sddm.conf
 		fi
 	fi
 	if [ -z "$KERNEL" ]; then

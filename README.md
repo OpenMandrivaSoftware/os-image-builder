@@ -64,6 +64,21 @@ For example, to build an image that has x264 included, use
 
 `./build -P plasma -r restricted -p x264 rockpi4c`
 
+Selecting a desktop
+===================
+If you want to use a custom desktop, add _-d desktop_ to the command line, where
+_desktop_ is the name of a desktop file found in `/usr/share/xsessions` or
+`/usr/share/wayland-sessions`.
+
+By default, os-image-builder checks what desktops are installed, and uses, in that
+order, _plasma_, _lxqt_, _openbox_, _failsafe_, _plasma-mobile_, _plasmawayland_,
+_weston_.
+
+For example, to build a Raspberry Pi 4B image that launches lxqt even if Plasma
+Desktop is installed as well, use
+
+`./build -d lxqt pi4b`
+
 Selecting services
 ==================
 If you wish to start extra systemd services (or disable standard services), you can
