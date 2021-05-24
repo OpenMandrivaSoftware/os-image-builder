@@ -27,3 +27,14 @@ and off:
 
 Once the Linux kernel is booted, you can control the LEDs through
 sysfs.
+
+Tweaking special devices
+========================
+The battery charger can be controlled via
+/sys/class/power_supply/axp20x-usb
+echo 4000000 >input_current_limit
+should speed up charging.
+
+More on the battery is in
+/sys/class/power_supply/axp20x-battery
+

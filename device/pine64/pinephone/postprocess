@@ -5,9 +5,6 @@ cat >"$OURDIR/$ROOTDIR"/usr/lib/NetworkManager/conf.d/00-wifi-backend.conf <<EOF
 [device]
 wifi.backend=iwd
 EOF
-# FIXME workaround for pulseaudio nuking (>= 12.0) or garbling (<= 11.0)
-# sound
-sudo rpm -r "$OURDIR/$ROOTDIR" -e --nodeps pulseaudio pulseaudio-utils pulseaudio-module-x11 pulseaudio-client-config ${LIB}alsa-plugins-pulseaudio
 # Disable some stuff pinephone doesn't use (but pulls in due to
 # dependencies). Longer term, those dependencies should be eliminated
 for i in mdmonitor rtkit-daemon remote-cryptsetup dnf-automatic-download \
