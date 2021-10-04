@@ -19,7 +19,7 @@ CONFIG_SERIAL_PRESENT=y
 CONFIG_GZIP=y
 CONFIG_CMD_UNZIP=y
 EOF
-make CROSS_COMPILE=aarch64-linux-gnu- BL31=$(pwd)/arm-trusted-firmware/build/rk3399/debug/bl31/bl31.elf EXTRAVERSION="-OpenMandriva"
+make CROSS_COMPILE=aarch64-linux-gnu- BL31=$(pwd)/arm-trusted-firmware/build/rk3399/debug/bl31/bl31.elf EXTRAVERSION="-OpenMandriva" LDFLAGS="-fuse-ld=bfd" KBUILD_LDFLAGS="-fuse-ld=bfd" HOSTLDFLAGS="-fuse-ld=bfd"
 cd ..
 
 cp u-boot/idbloader.img "$OURDIR/$ROOTDIR"/boot/

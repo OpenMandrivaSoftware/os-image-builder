@@ -54,4 +54,3 @@ umount mnt
 losetup -d ${LOOPDEV}
 popd
 sync
-xz -9ef ${OURDIR}/results/${BASENAME}.img

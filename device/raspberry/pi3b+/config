@@ -1,7 +1,7 @@
 ARCH="aarch64"
 HWPACKAGES="kernel-firmware kernel-firmware-extra"
 HWPACKAGES_gui="lib64dri-drivers-vc4"
-KERNEL="https://github.com/raspberrypi/linux.git#rpi-5.12.y"
+KERNEL="https://github.com/raspberrypi/linux.git#rpi-5.15.y"
 KERNEL_CONFIG="bcmrpi3_defconfig"
 KERNEL_EXTRACONFIG="--module NTFS3_FS --enable NTFS3_LZX_XPRESS --enable NTFS3_FS_POSIX_ACL --disable NTFS3_64BIT_CLUSTER"
 DTB="broadcom/bcm2710-rpi-3-b-plus"
