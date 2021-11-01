@@ -87,7 +87,7 @@ ABF_DOWNLOADS="${ABF_DOWNLOADS:-http://abf-downloads.openmandriva.org}"
 BASE_TRIPLET="${BASE_TRIPLET:-openmandriva-linux-gnu}"
 # ver prefix needed only for rosalinux
 # should be just rosa
-VER_PREFIX=""
+VER_PREFIX="${VER_PREFIX:-}"
 # for rosa it is 2021.1
 OMV_VERSION="${OMV_VERSION:-cooker}"
 # for rosa it is RosaLinux
