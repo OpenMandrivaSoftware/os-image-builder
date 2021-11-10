@@ -515,7 +515,7 @@ if [ ! -d "$ROOTDIR" ]; then
 	done
 
 	if [ -z $KEEP_OLD_ROOT ]; then
-		if ! dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $WEAKDEPS $PACKAGES $KERNELRPM; then
+		if ! dnf -y install --exclude dbus-broker --exclude distro-release-desktop-Plasma-* --skip-broken --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $WEAKDEPS $PACKAGES $KERNELRPM; then
 			if [ -e $OURDIR/$ROOTDIR/bin/sh ]; then
 				cat >&2 <<EOF
 WARNING: dnf returned an error code, but it looks like installation finished.
