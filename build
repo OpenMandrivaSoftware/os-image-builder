@@ -504,10 +504,12 @@ if [ ! -d "$ROOTDIR" ]; then
 		done
 	fi
 
+	QEMU_PROXY=""
 	if ! $NATIVEBUILD; then
 		# Make sure we can run %post scripts in the chroot
 		mkdir -p $OURDIR/$ROOTDIR/usr/bin
 		cp /usr/bin/qemu-$QEMUARCH-static $OURDIR/$ROOTDIR/usr/bin/
+		QEMU_PROXY=qemu-$QEMUARCH-static
 	fi
 
 	# FIXME workaround for ldd being broken on aarch64 (at least in qemu)
@@ -689,7 +691,7 @@ EOF
 			TYPE="$(echo $r |awk '{ print $1; }')"
 			if [ "$TYPE" = "enable" ] || [ "$TYPE" = "disable" ]; then
 				[ "$(echo "$r" |awk '{ print $2; }')" = '*' ] && continue
-				chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl $r || :
+				chroot "$OURDIR/$ROOTDIR" $QEMU_PROXY /usr/bin/systemctl $r || :
 			fi
 		done < $i
 	done
@@ -707,19 +709,19 @@ EOF
 
 	# Make sure key services are started even if they're omitted
 	# in the preset files
-	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
-	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/simplelogin.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable simplelogin
-	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/sddm.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
+	chroot "$OURDIR/$ROOTDIR" $QEMU_PROXY /usr/bin/systemctl enable getty@tty1.service
+	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/simplelogin.service ] && chroot "$OURDIR/$ROOTDIR" $QEMU_PROXY /usr/bin/systemctl enable simplelogin
+	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/sddm.service ] && chroot "$OURDIR/$ROOTDIR" $QEMU_PROXY /usr/bin/systemctl enable sddm
 	if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ] || [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/simplelogin.service" ]; then
-		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
+		chroot "$OURDIR/$ROOTDIR" $QEMU_PROXY /usr/bin/systemctl set-default graphical.target
 	else
-		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default multi-user.target
+		chroot "$OURDIR/$ROOTDIR" $QEMU_PROXY /usr/bin/systemctl set-default multi-user.target
 	fi
 	# At least while we're mostly dealing with headless boards
-	[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sshd.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sshd
+	[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sshd.service" ] && chroot "$OURDIR/$ROOTDIR" $QEMU_PROXY /usr/bin/systemctl enable sshd
 	for i in $SERVICES; do
 		if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/$i.service" ]; then
-			chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable $i
+			chroot "$OURDIR/$ROOTDIR" $QEMU_PROXY /usr/bin/systemctl enable $i
 		else
 			echo "WARNING: Service $i requested, but not installed" >&2
 		fi
@@ -731,19 +733,19 @@ EOF
 	    # non-zero as we are on ext4, but then it will compare against the stamps
 	    # on the squashfs live image, squashfs only has second level timestamp resolution
 	    FCTIME=$(date +%Y%m%d%H%M.%S)
-	    chroot "$OURDIR/$ROOTDIR" find /usr/share/fonts -type d -exec touch -t "$FCTIME" {} \;
-	    chroot "$OURDIR/$ROOTDIR" fc-cache -rf
-	    chroot "$OURDIR/$ROOTDIR" /bin/mkdir -p /root/.cache/fontconfig/
-	    chroot "$OURDIR/$ROOTDIR" /bin/mkdir -p /home/omv/.cache/fontconfig/
+	    find $OURDIR/$ROOTDIR/usr/share/fonts -type d -exec touch -t "$FCTIME" {} \;
+	    fc-cache --sysroot=$OURDIR/$ROOTDIR -rf
+	    /bin/mkdir -p $OURDIR/$ROOTDIR/root/.cache/fontconfig/
+	    /bin/mkdir -p $OURDIR/$ROOTDIR/home/omv/.cache/fontconfig/
 	fi
 
 	# Rebuild man-db
-	[ -x "$OURDIR/$ROOTDIR"/usr/bin/mandb ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/mandb --quiet
+	[ -x "$OURDIR/$ROOTDIR"/usr/bin/mandb ] && chroot "$OURDIR/$ROOTDIR" $QEMU_PROXY /usr/bin/mandb --quiet
 
 	# Rebuild mime database
-	[ -x "$OURDIR/$ROOTDIR"/usr/bin/update-mime-database ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/update-mime-database /usr/share/mime
+	[ -x "$OURDIR/$ROOTDIR"/usr/bin/update-mime-database ] && chroot "$OURDIR/$ROOTDIR" $QEMU_PROXY /usr/bin/update-mime-database /usr/share/mime
 
-	chroot "$OURDIR/$ROOTDIR" /sbin/ldconfig
+	chroot "$OURDIR/$ROOTDIR" $QEMU_PROXY /sbin/ldconfig
 
 	for i in etc var; do
 	    printf "%s\n" 'File created by os-image-builder. See systemd-update-done.service(8).' > "$OURDIR/$ROOTDIR/$i"/.updated
