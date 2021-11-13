@@ -79,16 +79,20 @@ PACKAGES=""
 PACKAGESETS=""
 SERVICES="dbus-broker NetworkManager"
 WEAKDEPS=""
+ROOTFS_FS="f2fs"
 addpackageset core
 
 OMV_VERSION=cooker
 [ -z "$FINAL" ] && FINAL=false
 OS_VERSION=""
 IDENTIFIER=""
-while getopts "d:Fi:K:o:p:P:r:s:S:v:w:W" opt; do
+while getopts "d:f:Fi:K:o:p:P:r:s:S:v:w:W" opt; do
 	case $opt in
 	d)
 		SDDMSESSION="$OPTARG"
+		;;
+	f)
+		ROOTFS_FS="$OPTARG"
 		;;
 	F)
 		FINAL=true
