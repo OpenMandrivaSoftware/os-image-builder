@@ -1,0 +1,27 @@
+FROM openmandriva/cooker
+
+RUN dnf clean all
+RUN dnf clean packages
+RUN dnf -y update && dnf -y upgrade
+RUN dnf install -y iputils openssh mc vi vim
+
+RUN dnf install -y locales
+
+RUN dnf install -y traceroute git-core bzip2 wget pbzip2 xz openssl
+RUN dnf install -y ccache gcc gcc-c++ cross-aarch64-openmandriva-linux-gnu-gcc cross-armv7hnl-openmandriva-linux-gnueabihf-gcc
+RUN dnf install -y cmake sudo
+RUN dnf install -y timezone u-boot-tools dosfstools qemu-user-binfmt qemu-user-static-tapset fontconfig kpartx lsof f2fs-tools
+
+RUN git config --global user.email "you@example.com"
+RUN git config --global user.name "Your Name"
+
+RUN rm -rf /tmp/*
+
+CMD /bin/bash
+
+# commands for build and start docker:
+# build:
+#   docker build --network host -t "rosa" .
+# start:
+#   docker run --network host -it -v /dev:/dev --privileged "rosa" "bash"
+ 
