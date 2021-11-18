@@ -30,6 +30,10 @@ _os-image-builder_ makes some assumptions about the host system - in particular 
 assumes dnf is available, binaries for the target architectures can be run (e.g. by
 having a corresponding qemu installed and registered with binfmt-misc, the way
 OpenMandriva qemu packages do).
+Here example of additional packages, needed on host system (*Ubuntu 20.04*)
+```
+sudo apt-get install binfmt-support qemu-user-static qemu-user-binfmt
+```
 
 It is therefore recommended to run _os-image-builder_ on OpenMandriva -- but other
 similar distributions may work.
