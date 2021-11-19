@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -x
 set -e
 
 listTargets() {
@@ -776,6 +777,7 @@ fi
 
 [ -z $KEEP_OLD_ROOT ] && dnf -y reinstall --installroot="$OURDIR/$ROOTDIR" --releasever=$OMV_VERSION --forcearch=$ARCH ${PRE_PACKAGES}
 [ -d "$OURDIR/$ROOTDIR/var/cache/dnf" ] && rm -rf "$OURDIR/$ROOTDIR/var/cache/dnf/*"
+[ -d "$OURDIR/$ROOTDIR/usr/share" ] && rm -rf "$OURDIR/$ROOTDIR/usr/share"
 BASENAME="${BASE_DISTRO}-${SHORTTARGET}-${OS_VERSION}"
 
 # generate-bootimg and generate-rootfs can write to results.
@@ -797,7 +799,7 @@ mv *.tar* results/ 2>/dev/null || :
 cp -a device/${TARGET}/*.md results/ 2>/dev/null || :
 cp -a device/${TARGET}/write2sd results/ 2>/dev/null || :
 
-for i in device/${TARGET}/*.md.in device/${TARGET}/write2sd.in; do
+for i in device/${TARGET}/*.md.in device/${TARGET}/write2sd.in device/${TARGET}/write2sd-rosa.in; do
 	[ -e "$i" ] || continue
 	r="results/$(basename $i .in)"
 	sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BASENAME@,${BASENAME},g" $i >"$r"

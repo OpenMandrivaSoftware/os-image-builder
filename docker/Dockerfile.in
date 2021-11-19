@@ -11,11 +11,29 @@ RUN dnf install -y traceroute git-core bzip2 wget pbzip2 xz openssl
 RUN dnf install -y ccache gcc gcc-c++ cross-aarch64-openmandriva-linux-gnu-gcc cross-armv7hnl-openmandriva-linux-gnueabihf-gcc
 RUN dnf install -y cmake sudo
 RUN dnf install -y timezone u-boot-tools dosfstools qemu-user-binfmt qemu-user-static-tapset fontconfig kpartx lsof f2fs-tools
+RUN dnf install -y automake libtool make glibc-devel libuuid-devel lz4 liblz4-devel liblzo-devel glibc-static-devel glibc-devel clang
+
+RUN cd /tmp; git clone https://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs-tools.git; \
+    cd f2fs-tools; ./autogen.sh; ./configure --prefix /usr/local; make install
+
+RUN cd /tmp; git clone https://github.com/LonelyFool/lpunpack_and_lpmake.git; \
+    cd lpunpack_and_lpmake; sed -i 's|CFLAGS.*static.*||g' make.sh; ./make.sh; mv bin/* /usr/local/bin
+
+RUN cd /tmp; git clone https://github.com/anestisb/android-simg2img.git; \
+    cd android-simg2img; make; \
+    mv simg2img /usr/local/bin; \
+    mv img2simg /usr/local/bin; \
+    mv simg2simg /usr/local/bin; \
+    mv append2simg /usr/local/bin;
+
+
 
 RUN git config --global user.email "you@example.com"
 RUN git config --global user.name "Your Name"
 
 RUN rm -rf /tmp/*
+
+RUN echo "PATH=/usr/local/bin:\$PATH" >> /root/.bashrc
 
 CMD /bin/bash
 
