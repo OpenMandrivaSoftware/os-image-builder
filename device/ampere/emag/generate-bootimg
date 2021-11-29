@@ -1,0 +1,1 @@
+. ${OURDIR}/device/generic/aarch64-uefi/generate-bootimg
