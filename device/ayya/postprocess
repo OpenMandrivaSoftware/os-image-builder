@@ -1,0 +1,23 @@
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@ttyS0.service
+# Iwd works well on pinephone, might as well use it
+chroot "$OURDIR/$ROOTDIR" rpm -e wpa_supplicant
+cat >"$OURDIR/$ROOTDIR"/usr/lib/NetworkManager/conf.d/00-wifi-backend.conf <<EOF
+[device]
+wifi.backend=iwd
+EOF
+# Disable some stuff pinephone doesn't use (but pulls in due to
+# dependencies). Longer term, those dependencies should be eliminated
+for i in mdmonitor rtkit-daemon remote-cryptsetup dnf-automatic-download \
+		dnf-automatic-install dnf-automatic-notifyonly dnf-automatic \
+		dnfdaemon dnf-makecache nscd; do
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl disable $i
+done
+# Make sure some important bits and pieces are enabled
+for i in gpsd.socket gpsd.service geoclue iio-sensor-proxy \
+	usb-gadget plymouth-start modem ModemManager \
+		; do
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable $i
+done
+
+# Let's put the debug shell on something we stand a chance of seeing...
+sed -i -e 's,tty9,ttyS0,g' "$OURDIR/$ROOTDIR"/lib/systemd/system/debug-shell.service

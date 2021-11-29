@@ -1,0 +1,42 @@
+#!/bin/sh
+
+set -x
+
+pushd $OURDIR/$ROOTDIR
+MINSIZE=$(du -s --block-size=1048576 |awk '{ print $1; }')
+cd ..
+mkdir -p results
+dd if=/dev/zero of=results/${BASENAME}.img bs=1M count=$((MINSIZE+1024))
+losetup -fP results/${BASENAME}.img
+LOOPDEV=$(losetup -j results/${BASENAME}.img |tail -n1 |cut -d: -f1)
+# The data fed to fdisk below (blank lines are important! Don't remove them!)
+# create 1 partition for root FS
+# the rest of the disk
+fdisk --wipe always $LOOPDEV <<'EOF'
+o
+n
+p
+
+
+
+w
+EOF
+
+kpartx ${LOOPDEV}
+mkfs.${ROOTFS_FS} ${LOOPDEV}p1
+
+rm -rf mnt
+mkdir mnt
+mount ${LOOPDEV}p1 mnt
+cp -a ${ROOTDIR}/* mnt/
+umount mnt
+
+dd if=${LOOPDEV}p1 of=results/tmp_ayya_img.img bs=1M
+img2simg results/tmp_ayya_img.img results/ayya_super.img
+
+# Cleanup
+losetup -d ${LOOPDEV}
+rm -rf mnt results/${BASENAME}.img results/tmp_ayya_img.img
+
+popd
+
