@@ -80,7 +80,7 @@ PACKAGES=""
 PACKAGESETS=""
 SERVICES="dbus-broker NetworkManager"
 WEAKDEPS=""
-ROOTFS_FS="f2fs"
+ROOTFS_FS="ext4"
 addpackageset core
 
 # for rosa it is http://abf-downloads.rosalinux.ru
