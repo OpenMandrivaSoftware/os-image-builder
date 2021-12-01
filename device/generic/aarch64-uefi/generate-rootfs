@@ -1,7 +1,7 @@
 pushd $OURDIR/$ROOTDIR
 MINSIZE=$(du -s --block-size=1048576 |awk '{ print $1; }')
 cd ..
-dd if=/dev/zero of=results/${BASENAME}.img bs=1M count=$((MINSIZE+256))
+dd if=/dev/zero of=results/${BASENAME}.img bs=1M count=$((MINSIZE+512))
 losetup -fP results/${BASENAME}.img
 LOOPDEV=$(losetup -j results/${BASENAME}.img |cut -d: -f1)
 # The data fed to gdisk below (blank lines are important! Don't remove them!)

@@ -1,0 +1,59 @@
+#!/bin/sh
+DEV="$1"
+if ! [ -b "$DEV" ]; then
+	echo "Usage: $0 DEVICE"
+	echo "Where DEVICE is the device node of the SD card to write to,"
+	echo "typically /dev/sdb or /dev/mmcblk0"
+	exit 1
+fi
+if [ "$(id -u)" != 0 ]; then
+	echo "This script needs root access to write to the SD card"
+	echo "directly, reload partition tables, etc."
+	exec sudo $0 "$@"
+	# Just in case sudo isn't installed
+	exit 1
+fi
+MISSING=""
+for tool in kpartx partx fdisk dd resize2fs eject; do
+	if ! which $tool &>/dev/null; then
+		MISSING="$MISSING $tool"
+	fi
+done
+if [ -n "$MISSING" ]; then
+	echo "You're missing some tools needed by this script:"
+	echo "	$MISSING"
+	echo "Please install the tools (or run the script from a live image that has them,"
+	echo "such as OpenMandriva Cooker)."
+	exit 1
+fi
+
+echo "WARNING: All data on $DEV will be overwritten. If you"
+echo "aren't sure this is what you want to do, press Ctrl-C"
+echo "now. Otherwise, press enter to continue."
+read
+
+xz -cd @BASENAME@.img.xz |dd of=$DEV bs=1M status=progress
+udevadm settle -t 5
+SD="$(kpartx $DEV |tail -n1)"
+PART="$(echo $SD |cut -d' ' -f 1)"
+START="$(echo $SD |cut -d' ' -f 6)"
+# We need to preserve the disk identifier since
+# the bootloader references PARTUUID (which is generated
+# from it)
+IDENT="$(LC_ALL=C fdisk -l $DEV |grep identifier |cut -d' ' -f3)"
+fdisk --wipe never --wipe-partitions never $DEV <<EOF
+d
+2
+n
+p
+2
+$START
+
+w
+EOF
+udevadm settle -t 5
+partx -u $DEV
+udevadm settle -t 5
+e2fsck -f /dev/$PART
+resize2fs /dev/$PART
+eject $DEV

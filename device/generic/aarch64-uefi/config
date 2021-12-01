@@ -1,7 +1,7 @@
 # Generic aarch64 board with UEFI support
 ARCH="aarch64"
 # Let's use a current kernel, it usually has more hardware support
-HWPACKAGES="kernel-release"
+HWPACKAGES="kernel-rc-server"
 # Most boards have a PCIE-slot that may take a graphics card (so we
 # need radeon and nouveau), others have onboard graphics (typically
 # mali or adreno...)

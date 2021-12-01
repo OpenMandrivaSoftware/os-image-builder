@@ -1,3 +1,2 @@
-sed -i -e 's,zstd,gzip,g' $OURDIR/$ROOTDIR/usr/lib/dracut/dracut.conf.d/50-dracut-distro.conf
-chroot $OURDIR/$ROOTDIR /usr/sbin/dracut --gzip -o ifcfg -o lvm -o mdraid -o aufs-mount -o network -o cifs -o dm -o crypt -o dmraid -o multipath -o multipath-hostonly --fstab --add-fstab /etc/fstab -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
+chroot $OURDIR/$ROOTDIR /usr/sbin/dracut -o ifcfg -o lvm -o mdraid -o aufs-mount -o network -o cifs -o dm -o crypt -o dmraid -o multipath -o multipath-hostonly --fstab --add-fstab /etc/fstab -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
 chmod 0644 $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img

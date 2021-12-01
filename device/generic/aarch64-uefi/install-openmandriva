@@ -200,6 +200,13 @@ if [ -n "$HOME" ]; then
 	mkfs.ext4 -F -L/home $HOME &>$TOOLOUTPUT
 fi
 
+# Make sure efivarfs is mounted -- it might not be if
+# the kernel has been built with modular efivarfs and
+# the initramfs doesn't force load the module
+if [ -z "$(ls -A /sys/firmware/efi/efivars)" ]; then
+	mount -t efivarfs none /sys/firmware/efi/efivars
+fi
+
 mkdir -p /mnt/destination
 mount $ROOT /mnt/destination
 if [ -n "$UEFI" ]; then
@@ -232,13 +239,15 @@ if [ -n "$UEFI" ]; then
 	echo "Copying bootup files..."
 	cp -ax /boot/efi/* /mnt/destination/boot/efi/
 	echo "Registering with UEFI bootloader"
-	mv /mnt/destination/boot/efi/startup.nsh /mnt/destination/boot/efi/openmandriva.nsh
+	if [ -e /mnt/destination/boot/efi/startup.nsh ]; then
+		mv /mnt/destination/boot/efi/startup.nsh /mnt/destination/boot/efi/openmandriva.nsh
+		sed -i -e "s,/dev/sdb2,$ROOT,g" /mnt/destination/boot/efi/openmandriva.nsh
+	fi
 	sed -i -e "s,^search .*,search --no-floppy --fs-uuid --set=root $ROOTUUID," /mnt/destination/boot/efi/EFI/BOOT/grub.cfg
 	sed -i -e "s,LABEL=OMVAA64,UUID=$ROOTUUID,g" /mnt/destination/boot/efi/EFI/BOOT/grub.cfg
 	cp /mnt/destination/boot/efi/EFI/BOOT/grub.cfg /mnt/destination/boot/efi/EFI/openmandriva/
 	cp /mnt/destination/boot/efi/EFI/BOOT/grub.cfg /mnt/destination/boot/grub2/
-	sed -i -e "s,/dev/sdb2,$ROOT,g" /mnt/destination/boot/efi/openmandriva.nsh
-	#efibootmgr --create -L 'OpenMandriva Lx 4.2' -l '\EFI\BOOT\bootaa64.efi' -d "$DESTINATION" -p $(echo $UEFI |sed -e "s,$DESTINATION,,")
+	efibootmgr --create -L 'OpenMandriva Lx 4.2' -l '\EFI\BOOT\bootaa64.efi' -d "$DESTINATION" -p $(echo $UEFI |sed -e "s,$DESTINATION,,")
 	chroot /mnt/destination /usr/sbin/grub2-install 
 	umount /mnt/destination/sys/firmware/efi/efivars
 	umount /mnt/destination/sys

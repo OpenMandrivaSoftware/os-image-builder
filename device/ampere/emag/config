@@ -2,7 +2,7 @@ ARCH="aarch64"
 # Let's support what people might drop into those PCI-E slots...
 HWPACKAGES="pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr"
 HWPACKAGES_gui="lib64dri-drivers-nouveau lib64dri-drivers-radeon radeon-firmware"
-KERNEL="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v5.16-rc2"
+KERNEL="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v5.16-rc3"
 KERNEL_CONFIG="opensuse_defconfig"
 DTB=""
 # Enable what's needed for eMAG, disable some options that

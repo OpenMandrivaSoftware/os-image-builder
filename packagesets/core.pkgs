@@ -25,3 +25,4 @@ usbutils
 passwd
 sysfsutils
 dbus-broker
+e2fsprogs
