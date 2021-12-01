@@ -32,7 +32,7 @@ having a corresponding qemu installed and registered with binfmt-misc, the way
 OpenMandriva qemu packages do).
 Here example of additional packages, needed on host system (*Ubuntu 20.04*)
 ```
-sudo apt-get install binfmt-support qemu-user-static qemu-user-binfmt
+sudo apt-get install binfmt-support qemu-user-static
 ```
 
 It is therefore recommended to run _os-image-builder_ on OpenMandriva -- but other
