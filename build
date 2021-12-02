@@ -461,7 +461,7 @@ ROOTDIR="${BASE_DISTRO}-$OMV_VERSION-$ARCH-root"
 
 # Make sure we don't have any dangerous bind mounts left...
 cleanup() {
-	for mp in /proc /sys /dev/pts /dev; do
+	for mp in /proc /sys /sys/firmware/efi/efivars /dev/pts /dev; do
 		[ -e "$OURDIR/$ROOTDIR$mp" ] && umount -Rq "$OURDIR/$ROOTDIR$mp" || :
 	done
 }
@@ -531,7 +531,7 @@ if [ ! -d "$ROOTDIR" ]; then
 
 	# Mount relevant filesystems so %post scripts can access
 	# the likes of /dev/null and /dev/urandom
-	for mp in /proc /sys /dev /dev/pts; do
+	for mp in /proc /sys /sys/firmware/efi/efivars /dev /dev/pts; do
 		mkdir -p "$OURDIR/$ROOTDIR$mp" || :
 		mount --bind -o ro $mp "$OURDIR/$ROOTDIR$mp"
 	done
@@ -764,7 +764,7 @@ EOF
 else
 	# Mount relevant filesystems so generate-bootimg can use
 	# the likes of /dev/null and /dev/urandom in chroot
-	for mp in /proc /sys /dev /dev/pts; do
+	for mp in /proc /sys /sys/firmware/efi/efivars /dev /dev/pts; do
 		mkdir -p "$OURDIR/$ROOTDIR$mp" || :
 		mount --bind -o ro $mp "$OURDIR/$ROOTDIR$mp"
 	done
