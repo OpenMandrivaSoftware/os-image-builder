@@ -1,0 +1,1 @@
+cp -a device/generic/aarch64-uefi/install-openmandriva $OURDIR/$ROOTDIR/home/omv/

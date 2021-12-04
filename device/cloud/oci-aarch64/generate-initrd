@@ -1,0 +1,2 @@
+sed -i -e '/^add_drivers/d' $OURDIR/$ROOTDIR/usr/lib/dracut/dracut.conf.d/50-dracut-distro.conf
+. ${OURDIR}/device/generic/aarch64-uefi/generate-initrd

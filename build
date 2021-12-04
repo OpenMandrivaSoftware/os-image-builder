@@ -224,6 +224,7 @@ aarch64)
 	[ -z "$KERNELTARGET" ] && KERNELTARGET=Image.gz
 	BOOTEFI=bootaa64.efi
 	EFIARCH=arm64-efi
+	DTBS="dtbs"
 	;;
 arm*)
 	KERNELARCH=arm
@@ -232,13 +233,15 @@ arm*)
 	KERNELTARGET=zImage
 	BOOTEFI=bootarm.efi
 	EFIARCH=arm-efi
+	DTBS="dtbs"
 	;;
 x86_64|znver1)
 	KERNELARCH=x86
 	QEMUARCH=x86_64
-	KERNELTARGET=vmlinuz
+	KERNELTARGET=vmlinux
 	BOOTEFI=bootx64.efi
 	EFIARCH=x86_64-efi
+	DTBS=""
 	;;
 i686)
 	KERNELARCH=x86
@@ -246,6 +249,7 @@ i686)
 	KERNELTARGET=vmlinuz
 	BOOTEFI=bootia32.efi
 	EFIARCH=i386-efi
+	DTBS=""
 	;;
 *)
 	# Anything here is possibly wrong...
@@ -254,6 +258,7 @@ i686)
 	KERNELTARGET=vmlinuz
 	BOOTEFI=boot${ARCH}.efi
 	EFIARCH=${ARCH}-efi
+	DTBS="dtbs"
 	;;
 esac
 if echo $ARCH |grep -qE '(64|znver1)'; then
@@ -419,15 +424,15 @@ EOF
 	if [ "$KERNEL_GCC" = "yes" ]; then
 		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
 		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "%make_build $KERNELTARGET dtbs modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 

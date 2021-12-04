@@ -1,0 +1,35 @@
+ARCH="aarch64"
+HOSTDEPS="$HOSTDEPS qemu-img"
+HWPACKAGES="pciutils efibootmgr cloud-init"
+SERVICES="$SERVICES cloud-init"
+KERNEL="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v5.16-rc3"
+KERNEL_CONFIG="opensuse_defconfig"
+DTB=""
+# Enable what's needed for eMAG, disable some options that
+KERNEL_EXTRACONFIG="--enable DRM_AST"
+# are entirely useless there...
+#KERNEL_EXTRACONFIG="--disable ARCH_ACTIONS --disable ARCH_APPLE --disable ARCH_K3  --disable ARCH_SYNQUACER --enable SNI_NETSEC --enable GPIO_MB86S7X --enable MMC_SDHCI_F_SDH30 --disable SND_SOC --disable ARCH_SUNXI --disable ARCH_ALPINE --disable ARCH_BCM2835 --disable ARCH_BCM_IPROC --disable ARCH_BERLIN --disable ARCH_BRCMSTB --disable ARCH_EXYNOS --disable ARCH_K3 --disable ARCH_LAYERSCAPE --disable ARCH_LG1K --disable ARCH_HISI --disable ARCH_MEDIATEK --disable ARCH_MESON --disable ARCH_MVEBU --disable ARCH_QCOM --disable ARCH_REALTEK --disable ARCH_RENESAS --disable ARCH_ROCKCHIP --disable ARCH_SEATTLE --disable ARCH_STRATIX10 --disable ARCH_TEGRA --disable ARCH_SPRD --disable ARCH_THUNDER --disable ARCH_THUNDER2 --disable ARCH_UNIPHIER --disable ARCH_VEXPRESS --enable ARCH_XGENE --disable ARCH_ZX --disable ARCH_ZYNQMP --disable DRM_HISI_HIBMC --disable DRM_HISI_KIRIN --disable RASPBERRYPI_POWER --disable SOC_BRCMSTB --disable RASPBERRYPI_FIRMWARE --disable SENSORS_RASPBERRYPI_HWMON --disable SOC_TI --enable ACPI --module IP_VS_TWOS --enable MLX5_IPSEC --enable MLX5_EN_IPSEC --enable DRM_AST"
+# Some basic configs
+#KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable MODULE_FORCE_LOAD --enable MODVERSIONS --enable MODULE_COMPRESS --disable MODULE_COMPRESS_GZIP --enable MODULE_COMPRESS_XZ"
+# Make sure we can boot from USB even if initrd is disabled
+#KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable USB_STORAGE --enable USB_UHCI --enable USB_OHCI --enable USB_EHCI --enable USB_XHCI --enable USB_UAS"
+# PCI-E graphics cards are useful...
+#KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --module DRM_RADEON --disable DRM_RADEON_USERPTR --module DRM_AMDGPU --enable DRM_AMDGPU_SI --enable DRM_AMDGPU_CIK --disable DRM_AMDGPU_USERPTR --disable DRM_AMDGPU_GART_DEBUGFS --enable DRM_AMD_ACP --enable DRM_AMD_DC --disable DRM_AMD_DC_HDCP --disable DEBUG_KERNEL_DC --disable CHASH_STATS --disable CHASH_SELFTEST --module DRM_NOUVEAU --enable HSA_AMD --enable DRM_AMD_DC_SI"
+# Enable stuff docker likes...
+#	docker cgroups...
+#KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable CGROUP_FREEZER --module NETFILTER_XT_MATCH_IPVS --module NETFILTER_XT_MATCH_POLICY"
+#	docker optional features
+#KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable BLK_DEV_THROTTLING --enable BLK_DEV_THROTTLING_LOW --module CFQ_GROUP_IOSCHED --module NET_CLS_CGROUP --enable CGROUP_NET_PRIO --enable CGROUP_NET_CLASSID --enable CFS_BANDWIDTH --enable RT_GROUP_SCHED --module IP_NF_TARGET_REDIRECT --module IP_VS --enable IP_VS_IPV6 --disable IP_VS_DEBUG --set-val IP_VS_TAB_BITS 12 --module IP_VS_NFCT --enable IP_VS_PROTO_TCP --enable IP_VS_PROTO_UDP --enable IP_VS_PROTO_ESP --enable IP_VS_PROTO_AH --enable IP_VS_PROTO_SCTP --module IP_VS_WRR --module IP_VS_LC --module IP_VS_WLC --module IP_VS_FO --module IP_VS_OVF --module IP_VS_LBLC --module IP_VS_LBLCR --module IP_VS_DH --module IP_VS_SH --module IP_VS_MH --module IP_VS_SED --module IP_VS_NQ --set-val IP_VS_SH_TAB_BITS 8 --set-val IP_VS_MH_TAB_INDEX 12 --module IP_VS_FTP --module IP_VS_RR --enable EXT4_FS_SECURITY"
+#	docker network overlay driver
+#KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --module VXLAN --module XFRM_USER --module XFRM_ALGO --module INET_ESP --module INET_ESP_OFFLOAD --disable INET_ESPINTCP --module XFRM_INTERFACE --disable XFRM_SUB_POLICY --disable XFRM_MIGRATE --disable XFRM_STATISTICS"
+#	docker network ipvlan driver
+#KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --module IPVLAN --module IPVTAP --module GENEVE --module GTP"
+#	docker network macvlan driver
+#KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --module DUMMY"
+#	docker tftp client in container
+#KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --module NF_NET_FTP --module NF_CONNTRACK_FTP --module NF_NAT_TFTP --module NF_CONNTRACK_TFTP"
+
+CMDLINE="console=tty1"
+USE_UEFI=yes
+# (this is the default anyway)
+# NEED_INITRD=yes
