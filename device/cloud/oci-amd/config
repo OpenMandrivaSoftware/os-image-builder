@@ -1,0 +1,8 @@
+ARCH="znver1"
+HOSTDEPS="$HOSTDEPS qemu-img"
+HWPACKAGES="kernel-rc-server pciutils efibootmgr cloud-init"
+SERVICES="$SERVICES cloud-init"
+CMDLINE="console=ttyS0"
+USE_UEFI=yes
+# (this is the default anyway)
+# NEED_INITRD=yes
