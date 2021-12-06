@@ -421,10 +421,12 @@ kernel for $SHORTTARGET devices
 EOF
 
 	# CROSS_COMPILE_ARM32 is a Sony-ism, but doesn't hurt anywhere else, so we can specify it unconditionally
+	# FIXME we have to use LD=/usr/bin/$TRIPLET-ld.bfd, for some reason yet to be debugged, aarch64
+	# kernels linked with lld don't boot on emag/oci-aarch64 (kernel 5.16-rc4, clang 13.0.0)
 	if [ "$KERNEL_GCC" = "yes" ]; then
 		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
 		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
@@ -432,16 +434,16 @@ EOF
 	if [ "$KERNEL_GCC" = "yes" ]; then
 		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 
 %install
 # Install kernel modules, if any
-make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf-
+make $SMPFLAGS INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd
 # And DTBs -- allow failure here because old kernels (onyx08 and friends)
 # don't have the dtbs_install target
-make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- || :
+make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd || :
 cp arch/$KERNELARCH/boot/$KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
 
 %files
@@ -642,7 +644,7 @@ EOF
 		if [ "$USE_UEFI" = "yes" ]; then
 			printf '%s\n' "Creating ESP for GRUB."
 			mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
-			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxterm_menu test all_video loadenv exfat ext2
+			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxterm_menu gfxmenu test all_video loadenv exfat ext2
 		fi
 
 		if [ "$USE_SYSTEMD_UEFI" = "yes" ]; then
@@ -675,7 +677,7 @@ default $MACH_ID-$KERNELVERSION.conf
 timeout 10
 EOF
 			sed -i -e 's,boot\/efi\/,\/,g' "$OURDIR/$ROOTDIR"/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf
-			if [ -n ${DTB} ] && ! grep -q devicetree $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf; then
+			if [ -n "${DTB}" ] && ! grep -q devicetree $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf; then
 				install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KERNELVERSION/${DTB}.dtb" "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KERNELVERSION/dtb/${DTB}.dtb"
 				printf '%s\n' "devicetree "/$MACH_ID/$KERNELVERSION"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf
 			fi
@@ -791,7 +793,7 @@ run generate-bootimg
 cleanup
 run generate-rootfs
 
-xz -9ef results/*.img || :
+xz -9ef results/*.img &>/dev/null || :
 
 # All of the following are allowed to fail because not
 # every board needs/produces every one of them
