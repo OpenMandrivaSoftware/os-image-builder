@@ -1,3 +1,3 @@
 . ${OURDIR}/device/generic/x86_64-uefi/generate-rootfs
 qemu-img convert -f raw results/${BASENAME}.img -O qcow2 results/${BASENAME}.qcow2
-rm results/${BASENAME}.img
+rm results/${BASENAME}.img results/boot-*
