@@ -12,6 +12,8 @@ RUN dnf install -y ccache gcc gcc-c++ cross-aarch64-openmandriva-linux-gnu-gcc c
 RUN dnf install -y cmake sudo
 RUN dnf install -y timezone u-boot-tools dosfstools qemu-user-binfmt qemu-user-static-tapset fontconfig kpartx lsof f2fs-tools
 RUN dnf install -y automake libtool make glibc-devel libuuid-devel lz4 liblz4-devel liblzo-devel glibc-static-devel glibc-devel clang
+RUN dnf install -y rpm-openmandriva-setup-build rpmdevtools abb
+RUN dnf install -y autoconf-archive expat libexpat-devel libx11-devel libsystemd-devel
 
 RUN cd /tmp; git clone https://git.kernel.org/pub/scm/linux/kernel/git/jaegeuk/f2fs-tools.git; \
     cd f2fs-tools; ./autogen.sh; ./configure --prefix /usr/local; make install
@@ -26,7 +28,12 @@ RUN cd /tmp; git clone https://github.com/anestisb/android-simg2img.git; \
     mv simg2simg /usr/local/bin; \
     mv append2simg /usr/local/bin;
 
-
+RUN echo $'\
+[ayya-pkgs]\n\
+name=ROSA AYYA SPECIAL PACKAGES\n\
+baseurl=file:///opt/ayya-repo\n\
+gpgcheck=0\n\
+enabled=1' > /etc/yum.repos.d/rosa.repo
 
 RUN git config --global user.email "you@example.com"
 RUN git config --global user.name "Your Name"
@@ -41,5 +48,5 @@ CMD /bin/bash
 # build:
 #   docker build --network host -t "rosa" .
 # start:
-#   docker run --network host -it -v /dev:/dev --privileged "rosa" "bash"
+#   docker run --network host -it -v /opt:/opt -v /dev:/dev -v ${HOME}:${HOME} --privileged "rosa" "bash"
  
