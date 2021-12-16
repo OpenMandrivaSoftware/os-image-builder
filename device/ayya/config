@@ -6,8 +6,6 @@ HWPACKAGES="$HWPACKAGES pinephone-tools kernel-firmware-pinephone qmi-tools"
 HWPACKAGES="$HWPACKAGES usb-gadget"
 # On the PinePhone chipset, iwd works well
 HWPACKAGES="$HWPACKAGES iwd"
-# Since we default to f2fs...
-HWPACKAGES="$HWPACKAGES f2fs-tools"
 HWPACKAGES_gui="lib64dri-drivers-lima"
 # https://xnux.eu/devices/pine64-pinephone.html
 # Known good revisions:

@@ -25,3 +25,5 @@ usbutils
 passwd
 sysfsutils
 dbus-broker
+mc
+htop
