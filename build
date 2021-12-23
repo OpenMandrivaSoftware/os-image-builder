@@ -539,8 +539,23 @@ if [ ! -d "$ROOTDIR" ]; then
 		mount --bind -o ro $mp "$OURDIR/$ROOTDIR$mp"
 	done
 
+	# FIXME workaround for distro-release-desktop-Plasma-Mobile and distro-release-desktop-Plasma
+        # conflict. If mobile plasma is requared, desktop plasma config package should be excluded.
+
+	EXCLUDE_PACKAGES=""
+
+	if [ -n "$(echo $PACKAGES | grep -i -P -o 'distro-release-desktop-Plasma-Mobile')" ]; then
+		EXCLUDE_PACKAGES="$EXCLUDE_PACKAGES distro-release-desktop-Plasma"
+	fi
+
+	EXCLUDE_OPTION=""
+
+	if [ -n "$EXCLUDE_PACKAGES" ]; then
+		EXCLUDE_OPTION="--exclude $EXCLUDE_PACKAGES"
+	fi
+
 	if [ -z $KEEP_OLD_ROOT ]; then
-		if ! dnf -y install --exclude distro-release-desktop-Plasma-* --skip-broken --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $WEAKDEPS $PACKAGES $KERNELRPM; then
+		if ! dnf -y install $EXCLUDE_OPTION --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $WEAKDEPS $PACKAGES $KERNELRPM; then
 			if [ -e $OURDIR/$ROOTDIR/bin/sh ]; then
 				cat >&2 <<EOF
 WARNING: dnf returned an error code, but it looks like installation finished.
