@@ -337,14 +337,13 @@ if [ -n "$KERNEL" ]; then
 	KERNELBRANCH="$(echo $KERNEL |cut -d'#' -f2-)"
 	[ -n "$KERNELBRANCH" ] && KERNELBRANCH="-b $KERNELBRANCH"
 	[ -z "$KERNEL_CONFIG" ] && KERNEL_CONFIG="defconfig"
-	if ! [ -d kernel ]; then
-		if ! git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel; then
-			# KERNELBRANCH is a tag or commit hash, not a branch
-			git clone $KERNELREPO kernel
-			cd kernel
-			git checkout -b $KERNELBRANCH $KERNELBRANCH
-			cd ..
-		fi
+	rm -rf kernel
+	if ! git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel; then
+		# KERNELBRANCH is a tag or commit hash, not a branch
+		git clone $KERNELREPO kernel
+		cd kernel
+		git checkout -b $KERNELBRANCH $KERNELBRANCH
+		cd ..
 	fi
 	cd kernel
 	[ -e scripts/lld-version.sh ] && sed -i -e "s,' ' -f 2,' ' -f 4," scripts/lld-version.sh
@@ -451,7 +450,7 @@ cp arch/$KERNELARCH/boot/$KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
 /lib/modules/*
 EOF
 	cd kernel-rpm
-	rpmbuild -bb --target $ARCH --define "_sourcedir $(pwd)" --define "_specdir $(pwd)" --define "_srcrpmdir $(pwd)/SRPMS" --define "_rpmdir $(pwd)/RPMS"  kernel-$SHORTTARGET.spec 2>&1 |tee $OURDIR/kernelbuild.log
+	rpmbuild -bb --target $ARCH --define "_sourcedir $(pwd)" --define "_specdir $(pwd)" --define "_srcrpmdir $(pwd)/SRPMS" --define "_rpmdir $(pwd)/RPMS" --define "_builddir $(pwd)/BUILD" --define "_buildrootdir $(pwd)/BUILDROOT" kernel-$SHORTTARGET.spec 2>&1 |tee $OURDIR/kernelbuild.log
 	cd ..
 	KERNELRPM="$(ls $OURDIR/kernel-rpm/RPMS/*/*.rpm)"
 else
@@ -507,9 +506,21 @@ if [ ! -d "$ROOTDIR" ]; then
 	# Don't use mirrors when creating the image
 	sed -i -e '/mirror.openmandriva.org/d;s,^	,baseurl=,' "$OURDIR/$ROOTDIR"/etc/yum.repos.d/*.repo
 
+	if echo ${OMV_VERSION} |grep -q '^[0-9]'; then
+		DNF_VERSION=release
+		# This also needs to work before the rock symlink is updated on
+		# a new release...
+		dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-disabled rock-$ARCH
+		dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-disabled rock-updates-$ARCH
+		dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-enabled release-$ARCH
+		dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-enabled release-updates-$ARCH
+	else
+		DNF_VERSION="${OMV_VERSION}"
+	fi
+
 	if [ -n "$EXTRA_REPOS" ]; then
 		for i in $EXTRA_REPOS; do
-			dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-enabled $OMV_VERSION-$ARCH-$i
+			dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-enabled $DNF_VERSION-$ARCH-$i
 		done
 	fi
 
