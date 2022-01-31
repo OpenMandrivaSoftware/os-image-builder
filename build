@@ -35,6 +35,10 @@ run() {
 addpackageset() {
 	if ! [ -e "$OURDIR/packagesets/$1.pkgs" ]; then
 		echo "Unknown package set $1" >&2
+
+		# call for execute cleanup
+		false
+
 		exit 1
 	fi
 	PACKAGESETS="$PACKAGESETS $1"
@@ -69,6 +73,10 @@ isnative() {
 if [ "$(id -u)" != "0" ]; then
 	echo "Need root privileges to set ownership of extracted files."
 	exec sudo $0 "$@"
+
+	# call for execute cleanup
+	false
+
 	exit 1
 fi
 
@@ -306,6 +314,10 @@ if [ -n "$HOSTDEPS" ] && [ -z "$KEEP_OLD_ROOT" ]; then
 			if ! rpm -q $i &>/dev/null; then
 				echo "Couldn't install needed HOST tools. Make sure you're running current ${BASE_DISTRO}"
 				echo "or install $i manually"
+
+				# call for execute cleanup
+				false
+
 				exit 1
 			fi
 		done
@@ -497,6 +509,10 @@ if [ ! -d "$ROOTDIR" ]; then
 		P=$(grep "^$i-[0-9].*" PACKAGES |tail -n1)
 		if [ "$?" != "0" ]; then
 			echo "Can't find $i package for target" >&2
+
+			# call for execute cleanup
+			false
+
 			exit 1
 		fi
 		curl -O $PKGS/$P
@@ -564,6 +580,10 @@ script failing - but you may want to double-check.
 EOF
 			else
 				echo "ERROR: dnf failed without installing what looks like a workable system."
+
+				# call for execute cleanup
+				false
+
 				exit 1
 			fi
 		fi
