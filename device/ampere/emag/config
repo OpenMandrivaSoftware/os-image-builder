@@ -2,13 +2,14 @@ ARCH="aarch64"
 # Let's support what people might drop into those PCI-E slots...
 HWPACKAGES="pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr"
 HWPACKAGES_gui="lib64dri-drivers-nouveau lib64dri-drivers-radeon radeon-firmware"
-KERNEL="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v5.16-rc3"
+KERNEL="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v5.17-rc6"
+KERNEL_GCC=yes
 KERNEL_CONFIG="opensuse_defconfig"
 DTB=""
 # Enable what's needed for eMAG, disable some options that
 KERNEL_EXTRACONFIG="--enable DRM_AST"
 # are entirely useless there...
-#KERNEL_EXTRACONFIG="--disable ARCH_ACTIONS --disable ARCH_APPLE --disable ARCH_K3  --disable ARCH_SYNQUACER --enable SNI_NETSEC --enable GPIO_MB86S7X --enable MMC_SDHCI_F_SDH30 --disable SND_SOC --disable ARCH_SUNXI --disable ARCH_ALPINE --disable ARCH_BCM2835 --disable ARCH_BCM_IPROC --disable ARCH_BERLIN --disable ARCH_BRCMSTB --disable ARCH_EXYNOS --disable ARCH_K3 --disable ARCH_LAYERSCAPE --disable ARCH_LG1K --disable ARCH_HISI --disable ARCH_MEDIATEK --disable ARCH_MESON --disable ARCH_MVEBU --disable ARCH_QCOM --disable ARCH_REALTEK --disable ARCH_RENESAS --disable ARCH_ROCKCHIP --disable ARCH_SEATTLE --disable ARCH_STRATIX10 --disable ARCH_TEGRA --disable ARCH_SPRD --disable ARCH_THUNDER --disable ARCH_THUNDER2 --disable ARCH_UNIPHIER --disable ARCH_VEXPRESS --enable ARCH_XGENE --disable ARCH_ZX --disable ARCH_ZYNQMP --disable DRM_HISI_HIBMC --disable DRM_HISI_KIRIN --disable RASPBERRYPI_POWER --disable SOC_BRCMSTB --disable RASPBERRYPI_FIRMWARE --disable SENSORS_RASPBERRYPI_HWMON --disable SOC_TI --enable ACPI --module IP_VS_TWOS --enable MLX5_IPSEC --enable MLX5_EN_IPSEC --enable DRM_AST"
+KERNEL_EXTRACONFIG="--disable ARCH_ACTIONS --disable ARCH_APPLE --disable ARCH_K3  --disable ARCH_SYNQUACER --enable SNI_NETSEC --enable GPIO_MB86S7X --enable MMC_SDHCI_F_SDH30 --disable SND_SOC --disable ARCH_SUNXI --disable ARCH_ALPINE --disable ARCH_BCM2835 --disable ARCH_BCM_IPROC --disable ARCH_BERLIN --disable ARCH_BRCMSTB --disable ARCH_EXYNOS --disable ARCH_K3 --disable ARCH_LAYERSCAPE --disable ARCH_LG1K --disable ARCH_HISI --disable ARCH_MEDIATEK --disable ARCH_MESON --disable ARCH_MVEBU --disable ARCH_QCOM --disable ARCH_REALTEK --disable ARCH_RENESAS --disable ARCH_ROCKCHIP --disable ARCH_SEATTLE --disable ARCH_STRATIX10 --disable ARCH_TEGRA --disable ARCH_SPRD --disable ARCH_THUNDER --disable ARCH_THUNDER2 --disable ARCH_UNIPHIER --disable ARCH_VEXPRESS --enable ARCH_XGENE --disable ARCH_ZX --disable ARCH_ZYNQMP --disable DRM_HISI_HIBMC --disable DRM_HISI_KIRIN --disable RASPBERRYPI_POWER --disable SOC_BRCMSTB --disable RASPBERRYPI_FIRMWARE --disable SENSORS_RASPBERRYPI_HWMON --disable SOC_TI --enable ACPI --module IP_VS_TWOS --enable MLX5_IPSEC --enable MLX5_EN_IPSEC --enable DRM_AST"
 # Some basic configs
 #KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable MODULE_FORCE_LOAD --enable MODVERSIONS --enable MODULE_COMPRESS --disable MODULE_COMPRESS_GZIP --enable MODULE_COMPRESS_XZ"
 # Make sure we can boot from USB even if initrd is disabled
