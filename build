@@ -68,7 +68,7 @@ isnative() {
 
 if [ "$(id -u)" != "0" ]; then
 	echo "Need root privileges to set ownership of extracted files."
-	exec sudo $0 "$@"
+	exec sudo $0 -u "$(id -un)" "$@"
 	exit 1
 fi
 
@@ -92,6 +92,7 @@ VER_PREFIX="${VER_PREFIX:-}"
 OMV_VERSION="${OMV_VERSION:-cooker}"
 # for rosa it is RosaLinux
 BASE_DISTRO="${BASE_DISTRO:-OpenMandriva-Lx}"
+BUILDUSER="$(ls -ld ${OURDIR} |cut -d' ' -f3)"
 
 # install xldd only on OpenMandriva
 if [ $BASE_DISTRO == "OpenMandriva-Lx" ]; then
@@ -107,7 +108,7 @@ PRE_PACKAGES="${PRE_PACKAGES:-distro-release-repos}"
 [ -z "$FINAL" ] && FINAL=false
 OS_VERSION=""
 IDENTIFIER=""
-while getopts "d:Fi:K:o:p:P:r:s:S:v:w:W" opt; do
+while getopts "d:Fi:K:o:p:P:r:s:S:u:v:w:W" opt; do
 	case $opt in
 	d)
 		SDDMSESSION="$OPTARG"
@@ -138,6 +139,9 @@ while getopts "d:Fi:K:o:p:P:r:s:S:v:w:W" opt; do
 		;;
 	S)
 		SERVICES="$(echo $SERVICES |sed -e "s,^${OPTARG} ,,;s, ${OPTARG} , ,;s,^${OPTARG}\$,,;s, ${OPTARG}\$,,")"
+		;;
+	u)
+		BUILDUSER="${OPTARG}"
 		;;
 	w)
 		WEAKDEPS="--setopt=install_weak_deps=True"
@@ -425,7 +429,7 @@ EOF
 	if [ "$KERNEL_GCC" = "yes" ]; then
 		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
 		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
@@ -433,7 +437,7 @@ EOF
 	if [ "$KERNEL_GCC" = "yes" ]; then
 		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 
@@ -449,8 +453,9 @@ cp arch/$KERNELARCH/boot/$KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
 /boot/*
 /lib/modules/*
 EOF
+	chown -R $BUILDUSER kernel-rpm
 	cd kernel-rpm
-	rpmbuild -bb --target $ARCH --define "_sourcedir $(pwd)" --define "_specdir $(pwd)" --define "_srcrpmdir $(pwd)/SRPMS" --define "_rpmdir $(pwd)/RPMS" --define "_builddir $(pwd)/BUILD" --define "_buildrootdir $(pwd)/BUILDROOT" kernel-$SHORTTARGET.spec 2>&1 |tee $OURDIR/kernelbuild.log
+	/sbin/runuser -u $BUILDUSER -- rpmbuild -bb --target $ARCH --define "_sourcedir $(pwd)" --define "_specdir $(pwd)" --define "_srcrpmdir $(pwd)/SRPMS" --define "_rpmdir $(pwd)/RPMS" --define "_builddir $(pwd)/BUILD" --define "_buildrootdir $(pwd)/BUILDROOT" kernel-$SHORTTARGET.spec 2>&1 |tee $OURDIR/kernelbuild.log
 	cd ..
 	KERNELRPM="$(ls $OURDIR/kernel-rpm/RPMS/*/*.rpm)"
 else
@@ -600,17 +605,19 @@ EOF
 	# be hidden by tmpfs mounts anyway
 	rm -rf "$OURDIR/$ROOTDIR/run/* $OURDIR/$ROOTDIR/tmp/*"
 
-	if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
-		# Create omv user (password omv)
-		echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
-		echo 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
-		echo 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
-		# Add the omv user to important groups...
-		for group in audio dialout input lp lpadmin network render sambashare screen storage tty users video wheel; do
-			sed -i -e "s,$group:.*\$,&omv," $OURDIR/$ROOTDIR/etc/group
-		done
-		cp -a $OURDIR/$ROOTDIR/etc/skel $OURDIR/$ROOTDIR/home/omv
-		chown -R 1001:1001 $OURDIR/$ROOTDIR/home/omv
+	if [ "$CREATE_DEFAULT_USER" != "no" ]; then
+		if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
+			# Create omv user (password omv)
+			echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
+			echo 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
+			echo 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
+			# Add the omv user to important groups...
+			for group in audio dialout input lp lpadmin network render sambashare screen storage tty users video wheel; do
+				sed -i -e "s,$group:.*\$,&omv," $OURDIR/$ROOTDIR/etc/group
+			done
+			cp -a $OURDIR/$ROOTDIR/etc/skel $OURDIR/$ROOTDIR/home/omv
+			chown -R 1001:1001 $OURDIR/$ROOTDIR/home/omv
+		fi
 
 		# If sddm is installed, set it up to autologin as omv
 		if [ -z "$SDDMSESSION" ]; then
@@ -762,6 +769,9 @@ EOF
 
 	# Rebuild mime database
 	[ -x "$OURDIR/$ROOTDIR"/usr/bin/update-mime-database ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/update-mime-database /usr/share/mime
+
+	# Generate gconv-modules.cache
+	[ -x "$OURDIR/$ROOTDIR"/usr/sbin/iconvconfig ] && chroot "$OURDIR/$ROOTDIR" /usr/sbin/iconvconfig
 
 	chroot "$OURDIR/$ROOTDIR" /sbin/ldconfig
 

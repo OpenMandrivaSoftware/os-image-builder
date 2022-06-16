@@ -146,6 +146,11 @@ to boot
 `KERNEL_GCC=_yes_|_no_` Define whether or not to build the kernel with the
 gcc toolchain (default: use clang)
 
+`CREATE_DEFAULT_USER=_yes_|_no_` Define whether or not the default user (username
+omv with password omv) is created. Since you need a user, this is enabled by default
+(but it can make sense to turn it off if the user is created by other means, such
+as cloud-init)
+
 In addition to the `config` file, you can override the default behavior by creating
 scriptlets called `generate-initrd`, `generate-rootfs`, `generate-bootimg`,
 `setup-system-files`, `download_kernel_extras` and `postprocess`.

@@ -3,7 +3,8 @@
 make -C arm-trusted-firmware CROSS_COMPILE=aarch64-linux-gnu- M0_CROSS_COMPILE=armv7hnl-linux-gnueabihf- PLAT=rk3399 DEBUG=1 bl31
 [ -z "$UBOOT" ] && UBOOT="https://gitlab.denx.de/u-boot/u-boot.git"
 [ -z "$UBOOT_VERSION" ] && UBOOT_VERSION=master
-[ -d u-boot ] || git clone -b ${UBOOT_VERSION} $UBOOT u-boot
+rm -rf u-boot
+git clone -b ${UBOOT_VERSION} $UBOOT u-boot
 cd u-boot
 ln -s ../arm-trusted-firmware .
 PN=1

@@ -2,8 +2,11 @@ ARCH="aarch64"
 HOSTDEPS="$HOSTDEPS qemu-img"
 HWPACKAGES="pciutils efibootmgr cloud-init"
 SERVICES="$SERVICES cloud-init cloud-config cloud-final"
-KERNEL="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v5.16-rc4"
+KERNEL="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v5.19-rc2"
 KERNEL_CONFIG="oci_aarch64_defconfig"
+KERNEL_GCC=yes
+# cloud-init takes care of this
+CREATE_DEFAULT_USER=false
 DTB=""
 CMDLINE="console=tty0 console=ttyS0,115200n8 console=ttyAMA0"
 USE_UEFI=yes

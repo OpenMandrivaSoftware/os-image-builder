@@ -1,8 +1,8 @@
 ARCH="x86_64"
 HOSTDEPS="$HOSTDEPS qemu-img"
-HWPACKAGES="kernel-rc-server pciutils efibootmgr cloud-init"
-SERVICES="$SERVICES cloud-init cloud-config"
-CMDLINE="console=tty0 console=ttyS0,115200n8"
+HWPACKAGES="pciutils efibootmgr cloud-init"
+SERVICES="$SERVICES cloud-init cloud-config cloud-final"
+# cloud-init takes care of this
+CREATE_DEFAULT_USER=false
+CMDLINE="console=tty0 console=ttyS0,115200n8 console=ttyAMA0"
 USE_UEFI=yes
-# (this is the default anyway)
-# NEED_INITRD=yes
