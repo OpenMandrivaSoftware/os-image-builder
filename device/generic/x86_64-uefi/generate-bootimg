@@ -1,5 +1,5 @@
 mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva
-sed -e "s,@KVERSION@,${KERNELVERSION},g" $OURDIR/device/generic/x86_64-uefi/grub.cfg.in >$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+sed -e "s,@KVERSION@,${KERNELVERSION},g;s|@CMDLINE@|${CMDLINE}|g" $OURDIR/device/generic/x86_64-uefi/grub.cfg.in >$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
 pushd $OURDIR/$ROOTDIR/boot/efi
 tar cJf $OURDIR/boot-${SHORTTARGET}.tar.xz *
 popd

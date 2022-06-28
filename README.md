@@ -120,12 +120,17 @@ some of the following options:
 (obviously) correspond to a CPU architecture supported by the OpenMandriva version
 you're building. This is the only required option.
 
+`KERNELRPM=_package name_` Package name of the kernel to be installed (typically
+kernel-desktop or kernel-server). This can also be multiple packages separated
+by spaces, e.g. `KERNELRPM="kernel-server kernel-server-modules-infiniband"`
+Alternatively, if your target device uses a custom kernel, set the parameters below:
+
 `KERNEL=_url of kernel git repository_` URL of the git repository for the kernel
 to be used. Optionally, a branch can be specified by appending _#branch_. For
 example, to pull in the Raspberry Pi 5.10 kernel, use
 `KERNEL=https://github.com/raspberrypi/linux.git#rpi-5.10.y`
-If no kernel is specified, the binary package kernel-release will be pulled from
-OpenMandriva repositories instead.
+If no kernel is specified, the binary package specified by `KERNELRPM`
+(default: kernel-desktop) will be pulled from OpenMandriva repositories instead.
 
 `KERNEL_CONFIG=_kernel-config_` Kernel configuration (as in `ls arch/*/configs`
 inside the kernel source tree). If not specified, `defconfig` is used.

@@ -1,14 +1,14 @@
 ARCH="aarch64"
 HOSTDEPS="$HOSTDEPS qemu-img"
-HWPACKAGES="pciutils efibootmgr cloud-init"
+HWPACKAGES="pciutils efibootmgr cloud-init kernel-firmware-mellanox"
 SERVICES="$SERVICES cloud-init cloud-config cloud-final"
-KERNEL="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v5.19-rc2"
+KERNEL="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v5.19-rc4"
 KERNEL_CONFIG="oci_aarch64_defconfig"
 KERNEL_GCC=yes
 # cloud-init takes care of this
-CREATE_DEFAULT_USER=false
+CREATE_DEFAULT_USER=no
 DTB=""
-CMDLINE="console=tty0 console=ttyS0,115200n8 console=ttyAMA0"
+CMDLINE="console=tty0 console=ttyAMA0 rd.net.timeout.carrier=5 netroot=iscsi:169.254.0.2:::1:iqn.2015-02.oracle.boot:uefi rd.iscsi.param=node.session.timeo.replacement_timeout=6000 net.ifnames=1 nvme_core.shutdown_timeout=10 ipmi_si.tryacpi=0 ipmi_si.trydmi=0 libiscsi.debug_libiscsi_eh=1 loglevel=4 ip=single-dhcp"
 USE_UEFI=yes
 # (this is the default anyway)
 # NEED_INITRD=yes
