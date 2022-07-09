@@ -1,6 +1,1 @@
-sed -i -e '/^add_drivers/d' $OURDIR/$ROOTDIR/usr/lib/dracut/dracut.conf.d/50-dracut-distro.conf
-# Remove network from omit_dracutmodules -- we need it for iscsi
-sed -i -e 's, network,,g' $OURDIR/$ROOTDIR/usr/lib/dracut/dracut.conf.d/50-dracut-distro.conf
-# Let's add iscsi, needed for OCI Bare Metal hosts
-chroot $OURDIR/$ROOTDIR /usr/sbin/dracut -o aufs-mount -o crypt -o lvm -a network-manager -a network -a iscsi --fstab --add-fstab /etc/fstab -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
-chmod 0644 $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img
+../oci-common/generate-initrd
