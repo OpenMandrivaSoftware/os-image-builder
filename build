@@ -440,8 +440,17 @@ EOF
 	# CROSS_COMPILE_ARM32 is a Sony-ism, but doesn't hurt anywhere else, so we can specify it unconditionally
 	# FIXME we have to use LD=/usr/bin/$TRIPLET-ld.bfd, for some reason yet to be debugged, aarch64
 	# kernels linked with lld don't boot on emag/oci-aarch64 (kernel 5.16-rc4, clang 13.0.0)
+	if isnative $TRIPLET; then
+		if [ "$KERNEL_GCC" = "yes" ]; then
+			KERNEL_LD="LD=ld.bfd"
+		fi
+	else
+		if [ "$KERNEL_GCC" = "yes" ]; then
+			KERNEL_LD="LD=/usr/bin/$TRIPLET-ld.bfd"
+		fi
+	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
 		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
@@ -449,7 +458,7 @@ EOF
 		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
 		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
@@ -457,11 +466,23 @@ EOF
 
 %install
 # Install kernel modules, if any
-make $SMPFLAGS V=1 INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd
-# And DTBs -- allow failure here because old kernels (onyx08 and friends)
+make $SMPFLAGS V=1 INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD
+# And DTBs -- allow failure here because x86 and old kernels (onyx08 and friends)
 # don't have the dtbs_install target
-make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- LD=/usr/bin/$TRIPLET-ld.bfd || :
+make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD || :
+mkdir -p %{buildroot}/boot
+EOF
+	if [ "$ARCH" = "x86_64" -o "$ARCH" = "znver1" ]; then
+		cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
+cp $KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
+EOF
+	else
+		cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 cp arch/$KERNELARCH/boot/$KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
+EOF
+	fi
+
+	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 
 %files
 /boot/*
