@@ -1,5 +1,5 @@
 wayland-tools
-x11-server-xwayland
+xwayland
 qt5-qtwayland
 ${LIB}va-wayland2
 kwayland-server
