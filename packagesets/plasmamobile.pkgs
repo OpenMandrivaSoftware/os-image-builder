@@ -1,13 +1,13 @@
-#include gui
+#include "gui.pkgs"
 task-plasma-mobile
 plasma-workspace-wayland
 distro-release-desktop-Plasma-Mobile
 plasma-phone-components-wayland
-${LIB}GLESv1_CM1
-${LIB}GLESv2_2
-${LIB}OpenGL0
-${LIB}OpenVG0
-${LIB}kms1
+LIB(GLESv1_CM1)
+LIB(GLESv2_2)
+LIB(OpenGL0)
+LIB(OpenVG0)
+LIB(kms1)
 simplelogin
 breeze-plymouth
 calligra-gemini
@@ -23,20 +23,20 @@ bluez-qt
 bluedevil
 pulseaudio-module-bluetooth
 maliit-keyboard
-# ofono doesn't work, let's use something else
+// ofono doesn't work, let's use something else
 om-phone
-# For now, until the pinephone camera works with plasma-camera
+// For now, until the pinephone camera works with plasma-camera
 om-camera
-# Better not rely on gstreamer crap to drive the flash
+// Better not rely on gstreamer crap to drive the flash
 ledcontrol
-# Used by qt5-qtsensors to read the accelerometer
+// Used by qt5-qtsensors to read the accelerometer
 iio-sensor-proxy
-# And qt5-qtpositioning
+// And qt5-qtpositioning
 qt5-qtpositioning
 geoclue
 gpsd
 AmbientLight
-# Needed to set up cameras at least on PinePhone
+// Needed to set up cameras at least on PinePhone
 v4l-utils
-# Most Plasma Mobile devices should have LTE
+// Most Plasma Mobile devices should have LTE
 networkmanager-wwan

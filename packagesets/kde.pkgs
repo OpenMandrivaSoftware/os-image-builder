@@ -1,13 +1,13 @@
-#include gui
+#include "gui.pkgs"
 task-plasma-minimal
 falkon
 sddm
 sddm-theme-breeze
-${LIB}GLESv1_CM1
-${LIB}GLESv2_2
-${LIB}OpenGL0
-${LIB}OpenVG0
-${LIB}kms1
+LIB(GLESv1_CM1)
+LIB(GLESv2_2)
+LIB(OpenGL0)
+LIB(OpenVG0)
+LIB(kms1)
 pavucontrol-qt
 distro-release-desktop
 distro-release-indexhtml

@@ -1,17 +1,17 @@
 clang
 glibc-devel
-${LIB}stdc++-devel
-${LIB}gcc-devel
-${LIB}qt5core-devel
-${LIB}qt5gui-devel
-${LIB}qt5dbus-devel
-${LIB}qt5widgets-devel
-${LIB}qt5quick-devel
-${LIB}qt5xml-devel
+LIB(stdc++-devel)
+LIB(gcc-devel)
+LIB(qt5core-devel)
+LIB(qt5gui-devel)
+LIB(qt5dbus-devel)
+LIB(qt5widgets-devel)
+LIB(qt5quick-devel)
+LIB(qt5xml-devel)
 make
 ninja
 cmake
 git-core
-# For working on the dialer
-${LIB}phonenumber-devel
+// For working on the PinePhone dialer
+LIB(phonenumber-devel)
 protobuf-devel

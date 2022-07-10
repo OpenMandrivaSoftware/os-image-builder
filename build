@@ -32,20 +32,6 @@ run() {
 		done
 	fi
 }
-addpackageset() {
-	if ! [ -e "$OURDIR/packagesets/$1.pkgs" ]; then
-		echo "Unknown package set $1" >&2
-		exit 1
-	fi
-	PACKAGESETS="$PACKAGESETS $1"
-	while read p; do
-		if echo $p |grep -qE '^#include '; then
-			addpackageset $(echo $p |awk '{ print $2; }')
-		elif ! echo $p |grep -q '^#'; then
-			PACKAGES="$PACKAGES $p"
-		fi
-	done < <(cat "$OURDIR/packagesets/$1.pkgs")
-}
 isnative() {
 	local CPU=$(echo $1 |cut -d- -f1)
 	local ABI=$(echo $1 |rev |cut -d- -f1 |rev)
@@ -76,10 +62,18 @@ OURDIR="$(realpath $(dirname $0))"
 cd "$OURDIR"
 
 PACKAGES=""
-PACKAGESETS=""
+PACKAGES_FROM_CMDLINE=""
+PACKAGESETS="core"
 SERVICES="dbus-broker NetworkManager"
 WEAKDEPS=""
-addpackageset core
+if which clang-cpp &>/dev/null; then
+	CPP="clang-cpp"
+elif which cpp &>/dev/null; then
+	CPP="cpp"
+else
+	echo "Please install a C preprocessor (clang or gcc-cpp)"
+	exit 1
+fi
 
 # for rosa it is http://abf-downloads.rosalinux.ru
 ABF_DOWNLOADS="${ABF_DOWNLOADS:-http://abf-downloads.openmandriva.org}"
@@ -126,10 +120,14 @@ while getopts "d:Fi:K:o:p:P:r:s:S:u:v:w:W" opt; do
 		OS_VERSION="$OPTARG"
 		;;
 	p)
-		PACKAGES="$PACKAGES $OPTARG"
+		PACKAGES_FROM_CMDLINE="$PACKAGES_FROM_CMDLINE ${OPTARG}"
 		;;
 	P)
-		addpackageset ${OPTARG}
+		if ! [ -e "$OURDIR/packagesets/${OPTARG}.pkgs" ]; then
+			echo "Unknown packageset: ${OPTARG}" >&2
+			exit 1
+		fi
+		PACKAGESETS="$PACKAGESETS ${OPTARG}"
 		;;
 	r)
 		EXTRA_REPOS="$EXTRA_REPOS ${OPTARG}"
@@ -200,17 +198,6 @@ echo "Building ${BASE_DISTRO} $OMV_VERSION image for $TARGET"
 run config
 
 # ===================================================================
-# Add target specific packageset extensions (e.g. graphics drivers
-# for the gui package set)
-# ===================================================================
-for i in $PACKAGESETS; do
-	eval "XP=\${HWPACKAGES_${i}}"
-	if [ -n "$XP" ]; then
-		PACKAGES="$PACKAGES $XP"
-	fi
-done
-
-# ===================================================================
 # Prepare host system
 # ===================================================================
 if [ -z "$ARCH" ]; then
@@ -265,23 +252,9 @@ i686)
 	DTBS="dtbs"
 	;;
 esac
-if echo $ARCH |grep -qE '(64|znver1)'; then
-	LIB=lib64
-else
-	LIB=lib
-fi
 
 NATIVEBUILD=false
 [ "$ARCH" = "$(uname -m)" ] && NATIVEBUILD=true
-
-# Expand variables in PACKAGES now that all parameters
-# are known -- allowing for e.g. ${LIB}GL0 to install libGL0
-# or lib64GL0 depending on target arch
-PACKAGES_TMP="$PACKAGES"
-PACKAGES=""
-for i in $PACKAGES_TMP; do
-	PACKAGES="$PACKAGES $(eval echo $i)"
-done
 
 if [ -n "$KERNEL" ]; then
 	# We aren't using a packaged kernel, so we need the right toolchain...
@@ -323,6 +296,36 @@ if [ -n "$HOSTDEPS" ] && [ -z "$KEEP_OLD_ROOT" ]; then
 		[ -e /lib/ld-linux-aarch64.so.1 ] || ln -s /usr/$TRIPLET/lib/ld-linux-aarch64.so.1 /lib/
 	fi
 fi
+
+# ===================================================================
+# Parse packagesets and add target specific packageset extensions
+# (e.g. graphics drivers for the gui package set) specified in the
+# config (e.g. HWPACKAGES_gui=...)
+# Also, re-parse packages specified on the command line in case they
+# contain macros
+# ===================================================================
+if echo $ARCH |grep -qE '(64|znver1)'; then
+	LIB=lib64
+else
+	LIB=lib
+fi
+CPP="$CPP -undef -nostdinc -P -E -Wno-unused-command-line-argument -I$OURDIR/packagesets -DLIB(x)=${LIB}##x -DARCH_$ARCH=1 -DTARGET_$(echo $TARGET|sed -e 's,/,_,g;s,-,_,g')=1 -DTARGET_$(echo $SHORTTARGET|sed -e 's,/,_,g;s,-,_,g')=1"
+for ps in $PACKAGESETS; do
+	CPP="$CPP -DPACKAGESET_${ps}=1"
+done
+for p in $PACKAGES_FROM_CMDLINE; do
+	PACKAGES="$PACKAGES $(echo $p |$CPP -)"
+done
+for ps in $PACKAGESETS; do
+	eval "XP=\${HWPACKAGES_${i}}"
+	if [ -n "$XP" ]; then
+		PACKAGES="$PACKAGES $(echo $XP |$CPP -)"
+	fi
+	while read p; do
+		PACKAGES="$PACKAGES $p"
+	done < <($CPP $OURDIR/packagesets/${ps}.pkgs)
+done
+
 
 # ===================================================================
 # Build kernel if necessary

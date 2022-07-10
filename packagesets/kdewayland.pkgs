@@ -1,6 +1,6 @@
-#include kde
+#include "kde.pkgs"
 kwin-wayland
 plasma-workspace-wayland
 kwindowsystem-wayland
-# Just for testing
+// Just for testing
 weston

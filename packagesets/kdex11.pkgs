@@ -1,4 +1,4 @@
-#include kde
+#include "kde.pkgs"
 kwin-x11
 plasma-workspace-x11
 kwindowsystem-x11

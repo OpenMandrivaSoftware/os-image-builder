@@ -1,7 +1,7 @@
 wayland-tools
 xwayland
 qt5-qtwayland
-${LIB}va-wayland2
+LIB(va-wayland2)
 kwayland-server
 kwayland-integration
 kwayland

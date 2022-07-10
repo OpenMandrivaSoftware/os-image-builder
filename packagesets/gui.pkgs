@@ -3,7 +3,7 @@ distro-release-theme
 dbus-tools
 dbus-x11
 plymouth
-${LIB}GLESv1_CM1
+LIB(GLESv1_CM1)
 xdg-compliance
 xdg-user-dirs
 xdg-utils
