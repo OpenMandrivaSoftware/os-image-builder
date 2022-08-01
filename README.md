@@ -51,7 +51,7 @@ e.g. to build a minimal image for generic UEFI compliant aarch64 boards, do
 
 or to build a Raspberry Pi 4B image with KDE and audio support and vim-enhanced, use
 
-`./build -P plasma -P audio -p vim-enhanced pi4b`
+`./build -P kde -P audio -p vim-enhanced pi4b`
 
 Unless _-W_ is given, weak dependencies (Suggests:/Recommends:) are installed
 automatically.
@@ -62,7 +62,7 @@ If you wish to include packages from repositories other than _main_ (such as
 _unsupported_, _restricted_ or _non-free_), use -r to enable those repositories.
 For example, to build an image that has x264 included, use
 
-`./build -P plasma -r restricted -p x264 rockpi4c`
+`./build -P kde -r restricted -p x264 rockpi4c`
 
 Selecting a desktop
 ===================
@@ -71,11 +71,11 @@ _desktop_ is the name of a desktop file found in `/usr/share/xsessions` or
 `/usr/share/wayland-sessions`.
 
 By default, os-image-builder checks what desktops are installed, and uses, in that
-order, _plasma_, _lxqt_, _openbox_, _failsafe_, _plasma-mobile_, _plasmawayland_,
+order, _kde_, _lxqt_, _openbox_, _failsafe_, _plasmamobile_, _kdewayland_,
 _weston_.
 
-For example, to build a Raspberry Pi 4B image that launches lxqt even if Plasma
-Desktop is installed as well, use
+For example, to build a Raspberry Pi 4B image that launches lxqt
+even if KDE is installed as well, use
 
 `./build -d lxqt pi4b`
 
