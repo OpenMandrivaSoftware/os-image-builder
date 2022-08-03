@@ -1,0 +1,15 @@
+TARGETARCH="$(echo ${SHORTTARGET} |cut -d- -f2-)"
+case ${TARGETARCH} in
+x86-64)
+	. ${OURDIR}/device/generic/x86_64-uefi/generate-rootfs
+	;;
+amd)
+	. ${OURDIR}/device/generic/znver1-uefi/generate-rootfs
+	;;
+*)
+	. ${OURDIR}/device/generic/${TARGETARCH}-uefi/generate-rootfs
+	;;
+esac
+
+qemu-img convert -f raw results/${BASENAME}.img -O qcow2 -c results/${BASENAME}.qcow2
+rm results/${BASENAME}.img

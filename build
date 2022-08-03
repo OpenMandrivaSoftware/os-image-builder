@@ -261,7 +261,7 @@ if [ -n "$KERNEL" ]; then
 	if isnative $TRIPLET; then
 		HOSTDEPS="$HOSTDEPS gcc"
 	else
-		HOSTDEPS="$HOSTDEPS cross-$TRIPLET-gcc cross-$TRIPLET-libc"
+		HOSTDEPS="$HOSTDEPS cross-$TRIPLET-gcc cross-$TRIPLET-libc cross-$TRIPLET-kernel-headers"
 	fi
 	if [ "$ARCH" = "aarch64" ]; then
 		# Many aarch64 kernels (e.g. rk3399) need a 32-bit ARM compiler
@@ -378,6 +378,9 @@ elif [ -n "$KERNEL" ]; then
 		echo "Applying $(basename $i)" >&2
 		[ -e "$i" ] && git apply $i
 	done
+	# Get rid of bracketed version identifier that freaks out
+	# rpm's dependency generator
+	sed -i -E 's,(.*)"\["(.*)"\]"(.*),\1"-"\2""\3,' drivers/scsi/aacraid/linit.c
 	run download_kernel_extras
 
 	[ -e ${OURDIR}/device/${TARGET}/../generic/${KERNEL_CONFIG} ] && cp -f ${OURDIR}/device/${TARGET}/../generic/${KERNEL_CONFIG} arch/${KERNELARCH}/configs/
