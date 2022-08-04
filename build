@@ -457,8 +457,10 @@ EOF
 	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
 		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "make syncconfig ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
 		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "make syncconfig ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
 		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
@@ -863,8 +865,9 @@ mv *.img* results/ 2>/dev/null || :
 mv *.tar* results/ 2>/dev/null || :
 cp -a device/${TARGET}/*.md results/ 2>/dev/null || :
 cp -a device/${TARGET}/write2sd results/ 2>/dev/null || :
+cp -a device/${TARGET}/write2device results/ 2>/dev/null || :
 
-for i in device/${TARGET}/*.md.in device/${TARGET}/write2sd.in; do
+for i in device/${TARGET}/*.md.in device/${TARGET}/write2sd.in device/${TARGET}/write2device.in; do
 	[ -e "$i" ] || continue
 	r="results/$(basename $i .in)"
 	sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BASENAME@,${BASENAME},g" $i >"$r"

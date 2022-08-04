@@ -79,6 +79,9 @@ even if KDE is installed as well, use
 
 `./build -d lxqt pi4b`
 
+Note that _-d desktop_ only changes the default setting. It doesn't replace adding
+the package set(s) needed to use the desktop.
+
 Selecting services
 ==================
 If you wish to start extra systemd services (or disable standard services), you can
@@ -102,8 +105,27 @@ Generated images are put into the `results` directory.
 Adding new packagesets
 ======================
 Simply create a new file in the packagesets directory. The format is just a list of
-package names; in addition, you can use `#include xyz` to include another package set.
-${LIB} expands to lib or lib64, depending on the CPU architecture.
+package names; in addition, it is run through the C preprocessor, so you can use e.g.
+`#include "xyz.pkgs"` to include another package set.
+LIB(xyz) expands to the package name for the xyz library (libxyz or lib64xyz,
+depending on the CPU architecture).
+There are also defines for the target architecture and the included packagesets.
+For example,
+
+`./build -p kde synquacer`
+
+Would result in `ARCH_aarch64`, `TARGET_synquacer` and `PACKAGESET_kde` being defined,
+allowing for a packageset to say e.g.
+
+```
+libreoffice
+#ifdef PACKAGESET_kde
+libreoffice-kde
+#endif
+```
+
+to add libreoffice and if (and only if) the kde packageset is included, its kde
+integration extensions.
 
 Adding new target devices
 =========================
@@ -160,6 +182,11 @@ In addition to the `config` file, you can override the default behavior by creat
 scriptlets called `generate-initrd`, `generate-rootfs`, `generate-bootimg`,
 `setup-system-files`, `download_kernel_extras` and `postprocess`.
 Please refer to existing target devices to see what goes into those scripts.
+
+You can also add a `write2sd.in` or `write2device.in` script that will be sent to
+the output directory, containing the instructions needed to write the generated image
+to an SD card or device (typically `dd`-ing the image to the target device, potentially
+plus enlarging the root filesystem to fill the disk etc.)
 
 You can also create a directory called `kernel-patches` inside the device directory.
 Any patch files in this directory will be applied to the kernel after checking them
