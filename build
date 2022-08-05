@@ -457,17 +457,17 @@ EOF
 	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
 		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
-		echo "make syncconfig ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
 		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
-		echo "make syncconfig ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
 		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
+		echo "make syncconfig ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
 		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
+		echo "make syncconfig ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
