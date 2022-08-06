@@ -2,6 +2,9 @@ Installing OpenMandriva Lx on Synquacer
 ---------------------------------------
 To install OpenMandriva Lx on Synquacer:
 
+* Make sure your SynQuacer is running an up to date firmware. Older firmware
+  has a buggy DeviceTree file built in that causes current kernels to hang
+  very early in the boot process.
 * Insert a USB storage device on another machine
 * Create a GPT partition table with 2 partitions on it:
   * Partition 1: UEFI System Partition (tag ef00), formatted as FAT32
