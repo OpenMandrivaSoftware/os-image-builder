@@ -1,0 +1,19 @@
+diff -up linux-6.0-rc7/drivers/acpi/processor_idle.c.omv~ linux-6.0-rc7/drivers/acpi/processor_idle.c
+--- linux-6.0-rc7/drivers/acpi/processor_idle.c.omv~	2022-09-26 22:08:19.988702196 +0200
++++ linux-6.0-rc7/drivers/acpi/processor_idle.c	2022-09-26 22:08:41.983838135 +0200
+@@ -539,7 +539,6 @@ static void wait_for_freeze(void)
+ 	 */
+ 	if (boot_cpu_data.x86_vendor != X86_VENDOR_INTEL)
+ 		return;
+-#endif
+ 	/*
+ 	 * Dummy wait op - must do something useless after P_LVL2 read
+ 	 * because chipsets cannot guarantee that STPCLK# signal gets
+@@ -553,6 +552,7 @@ static void wait_for_freeze(void)
+ 	 * mechanism.
+ 	 */
+ 	inl(acpi_gbl_FADT.xpm_timer_block.address);
++#endif
+ }
+ 
+ /**

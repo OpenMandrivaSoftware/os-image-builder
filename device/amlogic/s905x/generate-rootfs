@@ -1,0 +1,63 @@
+MINSIZE=$(du -s --block-size=1048576 "$OURDIR/$ROOTDIR" |awk '{ print $1; }')
+mkdir -p "${OURDIR}/results"
+dd if=/dev/zero of=${OURDIR}/results/${BASENAME}.img bs=1M count=$((MINSIZE+1024))
+losetup -D
+losetup -fP ${OURDIR}/results/${BASENAME}.img
+LOOPDEV=$(losetup -j ${OURDIR}/results/${BASENAME}.img |tail -n1 |cut -d: -f1)
+
+# The data fed to fdisk below (blank lines are important! Don't remove them!)
+# create 2 partitions -- a 512 MB boot partition and a root FS spanning
+# the rest of the disk
+# Boot partition offset is 32768 to make the bootloader happy
+gdisk $LOOPDEV <<'EOF'
+o
+y
+n
+
+
++512M
+0700
+n
+
+
+
+8305
+w
+y
+EOF
+kpartx ${LOOPDEV}
+mkfs.vfat ${LOOPDEV}p1
+mkfs.ext4 -L OMVAA64 ${LOOPDEV}p2
+BOOTUUID=$(/sbin/blkid ${LOOPDEV}p1 |sed -e 's,.* UUID=",,;s,".*,,')
+ROOTUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* UUID=",,;s,".*,,')
+ROOTPUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* PARTUUID=",,;s,".*,,')
+rm -rf ${OURDIR}/mnt
+mkdir ${OURDIR}/mnt
+mount ${LOOPDEV}p1 ${OURDIR}/mnt
+
+cd ${OURDIR}/mnt
+cp ${OURDIR}/${ROOTDIR}/boot/amlogic ${OURDIR}/mnt/boot/
+cp ${OURDIR}/${ROOTDIR}/boot/vmlinuz-${KERNELVERSION} zImage
+cp ${OURDIR}/u-boot/u-boot.bin u-boot.ext
+mkdir extlinux
+cat >extlinux/extlinux.conf <<EOF
+label OpenMandriva
+	kernel /zImage
+	fdt /${DTB}.dtb
+	append root=PARTUUID=${ROOTPUUID} ${CMDLINE}
+EOF
+cd ..
+
+umount ${OURDIR}/mnt
+sleep 1
+mount ${LOOPDEV}p2 ${OURDIR}/mnt
+cp -a ${ROOTDIR}/* ${OURDIR}/mnt/
+mkdir -p ${OURDIR}/mnt/boot/uboot
+cat >${OURDIR}/mnt/etc/fstab <<EOF
+UUID=$ROOTUUID / ext4 defaults,noatime 0 1
+UUID=$BOOTUUID /boot/uboot vfat defaults,noatime 0 2
+EOF
+[ -d ${OURDIR}/mnt/var/cache/dnf ] && rm -rf ${OURDIR}/mnt/var/cache/dnf/*
+umount ${OURDIR}/mnt
+losetup -d ${LOOPDEV}
+sync

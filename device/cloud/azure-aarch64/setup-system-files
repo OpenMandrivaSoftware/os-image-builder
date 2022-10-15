@@ -1,0 +1,24 @@
+cat >>$OURDIR/$ROOTDIR/etc/waagent.conf <<'EOF'
+ResourceDisk.Format=n
+ResourceDisk.EnableSwap=n
+ResourceDisk.Filesystem=ext4
+ResourceDisk.MountPoint=/mnt/resource
+EOF
+sed -i 's/Provisioning.Agent=auto/Provisioning.Agent=cloud-init/g' $OURDIR/$ROOTDIR/etc/waagent.conf
+sed -i '/ - mounts/d' $OURDIR/$ROOTDIR/etc/cloud/cloud.cfg
+sed -i '/ - disk_setup/d' $OURDIR/$ROOTDIR/etc/cloud/cloud.cfg
+sed -i '/cloud_init_modules/a\\ - mounts' $OURDIR/$ROOTDIR/etc/cloud/cloud.cfg
+sed -i '/cloud_init_modules/a\\ - disk_setup' $OURDIR/$ROOTDIR/etc/cloud/cloud.cfg
+cat > $OURDIR/$ROOTDIR/etc/cloud/cloud.cfg.d/91-azure_datasource.cfg <<EOF
+datasource_list: [ Azure ]
+datasource:
+   Azure:
+     apply_network_config: False
+EOF
+cat >> $OURDIR/$ROOTDIR/etc/cloud/cloud.cfg.d/05_logging.cfg <<EOF
+
+# This tells cloud-init to redirect its stdout and stderr to
+# 'tee -a /var/log/cloud-init-output.log' so the user can see output
+# there without needing to look on the console.
+output: {all: '| tee -a /var/log/cloud-init-output.log'}
+EOF

@@ -3,10 +3,11 @@ ARCH="aarch64"
 HWPACKAGES="pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode efibootmgr"
 HWPACKAGES_gui="lib64dri-drivers-nouveau lib64dri-drivers-radeon radeon-firmware"
 # Known good w/ everything and support for ancient firmware
-KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/SynQuacer/5.9"
+#KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/SynQuacer/5.9"
 # Boots to "Reached target Basic System" with firmware 100
 #KERNEL="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v5.14"
 #KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#hardware/SynQuacer/5.19"
+KERNEL="https://github.com/steev/linux.git#linux-v5.19.0"
 # Building 5.8 with clang+lld results in
 # ld.lld: error: undefined symbol: stpcpy
 KERNEL_GCC=yes

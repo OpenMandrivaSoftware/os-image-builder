@@ -1,0 +1,16 @@
+# https://aliexpress.com/item/1005004336371357.html
+ARCH="aarch64"
+HWPACKAGES_gui="lib64dri-drivers-lima"
+KERNEL="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v6.0.1"
+KERNEL_CONFIG="defconfig"
+KERNELTARGET=Image
+DTB="amlogic/meson-gxl-s905w-tx3-mini"
+# Some basic configs
+KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable MODULE_FORCE_LOAD --enable MODVERSIONS --enable MODULE_COMPRESS --disable MODULE_COMPRESS_GZIP --enable MODULE_COMPRESS_XZ --module NTFS3_FS --enable NTFS3_LZX_XPRESS --enable NTFS3_FS_POSIX_ACL --disable NTFS3_64BIT_CLUSTER --enable MODULE_DECOMPRESS"
+# Make IWD great again...
+KERNEL_EXTRACONFIG="$KERNEL_EXTRACONFIG --enable KEY_DH_OPERATIONS"
+CMDLINE="console=ttyAML0,115200n8 console=tty0 no_console_suspend consoleblank=0 fsck.fix=yes fsck.repair=yes net.ifnames=0"
+UBOOT_CONFIG="p212_defconfig"
+UBOOT_VERSION="v2022.07"
+NEED_INITRD=no
+SDDMSESSION=plasma-wayland

@@ -1,0 +1,14 @@
+ARCH="aarch64"
+HOSTDEPS="$HOSTDEPS qemu-img"
+HWPACKAGES="pciutils efibootmgr cloud-init waagent hyperv-tools"
+SERVICES="$SERVICES waagent cloud-init cloud-config cloud-final"
+KERNEL="git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git#v6.0.1"
+KERNEL_CONFIG="azure_aarch64_defconfig"
+KERNEL_GCC=yes
+# cloud-init takes care of this
+CREATE_DEFAULT_USER=no
+DTB=""
+CMDLINE="rootdelay=300 console=ttyS0 earlyprintk=ttyS0 net.ifnames=0"
+USE_UEFI=yes
+# (this is the default anyway)
+# NEED_INITRD=yes

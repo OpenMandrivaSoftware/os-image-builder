@@ -1,0 +1,12 @@
+diff -up linux-5.5-rc4/drivers/scsi/aacraid/linit.c.omv~ linux-5.5-rc4/drivers/scsi/aacraid/linit.c
+--- linux-5.5-rc4/drivers/scsi/aacraid/linit.c.omv~	2020-01-01 19:15:08.904060592 +0100
++++ linux-5.5-rc4/drivers/scsi/aacraid/linit.c	2020-01-01 19:16:12.102057526 +0100
+@@ -53,7 +53,7 @@
+ #ifdef AAC_DRIVER_BUILD
+ #define _str(x) #x
+ #define str(x) _str(x)
+-#define AAC_DRIVER_FULL_VERSION	AAC_DRIVER_VERSION "[" str(AAC_DRIVER_BUILD) "]" AAC_DRIVER_BRANCH
++#define AAC_DRIVER_FULL_VERSION	AAC_DRIVER_VERSION "-" str(AAC_DRIVER_BUILD) "" AAC_DRIVER_BRANCH
+ #else
+ #define AAC_DRIVER_FULL_VERSION	AAC_DRIVER_VERSION AAC_DRIVER_BRANCH
+ #endif
