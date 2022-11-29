@@ -32,7 +32,7 @@ rm -rf mnt
 mkdir mnt
 mount ${LOOPDEV}p1 mnt
 cd mnt
-tar xf ../boot-${SHORTTARGET}.tar.xz
+mv ${OURDIR}/${ROOTDIR}/boot/efi/* .
 cd ..
 umount mnt
 mount ${LOOPDEV}p2 mnt

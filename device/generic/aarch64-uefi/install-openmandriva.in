@@ -239,15 +239,11 @@ if [ -n "$UEFI" ]; then
 	echo "Copying bootup files..."
 	cp -ax /boot/efi/* /mnt/destination/boot/efi/
 	echo "Registering with UEFI bootloader"
-	if [ -e /mnt/destination/boot/efi/startup.nsh ]; then
-		mv /mnt/destination/boot/efi/startup.nsh /mnt/destination/boot/efi/openmandriva.nsh
-		sed -i -e "s,/dev/sdb2,$ROOT,g" /mnt/destination/boot/efi/openmandriva.nsh
-	fi
 	sed -i -e "s,^search .*,search --no-floppy --fs-uuid --set=root $ROOTUUID," /mnt/destination/boot/efi/EFI/BOOT/grub.cfg
 	sed -i -e "s,LABEL=OMVAA64,UUID=$ROOTUUID,g" /mnt/destination/boot/efi/EFI/BOOT/grub.cfg
 	cp /mnt/destination/boot/efi/EFI/BOOT/grub.cfg /mnt/destination/boot/efi/EFI/openmandriva/
 	cp /mnt/destination/boot/efi/EFI/BOOT/grub.cfg /mnt/destination/boot/grub2/
-	efibootmgr --create -L 'OpenMandriva Lx 4.2' -l '\EFI\BOOT\bootaa64.efi' -d "$DESTINATION" -p $(echo $UEFI |sed -e "s,$DESTINATION,,")
+	efibootmgr --create -L 'OpenMandriva Lx @OMV_VERSION@' -l '\EFI\BOOT\bootaa64.efi' -d "$DESTINATION" -p $(echo $UEFI |sed -e "s,$DESTINATION,,")
 	chroot /mnt/destination /usr/sbin/grub2-install 
 	umount /mnt/destination/sys/firmware/efi/efivars
 	umount /mnt/destination/sys

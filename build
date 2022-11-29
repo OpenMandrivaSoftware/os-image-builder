@@ -698,6 +698,10 @@ EOF
 	done
 
 	run setup-system-files
+	if [ -e $OURDIR/device/$TARGET/install-openmandriva.in ]; then
+		sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g" device/$TARGET/install-openmandriva.in >$OURDIR/$ROOTDIR/home/omv/install-openmandriva
+		chmod +x $OURDIR/$ROOTDIR/home/omv/install-openmandriva
+	fi
 	if [ "$NEED_INITRD" != "no" ] || [ "$USE_UEFI" = "yes" ] || [ "$USE_SYSTEMD_UEFI" != "yes" ] && [ -n "$KERNELVERSION" ]; then
 		if [ "$NEED_INITRD" != "no" ]; then
 			run generate-initrd

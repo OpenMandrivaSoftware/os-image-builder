@@ -1,10 +1,2 @@
 mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva
-#cp $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva/initrd.img
-#cp $OURDIR/$ROOTDIR/boot/vmlinuz-${KERNELVERSION} $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva/linux.efi
 sed -e "s,@KVERSION@,${KERNELVERSION},g;s|@CMDLINE@|${CMDLINE}|g" $OURDIR/device/generic/aarch64-uefi/grub.cfg.in >$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
-#cat >$OURDIR/$ROOTDIR/boot/efi/startup.nsh <<'EOF'
-#\EFI\openmandriva\grub.efi
-#EOF
-pushd $OURDIR/$ROOTDIR/boot/efi
-tar cJf $OURDIR/boot-${SHORTTARGET}.tar.xz *
-popd
