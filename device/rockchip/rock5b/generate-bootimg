@@ -1,4 +1,4 @@
-# Known good revision: e4c837568c8fe9fe3605326decc18a5a5e0565a5
+[ -d rkbin ] || git clone -b master https://github.com/radxa/rkbin.git
 rm -rf arm-trusted-firmware
 [ -d arm-trusted-firmware ] || git clone https://github.com/ARM-software/arm-trusted-firmware
 # https://developer.trustedfirmware.org/T996
@@ -7,6 +7,3 @@ make -C arm-trusted-firmware CROSS_COMPILE=aarch64-linux-gnu- M0_CROSS_COMPILE=a
 
 BL31=${OURDIR}/u-boot/arm-trusted-firmware/build/rk3399/debug/bl31/bl31.elf
 . ${OURDIR}/helpers/build-uboot
-
-cp u-boot/idbloader.img "$OURDIR/$ROOTDIR"/boot/
-cp u-boot/u-boot.itb "$OURDIR/$ROOTDIR"/boot/
