@@ -71,8 +71,8 @@ if which clang-cpp &>/dev/null; then
 elif which cpp &>/dev/null; then
 	CPP="cpp"
 else
-	echo "Please install a C preprocessor (clang or gcc-cpp)"
-	exit 1
+	HOSTDEPS="$HOSTDEPS clang"
+	CPP="clang-cpp"
 fi
 
 # for rosa it is http://abf-downloads.rosalinux.ru
