@@ -268,6 +268,8 @@ if [ -n "$KERNEL" ]; then
 		# to target a helper Cortex-M0 etc.
 		HOSTDEPS="$HOSTDEPS ${CROSS_ARMHF}"
 	fi
+	# Build dependencies for binary formats etc.
+	HOSTDEPS="$HOSTDEPS pkgconfig(libelf)"
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
 # vim-common is for xxd, used to decode EDID information for pinebookpro
