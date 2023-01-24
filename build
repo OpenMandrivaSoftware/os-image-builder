@@ -76,7 +76,7 @@ else
 fi
 
 # for rosa it is http://abf-downloads.rosalinux.ru
-ABF_DOWNLOADS="${ABF_DOWNLOADS:-http://abf-downloads.openmandriva.org}"
+ABF_DOWNLOADS="${ABF_DOWNLOADS:-https://abf-downloads.openmandriva.org}"
 # for rosa it is rosa-linux-gnu
 BASE_TRIPLET="${BASE_TRIPLET:-openmandriva-linux-gnu}"
 # ver prefix needed only for rosalinux
