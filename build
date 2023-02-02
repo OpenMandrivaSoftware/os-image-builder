@@ -556,7 +556,7 @@ if [ ! -d "$ROOTDIR" ]; then
 	# Don't use mirrors when creating the image
 	sed -i -e '/mirror.openmandriva.org/d;s,^	,baseurl=,' "$OURDIR/$ROOTDIR"/etc/yum.repos.d/*.repo
 
-	if echo ${OMV_VERSION} |grep -q '^[0-9]'; then
+	if echo ${VER_PREFIX}${OMV_VERSION} |grep -q '^[0-9]'; then
 		DNF_VERSION=release
 		# This also needs to work before the rock symlink is updated on
 		# a new release...
@@ -565,7 +565,7 @@ if [ ! -d "$ROOTDIR" ]; then
 		dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-enabled release-$ARCH
 		dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-enabled release-updates-$ARCH
 	else
-		DNF_VERSION="${OMV_VERSION}"
+		DNF_VERSION="${VER_PREFIX}${OMV_VERSION}"
 	fi
 
 	if [ -n "$EXTRA_REPOS" ]; then
@@ -582,7 +582,7 @@ if [ ! -d "$ROOTDIR" ]; then
 
 	# FIXME workaround for ldd being broken on aarch64 (at least in qemu)
 	# (causes dracut to miss bash's dependencies)
-	if [ "$ARCH" = "aarch64" ]; then
+	if [ "$ARCH" = "aarch64" ] && [ "$BASE_DISTRO" == "OpenMandriva-Lx" ]; then
 		PACKAGES="$PACKAGES ${XLDD}"
 	fi
 	if [ "$NEED_INITRD" != "no" ]; then
@@ -622,7 +622,7 @@ EOF
 	# FIXME (continued) workaround for ldd being
 	# broken on aarch64 (at least in qemu)
 	# (causes dracut to miss bash's dependencies)
-	if [ "$ARCH" = "aarch64" ]; then
+	if [ "$ARCH" = "aarch64" ] && [ "$BASE_DISTRO" == "OpenMandriva-Lx" ]; then
 		mv $OURDIR/$ROOTDIR/usr/bin/ldd $OURDIR/$ROOTDIR/usr/bin/ldd.glibc
 		ln -sf xldd $OURDIR/$ROOTDIR/usr/bin/ldd
 	fi
