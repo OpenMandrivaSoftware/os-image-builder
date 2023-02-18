@@ -1,6 +1,6 @@
 ARCH="znver1"
 HOSTDEPS="$HOSTDEPS qemu-img"
-HWPACKAGES="pciutils efibootmgr cloud-init kernel-firmware-mellanox"
+HWPACKAGES="pciutils efibootmgr cloud-init kernel-firmware-mellanox iscsi-initiator-utils"
 SERVICES="$SERVICES cloud-init cloud-config cloud-final"
 # cloud-init takes care of this
 CREATE_DEFAULT_USER=no
