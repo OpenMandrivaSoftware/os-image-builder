@@ -1,0 +1,4 @@
+# We don't need "standard" stuff like ATA or usbhid
+sed -i -e '/^add_drivers/d' $OURDIR/$ROOTDIR/usr/lib/dracut/dracut.conf.d/50-dracut-distro.conf
+chroot $OURDIR/$ROOTDIR /usr/sbin/dracut -o aufs-mount -o crypt -o lvm --fstab --add-fstab /etc/fstab -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
+chmod 0644 $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img

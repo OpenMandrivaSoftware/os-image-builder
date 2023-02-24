@@ -178,6 +178,12 @@ omv with password omv) is created. Since you need a user, this is enabled by def
 (but it can make sense to turn it off if the user is created by other means, such
 as cloud-init)
 
+`HWPACKAGES="package1 package2 ..."` Define packages that are added to all builds for this target
+
+`HWPACKAGESETS="packageset1 packageset2 ..."` Define package sets that are added to all builds for this target
+
+`HWPACKAGES_packageset="package1 package2 ..."` Define packages that are added to builds for this target that include the `packageset` package set (this is useful, for example, for adding a graphics driver if and only if the gui packageset is installed - `HWPACKAGES_gui="my-gpu-driver"`)
+
 In addition to the `config` file, you can override the default behavior by creating
 scriptlets called `generate-initrd`, `generate-rootfs`, `generate-bootimg`,
 `setup-system-files`, `download_kernel_extras` and `postprocess`.

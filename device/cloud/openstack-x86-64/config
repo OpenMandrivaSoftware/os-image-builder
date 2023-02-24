@@ -1,0 +1,9 @@
+ARCH="x86_64"
+HOSTDEPS="$HOSTDEPS qemu-img"
+HWPACKAGES="pciutils efibootmgr microcode-intel"
+HWPACKAGESETS="cloud"
+# cloud-init takes care of this
+CREATE_DEFAULT_USER=no
+CMDLINE="console=tty0 console=ttyS0,115200 nvme_core.shutdown_timeout=10 ipmi_si.tryacpi=0 ipmi_si.trydmi=0 loglevel=4"
+KERNELRPM="kernel-server"
+USE_UEFI=yes

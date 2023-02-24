@@ -196,6 +196,7 @@ SHORTTARGET="$(basename $TARGET)"
 
 echo "Building ${BASE_DISTRO} $OMV_VERSION image for $TARGET"
 run config
+[ -n "$HWPACKAGESETS" ] && PACKAGESETS="$PACKAGESETS $HWPACKAGESETS"
 
 # ===================================================================
 # Prepare host system
