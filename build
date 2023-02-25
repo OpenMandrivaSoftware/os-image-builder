@@ -697,7 +697,7 @@ EOF
 	fi
 	# Handle post-processing scripts needed by packagesets
 	for i in $PACKAGESETS; do
-		[ -e "$OURDIR/packagesets/$1.post" ] && chroot "$OURDIR/$ROOTDIR" "$OURDIR/packagesets/$1.post"
+		[ -e "$OURDIR/packagesets/$i.post" ] && chroot "$OURDIR/$ROOTDIR" "$OURDIR/packagesets/$i.post"
 	done
 
 	run setup-system-files
