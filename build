@@ -696,8 +696,14 @@ EOF
 		KERNELVERSION=$(ls --sort=time $OURDIR/$ROOTDIR/boot/vmlinuz-* 2>/dev/null|head -n1 |sed -e 's,.*vmlinuz-,,')
 	fi
 	# Handle post-processing scripts needed by packagesets
-	for i in $PACKAGESETS; do
-		[ -e "$OURDIR/packagesets/$i.post" ] && chroot "$OURDIR/$ROOTDIR" "$OURDIR/packagesets/$i.post"
+	for PACKAGESET in $PACKAGESETS; do
+		PACKAGESET_POST="$PACKAGESET.post"
+		PACKAGESET_POST_PATH="$OURDIR/packagesets/$PACKAGESET_POST"
+		if [ -e "$PACKAGESET_POST_PATH" ]; then
+			cp "$PACKAGESET_POST_PATH" "$OURDIR/$ROOTDIR/tmp/$PACKAGESET_POST"
+			chroot "$OURDIR/$ROOTDIR" "/tmp/$PACKAGESET_POST"
+			rm  "$OURDIR/$ROOTDIR/tmp/$PACKAGESET_POST"
+		fi
 	done
 
 	run setup-system-files
