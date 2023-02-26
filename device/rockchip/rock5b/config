@@ -4,8 +4,6 @@ KERNEL="https://github.com/radxa/kernel.git#stable-5.10-rock5"
 KERNEL_CONFIG="rockchip_linux_defconfig"
 UBOOT="https://github.com/radxa/u-boot.git"
 UBOOT_VERSION="stable-5.10-rock5"
-
-# The line below is not a typo.
-# As far as u-boot is concerned, 4B and 4C are identical.
-UBOOT_CONFIG="rock-pi-4c-rk3399_defconfig"
+UBOOT_CONFIG="rock-5b-rk3588_defconfig"
+UBOOT_EXTRAS="itbloader.img u-boot.itb"
 DTB="rockchip/rk3388-rock-5b"
