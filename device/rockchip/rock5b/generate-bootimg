@@ -17,4 +17,5 @@ parted -s spi_image.img unit s mkpart reserved2 8192 16383
 parted -s spi_image.img unit s mkpart uboot 16384 32734
 dd if=idbloader.img of=spi_image.img seek=64 conv=notrunc
 dd if=u-boot.itb of=spi_image.img seek=16384 conv=notrunc
+cp idbloader.img u-boot.itb ${OURDIR}/${ROOTDIR}/boot/
 cd ..
