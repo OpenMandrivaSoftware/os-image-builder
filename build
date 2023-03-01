@@ -51,6 +51,20 @@ isnative() {
 		return 1
 	fi
 }
+rescanPartitions () {
+	partx -a $1 || :
+	partx -u $1
+	# Workaround for /dev/loopXpY device nodes not being created
+	# inside the isobuilder container in ABF -- this shouldn't
+	# run in a normal environment (but can't hurt either)
+	for i in $(partx -go NR $1); do
+		if ! [ -e $1p$i ]; then
+			local LDEV="$(basename $1)"
+			local NODE="$(cat /sys/block/$LDEV/${LDEV}p${i}/dev)"
+			mknod /dev/${LDEV}p${i} b ${NODE/:*/} ${NODE/*:/}
+		fi
+	done
+}
 
 if [ "$(id -u)" != "0" ]; then
 	echo "Need root privileges to set ownership of extracted files."
