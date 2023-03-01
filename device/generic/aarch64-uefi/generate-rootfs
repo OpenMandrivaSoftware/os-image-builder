@@ -23,7 +23,7 @@ n
 w
 y
 EOF
-kpartx ${LOOPDEV}
+partx -u ${LOOPDEV}
 mkfs.vfat -n OMVBOOT ${LOOPDEV}p1
 BOOTUUID=$(/sbin/blkid ${LOOPDEV}p1 |sed -e 's,.* UUID=",,;s,".*,,')
 mkfs.ext4 -L OMVAA64 ${LOOPDEV}p2

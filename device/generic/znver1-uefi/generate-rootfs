@@ -23,7 +23,7 @@ n
 w
 y
 EOF
-kpartx ${LOOPDEV}
+partx -u ${LOOPDEV}
 mkfs.vfat ${LOOPDEV}p1
 mkfs.ext4 -L OMVZNVER1 ${LOOPDEV}p2
 rm -rf mnt
