@@ -56,7 +56,7 @@ w
 y
 EOF
 set -x
-kpartx ${LOOPDEV}
+rescanPartitions ${LOOPDEV}
 mkfs.ext4 -L OMVAA64 ${LOOPDEV}p1
 ROOTUUID=$(/sbin/blkid ${LOOPDEV}p1 |sed -e 's,.* UUID=",,;s,".*,,')
 rm -rf mnt

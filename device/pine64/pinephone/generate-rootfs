@@ -22,7 +22,7 @@ p
 
 w
 EOF
-kpartx ${LOOPDEV}
+rescanPartitions ${LOOPDEV}
 mkfs.vfat ${LOOPDEV}p1
 mkfs.f2fs -l OMVAA64 ${LOOPDEV}p2
 rm -rf mnt

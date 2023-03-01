@@ -25,7 +25,7 @@ n
 w
 y
 EOF
-kpartx ${LOOPDEV}
+rescanPartitions ${LOOPDEV}
 mkfs.vfat ${LOOPDEV}p1
 mkfs.ext4 -L OMVAA64 ${LOOPDEV}p2
 BOOTUUID=$(/sbin/blkid ${LOOPDEV}p1 |sed -e 's,.* UUID=",,;s,".*,,')
