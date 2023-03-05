@@ -5,17 +5,5 @@
 cd u-boot
 make BL31=../rkbin/bin/rk35/rk3568_bl31_set_pmic_sleep_low_20221018_v1.32.elf CROSS_COMPILE=aarch64-linux-gnu- EXTRAVERSION="-OpenMandriva" LDFLAGS="-fuse-ld=bfd" KBUILD_LDFLAGS="-fuse-ld=bfd" HOSTLDFLAGS="-fuse-ld=bfd" spl/u-boot-spl.bin u-boot.dtb u-boot.itb
 ./tools/mkimage -n rk3568 -T rksd -d ../rkbin/bin/rk35/rk3568_ddr_1056MHz_v1.10.bin:spl/u-boot-spl.bin idbloader.img
-
-dd if=/dev/zero of=spi_image.img bs=1M count=0 seek=16
-parted -s spi_image.img mklabel gpt
-parted -s spi_image.img unit s mkpart idbloader 64 7167
-parted -s spi_image.img unit s mkpart vnvm 7168 7679
-parted -s spi_image.img unit s mkpart reserved_space 7680 8063
-parted -s spi_image.img unit s mkpart reserved1 8064 8127
-parted -s spi_image.img unit s mkpart uboot_env 8128 8191
-parted -s spi_image.img unit s mkpart reserved2 8192 16383
-parted -s spi_image.img unit s mkpart uboot 16384 32734
-dd if=idbloader.img of=spi_image.img seek=64 conv=notrunc
-dd if=u-boot.itb of=spi_image.img seek=16384 conv=notrunc
 cp idbloader.img u-boot.itb ${OURDIR}/${ROOTDIR}/boot/
 cd ..

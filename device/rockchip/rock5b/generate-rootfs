@@ -17,7 +17,6 @@ parted -s ${IMAGE} \
 	mkpart root ${FSTYPE} 262144 100%
 dd if=${OURDIR}/u-boot/idbloader.img of=${IMAGE} seek=64 conv=notrunc
 dd if=${OURDIR}/u-boot/u-boot.itb of=${IMAGE} seek=16384 conv=notrunc
-cp ${OURDIR}/u-boot/{idbloader.img,u-boot.itb} ${OURDIR}/${ROOTDIR}/boot/
 
 losetup -D
 losetup -fP ${IMAGE}
