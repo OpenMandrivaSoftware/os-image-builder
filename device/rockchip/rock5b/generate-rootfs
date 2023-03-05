@@ -17,11 +17,15 @@ parted -s ${IMAGE} \
 	mkpart root ${FSTYPE} 262144 100%
 dd if=${OURDIR}/u-boot/idbloader.img of=${IMAGE} seek=64 conv=notrunc
 dd if=${OURDIR}/u-boot/u-boot.itb of=${IMAGE} seek=16384 conv=notrunc
+cp ${OURDIR}/u-boot/{idbloader.img,u-boot.itb} ${OURDIR}/${ROOTDIR}/boot/
 
 losetup -D
 losetup -fP ${IMAGE}
 LOOPDEV=$(losetup -j ${IMAGE} |tail -n1 |cut -d: -f1)
 rescanPartitions ${LOOPDEV}
+
+dd if=${OURDIR}/u-boot/idbloader.img of=${LOOPDEV}p1 conv=notrunc
+dd if=${OURDIR}/u-boot/u-boot.itb of=${LOOPDEV}p7 conv=notrunc
 
 BOOTUUID=$(/sbin/blkid ${LOOPDEV}p8 |sed -e 's,.* UUID=",,;s,".*,,')
 ROOTUUID=$(/sbin/blkid ${LOOPDEV}p9 |sed -e 's,.* UUID=",,;s,".*,,')
