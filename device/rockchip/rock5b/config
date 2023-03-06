@@ -3,8 +3,10 @@
 # FIXME port the scripts in u-boot/arch/arm/mach-rockchip to python 3
 HOSTDEPS="$HOSTDEPS python2"
 HOSTDEPS="$HOSTDEPS parted"
+HWPACKAGES_gui="mali-g610-firmware"
 KERNEL="https://github.com/radxa/kernel.git#stable-5.10-rock5"
 KERNEL_CONFIG="rockchip_linux_defconfig"
+KERNEL_EXTRACONFIG="--module MALI400 --module MALI450 --module DRM_PANFROST"
 # Needed to fix warnings with gcc > 10
 # Should be fixed properly, preferably by updating to a
 # 6.x kernel
