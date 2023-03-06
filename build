@@ -8,10 +8,10 @@ listTargets() {
 	done
 }
 usage() {
-	echo "Usage: $0 [ -v VERSION ] target"
-	echo "	-v: Use ${BASE_DISTRO} VERSION (default: cooker)"
-	echo "	-K: Keep already existing build root (default: no)"
-	echo "Available targets:"
+	printf '%s\n' "Usage: $0 [ -v VERSION ] target"
+	printf '%s\n' "	-v: Use ${BASE_DISTRO} VERSION (default: cooker)"
+	printf '%s\n' "	-K: Keep already existing build root (default: no)"
+	printf '%s\n' "Available targets:"
 	listTargets
 }
 run() {
@@ -33,19 +33,19 @@ run() {
 	fi
 }
 isnative() {
-	local CPU=$(echo $1 |cut -d- -f1)
-	local ABI=$(echo $1 |rev |cut -d- -f1 |rev)
+	local CPU=$(printf '%s\n' $1 |cut -d- -f1)
+	local ABI=$(printf '%s\n' $1 |rev |cut -d- -f1 |rev)
 	local NATIVECPU=$(uname -m)
 	local NATIVEABI=gnu
 	if ldd /bin/sh |grep -q musl; then
 		NATIVEABI=musl
 	fi
-	if echo $NATIVECPU |grep -q ^arm; then
+	if printf '%s\n' $NATIVECPU |grep -q ^arm; then
 		NATIVEABI="${NATIVEABI}eabihf"
 		NATIVECPU="armv7hnl"
 	fi
 	[ "$CPU" = "znver1" ] && CPU=x86_64
-	if [ "$CPU" = "$NATIVECPU" -a "$ABI" = "$NATIVEABI" ]; then
+	if [ "$CPU" = "$NATIVECPU"] && [ "$ABI" = "$NATIVEABI" ]; then
 		return 0
 	else
 		return 1
@@ -68,7 +68,7 @@ rescanPartitions () {
 }
 
 if [ "$(id -u)" != "0" ]; then
-	echo "Need root privileges to set ownership of extracted files."
+	printf '%s\n' "Need root privileges to set ownership of extracted files."
 	exec sudo $0 -u "$(id -un)" "$@"
 	exit 1
 fi
@@ -81,9 +81,9 @@ PACKAGES_FROM_CMDLINE=""
 PACKAGESETS="core"
 SERVICES="dbus-broker NetworkManager"
 WEAKDEPS=""
-if which clang-cpp &>/dev/null; then
+if command -v clang-cpp &>/dev/null; then
 	CPP="clang-cpp"
-elif which cpp &>/dev/null; then
+elif command -v cpp &>/dev/null; then
 	CPP="cpp"
 else
 	HOSTDEPS="$HOSTDEPS clang"
@@ -104,7 +104,7 @@ BASE_DISTRO="${BASE_DISTRO:-OpenMandriva-Lx}"
 BUILDUSER="$(ls -ld ${OURDIR} |cut -d' ' -f3)"
 
 # install xldd only on OpenMandriva
-if [ $BASE_DISTRO == "OpenMandriva-Lx" ]; then
+if [ $BASE_DISTRO = "OpenMandriva-Lx" ]; then
 	XLDD="xldd"
 	CROSS_ARM="cross-armv7hnl-openmandriva-linux-gnueabihf-gcc"
 else
@@ -139,7 +139,7 @@ while getopts "d:Fi:K:o:p:P:r:s:S:u:v:w:W" opt; do
 		;;
 	P)
 		if ! [ -e "$OURDIR/packagesets/${OPTARG}.pkgs" ]; then
-			echo "Unknown packageset: ${OPTARG}" >&2
+			printf '%s\n' "Unknown packageset: ${OPTARG}" >&2
 			exit 1
 		fi
 		PACKAGESETS="$PACKAGESETS ${OPTARG}"
@@ -151,7 +151,7 @@ while getopts "d:Fi:K:o:p:P:r:s:S:u:v:w:W" opt; do
 		SERVICES="$SERVICES ${OPTARG}"
 		;;
 	S)
-		SERVICES="$(echo $SERVICES |sed -e "s,^${OPTARG} ,,;s, ${OPTARG} , ,;s,^${OPTARG}\$,,;s, ${OPTARG}\$,,")"
+		SERVICES="$(printf '%s\n' $SERVICES |sed -e "s,^${OPTARG} ,,;s, ${OPTARG} , ,;s,^${OPTARG}\$,,;s, ${OPTARG}\$,,")"
 		;;
 	u)
 		BUILDUSER="${OPTARG}"
@@ -166,7 +166,7 @@ while getopts "d:Fi:K:o:p:P:r:s:S:u:v:w:W" opt; do
 		KEEP_OLD_ROOT=true
 		;;
 	*)
-		echo "Unknown option $opt" >&2
+		printf '%s\n' "Unknown option $opt" >&2
 		usage
 		exit 1
 		;;
@@ -196,20 +196,20 @@ TARGET="$1"
 if ! [ -e device/$TARGET/config ]; then
 	# Allow abbreviations, e.g. db410c instead of qualcomm/db410c
 	for i in $(find device -name config); do
-		if echo $i |grep -q "$TARGET/config\$"; then
+		if printf '%s\n' $i |grep -q "$TARGET/config\$"; then
 			TARGET="$(dirname $i |cut -d/ -f2-)"
 			break
 		fi
 	done
 fi
 if ! [ -e device/$TARGET/config ]; then
-	echo "Invalid target $TARGET"
+	printf '%s\n' "Invalid target $TARGET"
 	usage
 	exit 1
 fi
 SHORTTARGET="$(basename $TARGET)"
 
-echo "Building ${BASE_DISTRO} $OMV_VERSION image for $TARGET"
+printf '%s\n' "Building ${BASE_DISTRO} $OMV_VERSION image for $TARGET"
 run config
 [ -n "$HWPACKAGESETS" ] && PACKAGESETS="$PACKAGESETS $HWPACKAGESETS"
 
@@ -217,7 +217,7 @@ run config
 # Prepare host system
 # ===================================================================
 if [ -z "$ARCH" ]; then
-	echo "$TARGET doesn't specify ARCH, assuming aarch64" >&2
+	printf '%s\n' "$TARGET doesn't specify ARCH, assuming aarch64" >&2
 	ARCH=aarch64
 fi
 
@@ -299,8 +299,8 @@ if [ -n "$HOSTDEPS" ] && [ -z "$KEEP_OLD_ROOT" ]; then
 	if ! dnf -y --refresh --nogpgcheck install $HOSTDEPS; then
 		for i in $HOSTDEPS; do
 			if ! rpm -q $i &>/dev/null; then
-				echo "Couldn't install needed HOST tools. Make sure you're running current ${BASE_DISTRO}"
-				echo "or install $i manually"
+				printf '%s\n' "Couldn't install needed HOST tools. Make sure you're running current ${BASE_DISTRO}"
+				printf '%s\n' "or install $i manually"
 				exit 1
 			fi
 		done
@@ -310,7 +310,7 @@ if [ -n "$HOSTDEPS" ] && [ -z "$KEEP_OLD_ROOT" ]; then
 	# We also need ld-linux-aarch64.so.1 symlinked to where some binary headers expect it
 	if [ !"$ARCH" = "aarch64" ]; then
 		HOSTDEPS="$HOSTDEPS"
-		echo ':aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-aarch64-static:' >/proc/sys/fs/binfmt_misc/register || :
+		printf '%s\n' ':aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-aarch64-static:' >/proc/sys/fs/binfmt_misc/register || :
 		[ -e /lib/ld-linux-aarch64.so.1 ] || ln -s /usr/$TRIPLET/lib/ld-linux-aarch64.so.1 /lib/
 	fi
 fi
@@ -322,22 +322,22 @@ fi
 # Also, re-parse packages specified on the command line in case they
 # contain macros
 # ===================================================================
-if echo $ARCH |grep -qE '(64|znver1)'; then
+if printf '%s\n' $ARCH |grep -qE '(64|znver1)'; then
 	LIB=lib64
 else
 	LIB=lib
 fi
-CPP="$CPP -undef -nostdinc -P -E -Wno-unused-command-line-argument -I$OURDIR/packagesets -DLIB(x)=${LIB}##x -DARCH_$ARCH=1 -DTARGET_$(echo $TARGET|sed -e 's,/,_,g;s,-,_,g')=1 -DTARGET_$(echo $SHORTTARGET|sed -e 's,/,_,g;s,-,_,g')=1"
+CPP="$CPP -undef -nostdinc -P -E -Wno-unused-command-line-argument -I$OURDIR/packagesets -DLIB(x)=${LIB}##x -DARCH_$ARCH=1 -DTARGET_$(printf '%s\n' $TARGET|sed -e 's,/,_,g;s,-,_,g')=1 -DTARGET_$(printf '%s\n' $SHORTTARGET|sed -e 's,/,_,g;s,-,_,g')=1"
 for ps in $PACKAGESETS; do
 	CPP="$CPP -DPACKAGESET_${ps}=1"
 done
 for p in $PACKAGES_FROM_CMDLINE; do
-	PACKAGES="$PACKAGES $(echo $p |$CPP -)"
+	PACKAGES="$PACKAGES $(printf '%s\n' $p |$CPP -)"
 done
 for ps in $PACKAGESETS; do
 	eval "XP=\${HWPACKAGES_${i}}"
 	if [ -n "$XP" ]; then
-		PACKAGES="$PACKAGES $(echo $XP |$CPP -)"
+		PACKAGES="$PACKAGES $(printf '%s\n' $XP |$CPP -)"
 	fi
 	while read p; do
 		PACKAGES="$PACKAGES $p"
@@ -371,9 +371,9 @@ fi
 if [ -n "$KEEP_KERNEL_RPM" ]; then
 	KERNELRPM="$(ls $OURDIR/kernel-rpm/RPMS/*/*.rpm)"
 elif [ -n "$KERNEL" ]; then
-	echo "Building $TARGET kernel"
-	KERNELREPO="$(echo $KERNEL |cut -d'#' -f1)"
-	KERNELBRANCH="$(echo $KERNEL |cut -d'#' -f2-)"
+	printf '%s\n' "Building $TARGET kernel"
+	KERNELREPO="$(printf '%s\n' $KERNEL |cut -d'#' -f1)"
+	KERNELBRANCH="$(printf '%s\n' $KERNEL |cut -d'#' -f2-)"
 	[ -n "$KERNELBRANCH" ] && KERNELBRANCH="-b $KERNELBRANCH"
 	[ -z "$KERNEL_CONFIG" ] && KERNEL_CONFIG="defconfig"
 	rm -rf kernel
@@ -388,12 +388,12 @@ elif [ -n "$KERNEL" ]; then
 	[ -e scripts/lld-version.sh ] && sed -i -e "s,' ' -f 2,' ' -f 4," scripts/lld-version.sh
 	PN=1
 	for i in ${OURDIR}/device/${TARGET}/kernel-patches/*.patch ${OURDIR}/device/${TARGET}/kernel-patches/*.diff; do
-		echo "Applying $(basename $i)" >&2
+		printf '%s\n' "Applying $(basename $i)" >&2
 		[ -e "$i" ] && patch -p1 -b -z .b${PN}~ <$i
 		PN=$((PN+1))
 	done
 	for i in ${OURDIR}/device/${TARGET}/kernel-patches/*.gitpatch; do
-		echo "Applying $(basename $i)" >&2
+		printf '%s\n' "Applying $(basename $i)" >&2
 		[ -e "$i" ] && git apply $i
 	done
 	# Get rid of bracketed version identifier that freaks out
@@ -405,10 +405,10 @@ elif [ -n "$KERNEL" ]; then
 	[ -e ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} ] && cp -f ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} arch/${KERNELARCH}/configs/
 	# Get rid of trailing + in version identifiers
 	sed -i -e 's,"+","",g' scripts/setlocalversion
-	if [ -n "$KERNEL_EXTRA_CFLAGS_GCC" -a "$KERNEL_GCC" = "yes" ]; then
+	if [ -n "$KERNEL_EXTRA_CFLAGS_GCC" ] && [ "$KERNEL_GCC" = "yes" ]; then
 		sed -i -e "s|-std=gnu89|$KERNEL_EXTRA_CFLAGS_GCC -std=gnu89|g" Makefile
 	fi
-	if [ -n "$KERNEL_EXTRA_CFLAGS_CLANG" -a "$KERNEL_GCC" != "yes" ]; then
+	if [ -n "$KERNEL_EXTRA_CFLAGS_CLANG" ] && [ "$KERNEL_GCC" != "yes" ]; then
 		sed -i -e "s|-std=gnu89|$KERNEL_EXTRA_CFLAGS_CLANG -std=gnu89|g" Makefile
 	fi
 	if [ -n "$KERNEL_EXTRA_CFLAGS" ]; then
@@ -424,9 +424,9 @@ elif [ -n "$KERNEL" ]; then
 		make $SMPFLAGS ARCH=$KERNELARCH LLVM=1 $KERNEL_CONFIG include/config/kernel.release
 	fi
 	KERNELVERSION=$(cat include/config/kernel.release)
-	KERNELVERSION_NUM="$(echo $KERNELVERSION |cut -d- -f1)"
-	if echo $KERNELVERSION |grep -q -- -; then
-		KERNELVERSION_EXTRA="$(echo $KERNELVERSION |cut -d- -f2- |sed -e 's,-,.,g')"
+	KERNELVERSION_NUM="$(printf '%s\n' $KERNELVERSION |cut -d- -f1)"
+	if printf '%s\n' $KERNELVERSION |grep -q -- -; then
+		KERNELVERSION_EXTRA="$(printf '%s\n' $KERNELVERSION |cut -d- -f2- |sed -e 's,-,.,g')"
 	fi
 	cd ..
 
@@ -442,9 +442,9 @@ Version:	$KERNELVERSION_NUM
 EOF
 
 	if [ -n "$KERNELVERSION_EXTRA" ]; then
-		echo "Release:	0.$KERNELVERSION_EXTRA.1" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		printf '%s\n' "Release:	0.$KERNELVERSION_EXTRA.1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "Release:	1" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		printf '%s\n' "Release:	1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 Summary:	kernel for $SHORTTARGET devices
@@ -481,19 +481,19 @@ EOF
 		fi
 	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		printf '%s\n' "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		printf '%s\n' "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
-		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		printf '%s\n' "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		echo "make syncconfig ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
-		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		printf '%s\n' "make syncconfig ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		printf '%s\n' "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "make syncconfig ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
-		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		printf '%s\n' "make syncconfig ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		printf '%s\n' "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 
@@ -523,12 +523,12 @@ EOF
 EOF
 	chown -R $BUILDUSER kernel-rpm
 	cd kernel-rpm
-	echo /sbin/runuser -u $BUILDUSER -- rpmbuild -bb --target $ARCH --define \"_sourcedir $(pwd)\" --define \"_specdir $(pwd)\" --define \"_srcrpmdir $(pwd)/SRPMS\" --define \"_rpmdir $(pwd)/RPMS\" --define \"_builddir $(pwd)/BUILD\" --define \"_buildrootdir $(pwd)/BUILDROOT\" kernel-$SHORTTARGET.spec >$OURDIR/kernelbuild.sh
+	printf '%s\n' /sbin/runuser -u $BUILDUSER -- rpmbuild -bb --target $ARCH --define \"_sourcedir $(pwd)\" --define \"_specdir $(pwd)\" --define \"_srcrpmdir $(pwd)/SRPMS\" --define \"_rpmdir $(pwd)/RPMS\" --define \"_builddir $(pwd)/BUILD\" --define \"_buildrootdir $(pwd)/BUILDROOT\" kernel-$SHORTTARGET.spec >$OURDIR/kernelbuild.sh
 	/sbin/runuser -u $BUILDUSER -- rpmbuild -bb --target $ARCH --define "_sourcedir $(pwd)" --define "_specdir $(pwd)" --define "_srcrpmdir $(pwd)/SRPMS" --define "_rpmdir $(pwd)/RPMS" --define "_builddir $(pwd)/BUILD" --define "_buildrootdir $(pwd)/BUILDROOT" kernel-$SHORTTARGET.spec 2>&1 |tee $OURDIR/kernelbuild.log
 	cd ..
 	KERNELRPM="$(ls $OURDIR/kernel-rpm/RPMS/*/*.rpm)"
 else
-	echo "KERNEL not specified in $TARGET config - assuming packaged kernel"
+	printf '%s\n' "KERNEL not specified in $TARGET config - assuming packaged kernel"
 fi
 
 # ===================================================================
@@ -565,12 +565,12 @@ if [ ! -d "$ROOTDIR" ]; then
 	# need to get the repository configs from rpm packages
 	# without having the repositories configured...
 	PKGS=${ABF_DOWNLOADS}/${VER_PREFIX}${OMV_VERSION}/repository/$ARCH/main/release/
-	echo $PKGS
+	printf '%s\n' $PKGS
 	curl -s -L $PKGS |grep '^<a' |cut -d'"' -f2 >PACKAGES
 	for i in $PRE_PACKAGES; do
 		P=$(grep "^$i-[0-9].*" PACKAGES |tail -n1)
 		if [ "$?" != "0" ]; then
-			echo "Can't find $i package for target" >&2
+			printf '%s\n' "Can't find $i package for target" >&2
 			exit 1
 		fi
 		curl -O $PKGS/$P
@@ -580,7 +580,7 @@ if [ ! -d "$ROOTDIR" ]; then
 	# Don't use mirrors when creating the image
 	sed -i -e '/mirror.openmandriva.org/d;s,^	,baseurl=,' "$OURDIR/$ROOTDIR"/etc/yum.repos.d/*.repo
 
-	if echo ${VER_PREFIX}${OMV_VERSION} |grep -q '^[0-9]'; then
+	if printf '%s\n' ${VER_PREFIX}${OMV_VERSION} |grep -q '^[0-9]'; then
 		DNF_VERSION=release
 		# This also needs to work before the rock symlink is updated on
 		# a new release...
@@ -637,7 +637,7 @@ This is likely something (relatively) harmless like a package's post-install
 script failing - but you may want to double-check.
 EOF
 			else
-				echo "ERROR: dnf failed without installing what looks like a workable system."
+				printf '%s\n' "ERROR: dnf failed without installing what looks like a workable system."
 				exit 1
 			fi
 		fi
@@ -677,9 +677,9 @@ EOF
 	if [ "$CREATE_DEFAULT_USER" != "no" ]; then
 		if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
 			# Create omv user (password omv)
-			echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
-			echo 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
-			echo 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
+			printf '%s\n' 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
+			printf '%s\n' 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
+			printf '%s\n' 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
 			# Add the omv user to important groups...
 			for group in audio dialout input lp lpadmin network render sambashare screen storage tty users video wheel; do
 				sed -i -e "s,$group:.*\$,&omv," $OURDIR/$ROOTDIR/etc/group
@@ -792,9 +792,9 @@ EOF
 	# Make sure default services are started
 	for i in "$OURDIR/$ROOTDIR"/lib/systemd/system-preset/*.preset; do
 		while read r; do
-			TYPE="$(echo $r |awk '{ print $1; }')"
+			TYPE="$(printf '%s\n' $r |awk '{ print $1; }')"
 			if [ "$TYPE" = "enable" ] || [ "$TYPE" = "disable" ]; then
-				[ "$(echo "$r" |awk '{ print $2; }')" = '*' ] && continue
+				[ "$(printf '%s\n' "$r" |awk '{ print $2; }')" = '*' ] && continue
 				chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl $r || :
 			fi
 		done < $i
@@ -827,7 +827,7 @@ EOF
 		if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/$i.service" ]; then
 			chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable $i
 		else
-			echo "WARNING: Service $i requested, but not installed" >&2
+			printf '%s\n' "WARNING: Service $i requested, but not installed" >&2
 		fi
 	done
 
