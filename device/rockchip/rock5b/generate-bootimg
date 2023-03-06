@@ -3,7 +3,8 @@
 . ${OURDIR}/helpers/build-uboot
 
 cd u-boot
-make BL31=../rkbin/bin/rk35/rk3568_bl31_set_pmic_sleep_low_20221018_v1.32.elf CROSS_COMPILE=aarch64-linux-gnu- EXTRAVERSION="-OpenMandriva" LDFLAGS="-fuse-ld=bfd" KBUILD_LDFLAGS="-fuse-ld=bfd" HOSTLDFLAGS="-fuse-ld=bfd" spl/u-boot-spl.bin u-boot.dtb u-boot.itb
-./tools/mkimage -n rk3568 -T rksd -d ../rkbin/bin/rk35/rk3568_ddr_1056MHz_v1.10.bin:spl/u-boot-spl.bin idbloader.img
+make BL31=../rkbin/bin/rk35/rk3588_bl31_v1.34.elf CROSS_COMPILE=aarch64-linux-gnu- EXTRAVERSION="-OpenMandriva" LDFLAGS="-fuse-ld=bfd" KBUILD_LDFLAGS="-fuse-ld=bfd" HOSTLDFLAGS="-fuse-ld=bfd" spl/u-boot-spl.bin u-boot.dtb u-boot.itb
+./tools/mkimage -n rk3588 -T rksd -d ../rkbin/bin/rk35/rk3588_ddr_lp4_2112MHz_lp5_2736MHz_v1.08.bin:spl/u-boot-spl.bin idbloader.img
+cp ../rkbin/bin/rk35/rk3588_spl_loader_v1.08.111.bin .
 cp idbloader.img u-boot.itb ${OURDIR}/${ROOTDIR}/boot/
 cd ..

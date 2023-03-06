@@ -6,6 +6,8 @@ dd if=/dev/zero of=${IMAGE} bs=1M count=$((MINSIZE+1024))
 parted -s ${IMAGE} \
 	mklabel gpt \
 	unit s \
+	mkpart boot fat32 32768 262143 \
+	mkpart root ${FSTYPE} 262144 100% \
 	mkpart idbloader 64 7167 \
 	mkpart vnvm 7168 7679 \
 	mkpart reserved_space 7680 8063 \
@@ -13,30 +15,27 @@ parted -s ${IMAGE} \
 	mkpart uboot_env 8128 8191 \
 	mkpart reserved2 8192 16383 \
 	mkpart uboot 16384 32734 \
-	mkpart boot fat32 32768 262143 \
-	mkpart root ${FSTYPE} 262144 100%
-dd if=${OURDIR}/u-boot/idbloader.img of=${IMAGE} seek=64 conv=notrunc
-dd if=${OURDIR}/u-boot/u-boot.itb of=${IMAGE} seek=16384 conv=notrunc
+	toggle 1 boot
 
 losetup -D
 losetup -fP ${IMAGE}
 LOOPDEV=$(losetup -j ${IMAGE} |tail -n1 |cut -d: -f1)
 rescanPartitions ${LOOPDEV}
 
-dd if=${OURDIR}/u-boot/idbloader.img of=${LOOPDEV}p1 conv=notrunc
-dd if=${OURDIR}/u-boot/u-boot.itb of=${LOOPDEV}p7 conv=notrunc
+dd if=${OURDIR}/u-boot/idbloader.img of=${LOOPDEV}p3 conv=notrunc
+dd if=${OURDIR}/u-boot/u-boot.itb of=${LOOPDEV}p9 conv=notrunc
 
-BOOTUUID=$(/sbin/blkid ${LOOPDEV}p8 |sed -e 's,.* UUID=",,;s,".*,,')
-ROOTUUID=$(/sbin/blkid ${LOOPDEV}p9 |sed -e 's,.* UUID=",,;s,".*,,')
-ROOTPUUID=$(/sbin/blkid ${LOOPDEV}p9 |sed -e 's,.* PARTUUID=",,;s,".*,,')
+BOOTUUID=$(/sbin/blkid ${LOOPDEV}p1 |sed -e 's,.* UUID=",,;s,".*,,')
+ROOTUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* UUID=",,;s,".*,,')
+ROOTPUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* PARTUUID=",,;s,".*,,')
 
 rm -rf ${OURDIR}/mnt
 mkdir ${OURDIR}/mnt
 
-mkfs.vfat ${LOOPDEV}p8
-mkfs.${FSTYPE} ${LOOPDEV}p9
+mkfs.vfat ${LOOPDEV}p1
+mkfs.${FSTYPE} ${LOOPDEV}p2
 
-mount ${LOOPDEV}p8 ${OURDIR}/mnt
+mount ${LOOPDEV}p1 ${OURDIR}/mnt
 cd ${OURDIR}/mnt
 cp -a ${OURDIR}/${ROOTDIR}/boot/rockchip .
 cp -a ${OURDIR}/${ROOTDIR}/boot/${DTB}.dtb .
@@ -52,7 +51,7 @@ EOF
 cd -
 umount ${OURDIR}/mnt
 sleep 1
-mount ${LOOPDEV}p9 ${OURDIR}/mnt
+mount ${LOOPDEV}p2 ${OURDIR}/mnt
 cp -a ${ROOTDIR}/* ${OURDIR}/mnt/
 cat >${OURDIR}/mnt/etc/fstab <<EOF
 UUID=$ROOTUUID / ext4 defaults,noatime 0 1
