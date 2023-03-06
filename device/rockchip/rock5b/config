@@ -5,6 +5,11 @@ HOSTDEPS="$HOSTDEPS python2"
 HOSTDEPS="$HOSTDEPS parted"
 KERNEL="https://github.com/radxa/kernel.git#stable-5.10-rock5"
 KERNEL_CONFIG="rockchip_linux_defconfig"
+# Needed to fix warnings with gcc > 10
+# Should be fixed properly, preferably by updating to a
+# 6.x kernel
+KERNEL_EXTRA_CFLAGS_GCC="-Wno-array-compare -Wno-dangling-pointer -Wno-address -Wno-stringop-overread"
+KERNEL_GCC=yes
 UBOOT="https://github.com/radxa/u-boot.git"
 UBOOT_VERSION="stable-5.10-rock5"
 UBOOT_CONFIG="rock-5b-rk3588_defconfig"

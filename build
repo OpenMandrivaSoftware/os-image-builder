@@ -404,11 +404,18 @@ elif [ -n "$KERNEL" ]; then
 	[ -e ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} ] && cp -f ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} arch/${KERNELARCH}/configs/
 	# Get rid of trailing + in version identifiers
 	sed -i -e 's,"+","",g' scripts/setlocalversion
+	if [ -n "$KERNEL_EXTRA_CFLAGS_GCC" -a "$KERNEL_GCC" = "yes" ]; then
+		sed -i -e "s|-std=gnu89|$KERNEL_EXTRA_CFLAGS_GCC -std=gnu89|g" Makefile
+	fi
+	if [ -n "$KERNEL_EXTRA_CFLAGS_CLANG" -a "$KERNEL_GCC" != "yes" ]; then
+		sed -i -e "s|-std=gnu89|$KERNEL_EXTRA_CFLAGS_CLANG -std=gnu89|g" Makefile
+	fi
+	if [ -n "$KERNEL_EXTRA_CFLAGS" ]; then
+		sed -i -e "s|-std=gnu89|$KERNEL_EXTRA_CFLAGS -std=gnu89|g" Makefile
+	fi
 	# Get rid of the "-dirty" name in localversion
-	cd kernel
 	git add -A || :
 	git commit -am "Apply OpenMandriva patches" || :
-	cd ..
 
 	if [ "$KERNEL_GCC" = "yes" ]; then
 		make $SMPFLAGS ARCH=$KERNELARCH $KERNEL_CONFIG include/config/kernel.release
@@ -515,6 +522,7 @@ EOF
 EOF
 	chown -R $BUILDUSER kernel-rpm
 	cd kernel-rpm
+	echo /sbin/runuser -u $BUILDUSER -- rpmbuild -bb --target $ARCH --define \"_sourcedir $(pwd)\" --define \"_specdir $(pwd)\" --define \"_srcrpmdir $(pwd)/SRPMS\" --define \"_rpmdir $(pwd)/RPMS\" --define \"_builddir $(pwd)/BUILD\" --define \"_buildrootdir $(pwd)/BUILDROOT\" kernel-$SHORTTARGET.spec >$OURDIR/kernelbuild.sh
 	/sbin/runuser -u $BUILDUSER -- rpmbuild -bb --target $ARCH --define "_sourcedir $(pwd)" --define "_specdir $(pwd)" --define "_srcrpmdir $(pwd)/SRPMS" --define "_rpmdir $(pwd)/RPMS" --define "_builddir $(pwd)/BUILD" --define "_buildrootdir $(pwd)/BUILDROOT" kernel-$SHORTTARGET.spec 2>&1 |tee $OURDIR/kernelbuild.log
 	cd ..
 	KERNELRPM="$(ls $OURDIR/kernel-rpm/RPMS/*/*.rpm)"
