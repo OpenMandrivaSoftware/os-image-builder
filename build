@@ -54,6 +54,7 @@ isnative() {
 rescanPartitions () {
 	partx -a $1 || :
 	partx -u $1
+	udevadm settle -t 5
 	# Workaround for /dev/loopXpY device nodes not being created
 	# inside the isobuilder container in ABF -- this shouldn't
 	# run in a normal environment (but can't hurt either)
