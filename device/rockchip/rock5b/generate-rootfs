@@ -25,10 +25,6 @@ rescanPartitions ${LOOPDEV}
 dd if=${OURDIR}/u-boot/idbloader.img of=${LOOPDEV}p3 conv=notrunc
 dd if=${OURDIR}/u-boot/u-boot.itb of=${LOOPDEV}p9 conv=notrunc
 
-BOOTUUID=$(/sbin/blkid ${LOOPDEV}p1 |sed -e 's,.* UUID=",,;s,".*,,')
-ROOTUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* UUID=",,;s,".*,,')
-ROOTPUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* PARTUUID=",,;s,".*,,')
-
 rm -rf ${OURDIR}/mnt
 mkdir ${OURDIR}/mnt
 
@@ -41,6 +37,11 @@ cp -a ${OURDIR}/${ROOTDIR}/boot/rockchip .
 cp -a ${OURDIR}/${ROOTDIR}/boot/${DTB}.dtb .
 cp -a ${OURDIR}/${ROOTDIR}/boot/vmlinuz-${KERNELVERSION} Image
 cp -a ${OURDIR}/u-boot/{idbloader.img,u-boot.itb} .
+
+BOOTUUID=$(/sbin/blkid ${LOOPDEV}p1 |sed -e 's,.* UUID=",,;s,".*,,')
+ROOTUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* UUID=",,;s,".*,,')
+ROOTPUUID=$(/sbin/blkid ${LOOPDEV}p2 |sed -e 's,.* PARTUUID=",,;s,".*,,')
+
 mkdir extlinux
 cat >extlinux/extlinux.conf <<EOF
 label OpenMandriva
@@ -53,8 +54,9 @@ umount ${OURDIR}/mnt
 sleep 1
 mount ${LOOPDEV}p2 ${OURDIR}/mnt
 cp -a ${ROOTDIR}/* ${OURDIR}/mnt/
+
 cat >${OURDIR}/mnt/etc/fstab <<EOF
-UUID=$ROOTUUID / ext4 defaults,noatime 0 1
+UUID=$ROOTUUID / ${FSTYPE} defaults,noatime 0 1
 UUID=$BOOTUUID /boot vfat defaults,noatime 0 2
 EOF
 [ -d ${OURDIR}/mnt/var/cache/dnf ] && rm -rf ${OURDIR}/mnt/var/cache/dnf/*
