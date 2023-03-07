@@ -45,7 +45,7 @@ isnative() {
 		NATIVECPU="armv7hnl"
 	fi
 	[ "$CPU" = "znver1" ] && CPU=x86_64
-	if [ "$CPU" = "$NATIVECPU"] && [ "$ABI" = "$NATIVEABI" ]; then
+	if [ "$CPU" = "$NATIVECPU" ] && [ "$ABI" = "$NATIVEABI" ]; then
 		return 0
 	else
 		return 1
