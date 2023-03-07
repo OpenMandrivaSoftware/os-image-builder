@@ -6,7 +6,7 @@ HOSTDEPS="$HOSTDEPS parted"
 HWPACKAGES_gui="mali-g610-firmware"
 KERNEL="https://github.com/radxa/kernel.git#stable-5.10-rock5"
 KERNEL_CONFIG="rockchip_linux_defconfig"
-KERNEL_EXTRACONFIG="--module MALI400 --module MALI450 --module DRM_PANFROST --enable SYNC_FILE"
+KERNEL_EXTRACONFIG="--disable MALI400 --disable MALI450 --module DRM_PANFROST --module DRM_MALI_DISPLAY --enable DRM_SCHED --enable DRM_GEM_SHMEM_HELPER --disable MALI_MIDGARD --disable MALI_BIFROST --enable SYNC_FILE"
 # Needed to fix warnings with gcc > 10
 # Should be fixed properly, preferably by updating to a
 # 6.x kernel

@@ -285,7 +285,7 @@ if [ -n "$KERNEL" ]; then
 		HOSTDEPS="$HOSTDEPS ${CROSS_ARMHF}"
 	fi
 	# Build dependencies for binary formats etc.
-	HOSTDEPS="$HOSTDEPS pkgconfig(libelf)"
+	HOSTDEPS="$HOSTDEPS pkgconfig(libelf) zstd"
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
 # vim-common is for xxd, used to decode EDID information for pinebookpro
