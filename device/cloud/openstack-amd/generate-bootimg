@@ -1,1 +1,1 @@
-. ${OURDIR}/device/generic/x86_64-uefi/generate-bootimg
+. ${OURDIR}/device/generic/x86-64-uefi/generate-bootimg
