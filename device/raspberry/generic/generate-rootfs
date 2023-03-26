@@ -3,10 +3,9 @@ cp -f $OURDIR/device/raspberry/generic/firmware/*.{bin,txt,dat,elf} .
 cp -f $OURDIR/device/${TARGET}/config.txt .
 cp -f vmlinuz-${KERNELVERSION} kernel8.img
 cp -f broadcom/*.dtb .
-tar cJf ../../bootfs-${SHORTTARGET}.tar.xz .
+tar cf ../../bootfs-${SHORTTARGET}.tar .
 cd ..
 rm -rf boot
-tar cJf ../rootfs-${SHORTTARGET}.tar.xz .
 popd
 
 pushd "$OURDIR/$ROOTDIR"
@@ -45,7 +44,8 @@ rm -rf mnt
 mkdir mnt
 mount ${LOOPDEV}p1 mnt
 cd mnt
-tar xf ../bootfs-${SHORTTARGET}.tar.xz
+tar xf ../bootfs-${SHORTTARGET}.tar
+rm ../bootfs-${SHORTTARGET}.tar
 cd ..
 umount mnt
 mount ${LOOPDEV}p2 mnt
