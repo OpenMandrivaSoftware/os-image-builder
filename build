@@ -372,8 +372,8 @@ if [ -n "$KEEP_KERNEL_RPM" ]; then
 	KERNELRPM="$(ls $OURDIR/kernel-rpm/RPMS/*/*.rpm)"
 elif [ -n "$KERNEL" ]; then
 	printf '%s\n' "Building $TARGET kernel"
-	KERNELREPO="$(printf '%s\n' $KERNEL |cut -d'#' -f1)"
-	KERNELBRANCH="$(printf '%s\n' $KERNEL |cut -d'#' -f2-)"
+	KERNELREPO="$(printf '%s' $KERNEL |cut -d'#' -f1)"
+	KERNELBRANCH="$(printf '%s' $KERNEL |cut -d'#' -f2-)"
 	[ -n "$KERNELBRANCH" ] && KERNELBRANCH="-b $KERNELBRANCH"
 	[ -z "$KERNEL_CONFIG" ] && KERNEL_CONFIG="defconfig"
 	rm -rf kernel
@@ -381,7 +381,7 @@ elif [ -n "$KERNEL" ]; then
 		# KERNELBRANCH is a tag or commit hash, not a branch
 		git clone $KERNELREPO kernel
 		cd kernel
-		git checkout -b $KERNELBRANCH $KERNELBRANCH
+		git checkout $KERNELBRANCH $(echo $KERNELBRANCH |cut -b4-)
 		cd ..
 	fi
 	cd kernel
