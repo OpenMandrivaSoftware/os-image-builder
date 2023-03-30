@@ -322,22 +322,22 @@ fi
 # Also, re-parse packages specified on the command line in case they
 # contain macros
 # ===================================================================
-if printf '%s\n' $ARCH |grep -qE '(64|znver1)'; then
+if printf '%s' $ARCH |grep -qE '(64|znver1)'; then
 	LIB=lib64
 else
 	LIB=lib
 fi
-CPP="$CPP -undef -nostdinc -P -E -Wno-unused-command-line-argument -I$OURDIR/packagesets -DLIB(x)=${LIB}##x -DARCH_$ARCH=1 -DTARGET_$(printf '%s\n' $TARGET|sed -e 's,/,_,g;s,-,_,g')=1 -DTARGET_$(printf '%s\n' $SHORTTARGET|sed -e 's,/,_,g;s,-,_,g')=1"
+CPP="$CPP -undef -nostdinc -P -E -Wno-unused-command-line-argument -I$OURDIR/packagesets -DLIB(x)=${LIB}##x -DARCH_$ARCH=1 -DTARGET_$(printf '%s\n' $TARGET|sed -e 's,/,_,g;s,-,_,g')=1 -DTARGET_$(printf '%s' $SHORTTARGET|sed -e 's,/,_,g;s,-,_,g')=1"
 for ps in $PACKAGESETS; do
 	CPP="$CPP -DPACKAGESET_${ps}=1"
 done
 for p in $PACKAGES_FROM_CMDLINE; do
-	PACKAGES="$PACKAGES $(printf '%s\n' $p |$CPP -)"
+	PACKAGES="$PACKAGES $(printf '%s' $p |$CPP -)"
 done
 for ps in $PACKAGESETS; do
-	eval "XP=\${HWPACKAGES_${i}}"
+	eval "XP=\${HWPACKAGES_${ps}}"
 	if [ -n "$XP" ]; then
-		PACKAGES="$PACKAGES $(printf '%s\n' $XP |$CPP -)"
+		PACKAGES="$PACKAGES $(printf '%s' $XP |$CPP -)"
 	fi
 	while read p; do
 		PACKAGES="$PACKAGES $p"
