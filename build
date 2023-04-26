@@ -385,6 +385,11 @@ elif [ -n "$KERNEL" ]; then
 		cd ..
 	fi
 	cd kernel
+	# Bogus naming, e.g. "rock-5b.config", in some kernels
+	if echo $KERNEL_CONFIG |grep -q '\.config'; then
+		cp arch/arm64/configs/${KERNEL_CONFIG} arch/arm64/configs/${KERNEL_CONFIG/.config/_defconfig}
+		KERNEL_CONFIG=${KERNEL_CONFIG/.config/_defconfig}
+	fi
 	[ -e scripts/lld-version.sh ] && sed -i -e "s,' ' -f 2,' ' -f 4," scripts/lld-version.sh
 	PN=1
 	for i in ${OURDIR}/device/${TARGET}/kernel-patches/*.patch ${OURDIR}/device/${TARGET}/kernel-patches/*.diff; do
@@ -523,7 +528,7 @@ EOF
 EOF
 	chown -R $BUILDUSER kernel-rpm
 	cd kernel-rpm
-	printf '%s\n' /sbin/runuser -u $BUILDUSER -- rpmbuild -bb --target $ARCH --define \"_sourcedir $(pwd)\" --define \"_specdir $(pwd)\" --define \"_srcrpmdir $(pwd)/SRPMS\" --define \"_rpmdir $(pwd)/RPMS\" --define \"_builddir $(pwd)/BUILD\" --define \"_buildrootdir $(pwd)/BUILDROOT\" kernel-$SHORTTARGET.spec >$OURDIR/kernelbuild.sh
+	echo /sbin/runuser -u $BUILDUSER -- rpmbuild -bb --target $ARCH --define \"_sourcedir $(pwd)\" --define \"_specdir $(pwd)\" --define \"_srcrpmdir $(pwd)/SRPMS\" --define \"_rpmdir $(pwd)/RPMS\" --define \"_builddir $(pwd)/BUILD\" --define \"_buildrootdir $(pwd)/BUILDROOT\" kernel-$SHORTTARGET.spec >$OURDIR/kernelbuild.sh
 	/sbin/runuser -u $BUILDUSER -- rpmbuild -bb --target $ARCH --define "_sourcedir $(pwd)" --define "_specdir $(pwd)" --define "_srcrpmdir $(pwd)/SRPMS" --define "_rpmdir $(pwd)/RPMS" --define "_builddir $(pwd)/BUILD" --define "_buildrootdir $(pwd)/BUILDROOT" kernel-$SHORTTARGET.spec 2>&1 |tee $OURDIR/kernelbuild.log
 	cd ..
 	KERNELRPM="$(ls $OURDIR/kernel-rpm/RPMS/*/*.rpm)"

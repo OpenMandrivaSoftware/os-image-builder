@@ -1,0 +1,4 @@
+git clone --depth 1 -b main https://github.com/radxa/overlays
+mv overlays/arch/arm64/boot/dts/amlogic/overlays arch/arm64/boot/dts/amlogic/
+mv overlays/arch/arm64/boot/dts/rockchip/overlays arch/arm64/boot/dts/rockchip/
+rm -rf overlays

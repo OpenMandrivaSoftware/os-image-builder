@@ -1,0 +1,33 @@
+diff -up kernel/drivers/gpu/drm/drm_displayid.c.omv~ kernel/drivers/gpu/drm/drm_displayid.c
+--- kernel/drivers/gpu/drm/drm_displayid.c.omv~	2023-03-26 21:11:23.575899786 +0200
++++ kernel/drivers/gpu/drm/drm_displayid.c	2023-03-26 22:01:57.176377593 +0200
+@@ -65,6 +65,7 @@ void displayid_iter_edid_begin(const str
+ 
+ 	iter->drm_edid = drm_edid;
+ }
++EXPORT_SYMBOL_GPL(displayid_iter_edid_begin);
+ 
+ static const struct displayid_block *
+ displayid_iter_block(const struct displayid_iter *iter)
+@@ -125,8 +126,10 @@ __displayid_iter_next(struct displayid_i
+ 			return block;
+ 	}
+ }
++EXPORT_SYMBOL_GPL(__displayid_iter_next);
+ 
+ void displayid_iter_end(struct displayid_iter *iter)
+ {
+ 	memset(iter, 0, sizeof(*iter));
+ }
++EXPORT_SYMBOL_GPL(displayid_iter_end);
+diff -up kernel/drivers/gpu/drm/drm_edid.c.omv~ kernel/drivers/gpu/drm/drm_edid.c
+--- kernel/drivers/gpu/drm/drm_edid.c.omv~	2023-03-26 22:01:20.466097727 +0200
++++ kernel/drivers/gpu/drm/drm_edid.c	2023-03-26 22:01:36.667221249 +0200
+@@ -4099,6 +4099,7 @@ const u8 *drm_find_edid_extension(const
+ 
+ 	return edid_ext;
+ }
++EXPORT_SYMBOL_GPL(drm_find_edid_extension);
+ 
+ /* Return true if the EDID has a CTA extension or a DisplayID CTA data block */
+ static bool drm_edid_has_cta_extension(const struct drm_edid *drm_edid)

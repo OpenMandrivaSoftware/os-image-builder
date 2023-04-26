@@ -36,6 +36,7 @@ cd ${OURDIR}/mnt
 cp -a ${OURDIR}/${ROOTDIR}/boot/rockchip .
 cp -a ${OURDIR}/${ROOTDIR}/boot/${DTB}.dtb .
 cp -a ${OURDIR}/${ROOTDIR}/boot/vmlinuz-${KERNELVERSION} Image
+cp -a ${OURDIR}/${ROOTDIR}/boot/initrd-${KERNELVERSION}.img initrd.img
 cp -a ${OURDIR}/u-boot/{idbloader.img,u-boot.itb} .
 
 BOOTUUID=$(/sbin/blkid ${LOOPDEV}p1 |sed -e 's,.* UUID=",,;s,".*,,')
@@ -46,9 +47,11 @@ mkdir extlinux
 cat >extlinux/extlinux.conf <<EOF
 label OpenMandriva
 	kernel /Image
+	initrd /initrd.img
 	fdt /${DTB}.dtb
 	append root=PARTUUID=${ROOTPUUID} ${CMDLINE}
 EOF
+[ -d /rockchip/overlays ] && echo '	fdtoverlays /rockchip/overlays/rk3588-uart7-m2.dtbo' >>extlinux/extlinux.conf
 cd -
 umount ${OURDIR}/mnt
 sleep 1

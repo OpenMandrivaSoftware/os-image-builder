@@ -1,0 +1,13 @@
+diff -up kernel/drivers/soc/rockchip/rockchip_opp_select.c.omv~ kernel/drivers/soc/rockchip/rockchip_opp_select.c
+--- kernel/drivers/soc/rockchip/rockchip_opp_select.c.omv~	2023-03-28 20:34:48.539661265 +0200
++++ kernel/drivers/soc/rockchip/rockchip_opp_select.c	2023-03-28 20:36:08.498219133 +0200
+@@ -1202,7 +1202,8 @@ struct opp_table *rockchip_set_opp_prop_
+ 		return NULL;
+ 	}
+ 
+-	return dev_pm_opp_set_prop_name(dev, name);
++	dev_pm_opp_set_prop_name(dev, name);
++	return dev_pm_opp_get_opp_table(dev);
+ }
+ EXPORT_SYMBOL(rockchip_set_opp_prop_name);
+ 
