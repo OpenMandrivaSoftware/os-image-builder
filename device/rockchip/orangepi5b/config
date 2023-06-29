@@ -1,0 +1,13 @@
+. ${OURDIR}/device/rockchip/generic/config
+# FIXME port the scripts in u-boot/arch/arm/mach-rockchip to python 3
+HOSTDEPS="$HOSTDEPS"
+HOSTDEPS="$HOSTDEPS parted"
+#HWPACKAGES_gui="mali-g610-firmware"
+KERNEL="https://github.com/Joshua-Riek/linux-rockchip.git#linux-5.10-gen-rkr4"
+KERNEL_CONFIG="rockchip_linux_defconfig"
+KERNEL_GCC=yes
+UBOOT="https://github.com/orangepi-xunlong/u-boot-orangepi.git"
+UBOOT_VERSION="v2017.09-rk3588"
+UBOOT_CONFIG="orangepi_5b_defconfig"
+DTB="rockchip/rk3588s-orangepi-5b"
+CMDLINE="earlycon=uart8250,mmio32,0xfeb50000 console=ttyFIQ0 console=tty1 consoleblank=0 irqchip.gicv3_pseudo_nmi=0 switolb=1 coherent_pool=2M cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory swapaccount=1"
