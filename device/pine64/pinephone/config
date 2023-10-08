@@ -14,7 +14,8 @@ HWPACKAGES_gui="lib64dri-drivers-lima"
 # 9422c45f7b9fb598a4d65ecc6e524e8022f2cb3a (5.7.10 based)
 # 762fb69450b4a7f3fb61724427938561b66a1a02 (5.10-rc based)
 # 4ce8bf182f5560242f90a6032ff947424ad38b17 (5.12-rc3 based)
-KERNEL="https://github.com/megous/linux.git#orange-pi-5.13"
+KERNEL="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git#orange-pi-6.6"
+KERNELBUNDLE="https://xff.cz/kernels/git/orange-pi-active.bundle"
 KERNEL_CONFIG="pinephone_defconfig"
 #KERNEL="https://gitlab.com/pine64-org/linux.git#pine64-kernel-5.7.y"
 #KERNEL_CONFIG="pine64_defconfig" #for kernel from gitlab.org/pine64-org

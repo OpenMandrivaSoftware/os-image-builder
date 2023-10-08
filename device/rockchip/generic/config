@@ -6,7 +6,8 @@ HWPACKAGES="wpa_supplicant kernel-firmware-extra e2fsprogs"
 HWPACKAGES_gui="lib64dri-drivers-panfrost"
 # Known good revision: db16c398a809ac303e7693f2f46ad20fad11d39a (5.10-rc based)
 # For 5.11 branch (rc3 based): 0db7492ba3743b3a2ced77a94dfb9d23a1368bc0 (ok-ish, but known to crash occasionally)
-KERNEL="https://github.com/megous/linux.git#orange-pi-5.15"
+KERNEL="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git#orange-pi-6.6"
+KERNELBUNDLE="https://xff.cz/kernels/git/orange-pi-active.bundle"
 KERNEL_CONFIG="rk3399_defconfig"
 UBOOT_VERSION="v2021.10"
 KERNELTARGET=Image

@@ -377,11 +377,24 @@ elif [ -n "$KERNEL" ]; then
 	[ -n "$KERNELBRANCH" ] && KERNELBRANCH="-b $KERNELBRANCH"
 	[ -z "$KERNEL_CONFIG" ] && KERNEL_CONFIG="defconfig"
 	rm -rf kernel
-	if ! git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel; then
-		# KERNELBRANCH is a tag or commit hash, not a branch
+	if [ -z "$KERNELBUNDLE" ]; then
+		if ! git clone --depth 1 $KERNELBRANCH $KERNELREPO kernel; then
+			# KERNELBRANCH is a tag or commit hash, not a branch
+			git clone $KERNELREPO kernel
+			cd kernel
+			git checkout $KERNELBRANCH $(echo $KERNELBRANCH |cut -b4-)
+			cd ..
+		fi
+	else
+		# Very special case, but the megi kernel that relies on it
+		# is very important for several targets...
 		git clone $KERNELREPO kernel
 		cd kernel
-		git checkout $KERNELBRANCH $(echo $KERNELBRANCH |cut -b4-)
+		curl -o .bundle "$KERNELBUNDLE"
+		git fetch .bundle '+refs/heads/*:refs/remotes/bundle/*'
+		git checkout -b $KERNELBRANCH bundle/$KERNELBRANCH
+		git gc --aggressive --prune=all
+		rm .bundle
 		cd ..
 	fi
 	cd kernel
