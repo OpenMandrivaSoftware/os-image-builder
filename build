@@ -778,8 +778,8 @@ EOF
 			fi
 
 #			chroot "$OURDIR/$ROOTDIR" SYSTEMD_RELAX_ESP_CHECKS=1 bootctl install --esp-path=/boot/efi
-			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-bootaa64.efi $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/BOOTAA64.efi
-			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-bootaa64.efi $OURDIR/$ROOTDIR/boot/efi/EFI/systemd
+			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-${BOOTEFI} $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/BOOTAA64.efi
+			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-${BOOTEFI} $OURDIR/$ROOTDIR/boot/efi/EFI/systemd
 			MACH_ID=$(chroot $OURDIR/$ROOTDIR systemd-machine-id-setup --print)
 			mkdir -p "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID"
 			chroot "$OURDIR/$ROOTDIR" kernel-install -v add "$KERNELVERSION" "/boot/vmlinuz-$KERNELVERSION"
