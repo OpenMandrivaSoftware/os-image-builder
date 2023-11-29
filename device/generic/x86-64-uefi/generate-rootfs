@@ -24,7 +24,7 @@ w
 y
 EOF
 rescanPartitions ${LOOPDEV}
-mkfs.vfat ${LOOPDEV}p1
+mkfs.vfat -n "BOOT" -F 16 -s 1 -S 512 -M 0xFF -i 22222222 ${LOOPDEV}p1
 mkfs.ext4 -L OMVZNVER1 ${LOOPDEV}p2
 rm -rf mnt
 mkdir mnt

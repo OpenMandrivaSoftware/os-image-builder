@@ -1,15 +1,17 @@
 #include "gui.pkgs"
-task-plasma-minimal
-falkon
-sddm
-sddm-theme-breeze
+task-plasma6-minimal
+plasma6-sddm
+plasma6-sddm-theme-breeze
 LIB(GLESv1_CM1)
 LIB(GLESv2_2)
 LIB(OpenGL0)
 LIB(OpenVG0)
-pavucontrol-qt
+plasma6-pa
 distro-release-desktop
 distro-release-indexhtml
-distro-release-desktop-Plasma
+distro-release-desktop-Plasma6
 distro-release-repos-pkgprefs
-phonon4qt5-mpv
+ffmpeg
+mpv
+qmplay2
+phonon4qt6-mpv

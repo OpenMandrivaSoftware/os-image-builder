@@ -1,0 +1,4 @@
+#include "plasma6.pkgs"
+plasma6-kwin-x11
+plasma6-workspace-x11
+kf6-kwindowsystem-backend-x11

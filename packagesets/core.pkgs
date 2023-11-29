@@ -11,7 +11,7 @@ systemd-analyze
 systemd-hwdb
 systemd-polkit
 less
-vim-enhanced
+neovim
 psmisc
 procps-ng
 gptfdisk
@@ -26,3 +26,4 @@ passwd
 sysfsutils
 dbus-broker
 e2fsprogs
+dracut-modules-growroot
