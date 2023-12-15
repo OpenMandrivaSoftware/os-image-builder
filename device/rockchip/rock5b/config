@@ -7,7 +7,7 @@ HOSTDEPS="$HOSTDEPS parted"
 HWPACKAGES_gui="mali-g610-firmware"
 # For rtl_nic/rtl8125b-2.fw -- FIXME kernel-firmware-extra needs to be split
 HWPACKAGES="kernel-firmware-extra"
-DRACUT_EXTRAS="-I /lib/firmware/mali_csffw.bin -I /lib/firmware/rtl_nic/rtl8125b-2.fw.xz -I /lib/firmware/rtw89/rtw8852b_fw.bin.xz -I /lib/firmware/rtw89/rtw8852b_fw-1.bin.xz"
+DRACUT_EXTRAS="-I /lib/firmware/arm/mali/arch10.8/mali_csffw.bin -I /lib/firmware/rtl_nic/rtl8125b-2.fw.xz -I /lib/firmware/rtw89/rtw8852b_fw.bin.xz -I /lib/firmware/rtw89/rtw8852b_fw-1.bin.xz"
 # Official repository supported by Radxa:
 #KERNEL="https://github.com/radxa/kernel.git#linux-5.10-gen-rkr4.1"
 #KERNEL_CONFIG="rockchip_linux_defconfig"
@@ -16,6 +16,8 @@ DRACUT_EXTRAS="-I /lib/firmware/mali_csffw.bin -I /lib/firmware/rtl_nic/rtl8125b
 #KERNEL_CONFIG="rockchip_linux_defconfig"
 # Far ahead of Radxa
 #KERNEL="https://gitlab.freedesktop.org/panfrost/linux.git#panthor-v3+rk3588-evb1"
+#KERNEL="https://gitlab.freedesktop.org/panfrost/linux.git#panthor-v4+rk3588"
+#KERNEL="https://gitlab.freedesktop.org/panfrost/linux.git#panthor-next+rk3588"
 # Fork of the above -- working Open Source graphics, 6.6 based
 #KERNEL="https://github.com/OpenMandrivaSoftware/linux.git#panthor-v3+rk3588-evb1-6.6.2-omv"
 # Experimental rebase, display not yet working (clash between panthor and upstream drm changes)
