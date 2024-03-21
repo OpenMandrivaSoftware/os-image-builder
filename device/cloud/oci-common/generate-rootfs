@@ -11,5 +11,5 @@ amd)
 	;;
 esac
 
-qemu-img convert -f raw results/${BASENAME}.img -O qcow2 -c results/${BASENAME}.qcow2
-rm results/${BASENAME}.img
+qemu-img convert -f raw ${RESULTDIR}/${BASENAME}.img -O qcow2 -c ${RESULTDIR}/${BASENAME}.qcow2
+rm ${RESULTDIR}/${BASENAME}.img

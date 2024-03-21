@@ -1,7 +1,7 @@
 [ -z "$FSTYPE" ] && FSTYPE=ext4
 MINSIZE=$(du -s --block-size=1048576 "$OURDIR/$ROOTDIR" |awk '{ print $1; }')
 mkdir -p "${OURDIR}/results"
-IMAGE=${OURDIR}/results/${BASENAME}.img
+IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
 dd if=/dev/zero of=${IMAGE} bs=1M count=$((MINSIZE+1024))
 parted -s ${IMAGE} \
 	mklabel gpt \

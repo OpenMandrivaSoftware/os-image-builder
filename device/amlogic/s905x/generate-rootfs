@@ -1,9 +1,9 @@
 MINSIZE=$(du -s --block-size=1048576 "$OURDIR/$ROOTDIR" |awk '{ print $1; }')
 mkdir -p "${OURDIR}/results"
-dd if=/dev/zero of=${OURDIR}/results/${BASENAME}.img bs=1M count=$((MINSIZE+1024))
+dd if=/dev/zero of=${OURDIR}/${RESULTDIR}/${BASENAME}.img bs=1M count=$((MINSIZE+1024))
 losetup -D
-losetup -fP ${OURDIR}/results/${BASENAME}.img
-LOOPDEV=$(losetup -j ${OURDIR}/results/${BASENAME}.img |tail -n1 |cut -d: -f1)
+losetup -fP ${OURDIR}/${RESULTDIR}/${BASENAME}.img
+LOOPDEV=$(losetup -j ${OURDIR}/${RESULTDIR}/${BASENAME}.img |tail -n1 |cut -d: -f1)
 
 # The data fed to fdisk below (blank lines are important! Don't remove them!)
 # create 2 partitions -- a 512 MB boot partition and a root FS spanning

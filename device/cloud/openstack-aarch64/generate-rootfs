@@ -1,1 +1,12 @@
-../openstack-common/generate-rootfs
+TARGETARCH="$(echo ${SHORTTARGET} |cut -d- -f2-)"
+case ${TARGETARCH} in
+amd)
+	. ${OURDIR}/device/generic/znver1-uefi/generate-rootfs
+	;;
+*)
+	. ${OURDIR}/device/generic/${TARGETARCH}-uefi/generate-rootfs
+	;;
+esac
+
+qemu-img convert -f raw ${RESULTDIR}/${BASENAME}.img -O qcow2 -c ${RESULTDIR}/${BASENAME}.qcow2
+rm ${RESULTDIR}/${BASENAME}.img

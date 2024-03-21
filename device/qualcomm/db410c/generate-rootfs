@@ -1,1 +1,1 @@
-make_ext4fs -s -l 4G -K results/${BASENAME}-rootfs.img ${OURDIR}/$ROOTDIR
+make_ext4fs -s -l 4G -K ${RESULTDIR}/${BASENAME}-rootfs.img ${OURDIR}/$ROOTDIR

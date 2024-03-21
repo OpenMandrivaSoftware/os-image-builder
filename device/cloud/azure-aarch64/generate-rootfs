@@ -1,1 +1,22 @@
-../azure-common/generate-rootfs
+TARGETARCH="$(echo ${SHORTTARGET} |cut -d- -f2-)"
+case ${TARGETARCH} in
+x86-64)
+	. ${OURDIR}/device/generic/x86_64-uefi/generate-rootfs
+	;;
+amd)
+	. ${OURDIR}/device/generic/znver1-uefi/generate-rootfs
+	;;
+*)
+	. ${OURDIR}/device/generic/${TARGETARCH}-uefi/generate-rootfs
+	;;
+esac
+
+MB=$((1024*1024))
+size=$(qemu-img info -f raw --output json ${RESULTDIR}/${BASENAME}.img | \
+gawk 'match($0, /"virtual-size": ([0-9]+),/, val) {print val[1]}')
+
+rounded_size=$(((($size+$MB-1)/$MB)*$MB))
+
+qemu-img resize -f raw ${RESULTDIR}/${BASENAME}.img $rounded_size
+qemu-img convert -f raw ${RESULTDIR}/${BASENAME}.img -O vpc -o subformat=fixed,force_size ${RESULTDIR}/${BASENAME}.vhd
+rm ${RESULTDIR}/${BASENAME}.img

@@ -118,7 +118,7 @@ PRE_PACKAGES="${PRE_PACKAGES:-distro-release-repos}"
 [ -z "$FINAL" ] && FINAL=false
 OS_VERSION=""
 IDENTIFIER=""
-while getopts "d:Fi:K:o:p:P:r:s:S:u:v:w:W" opt; do
+while getopts "d:Fi:K:n:o:p:P:r:s:S:u:v:w:W" opt; do
 	case $opt in
 	d)
 		SDDMSESSION="$OPTARG"
@@ -165,6 +165,9 @@ while getopts "d:Fi:K:o:p:P:r:s:S:u:v:w:W" opt; do
 		;;
 	K)
 		KEEP_OLD_ROOT=true
+		;;
+	n)
+		IMAGENAME="${OPTARG}"
 		;;
 	*)
 		printf '%s\n' "Unknown option $opt" >&2
@@ -912,7 +915,12 @@ BASENAME="${BASE_DISTRO}-${SHORTTARGET}-${OS_VERSION}"
 
 # generate-bootimg and generate-rootfs can write to results.
 # Wipe it clean and make sure it exists
-rm -rf results ; mkdir results
+if [ -n "${IMAGENAME}" ]; then
+	RESULTDIR="results/${IMAGENAME}"
+else
+	RESULTDIR="results/${SHORTTARGET}"
+fi
+rm -rf ${RESULTDIR} ; mkdir -p ${RESULTDIR}
 
 run generate-bootimg
 # Stuff in virtual filesystems should not make it to
@@ -920,26 +928,26 @@ run generate-bootimg
 cleanup
 run generate-rootfs
 
-xz -9ef results/*.img &>/dev/null || :
+xz -9ef ${RESULTDIR}/*.img &>/dev/null || :
 
 # All of the following are allowed to fail because not
 # every board needs/produces every one of them
-mv *.img* results/ 2>/dev/null || :
-mv *.tar* results/ 2>/dev/null || :
-cp -a device/${TARGET}/*.md results/ 2>/dev/null || :
-cp -a device/${TARGET}/write2sd results/ 2>/dev/null || :
-cp -a device/${TARGET}/write2device results/ 2>/dev/null || :
+mv *.img* ${RESULTDIR}/ 2>/dev/null || :
+mv *.tar* ${RESULTDIR}/ 2>/dev/null || :
+cp -a device/${TARGET}/*.md ${RESULTDIR}/ 2>/dev/null || :
+cp -a device/${TARGET}/write2sd ${RESULTDIR}/ 2>/dev/null || :
+cp -a device/${TARGET}/write2device ${RESULTDIR}/ 2>/dev/null || :
 
 for i in device/${TARGET}/*.md.in device/${TARGET}/write2sd.in device/${TARGET}/write2device.in; do
 	[ -e "$i" ] || continue
-	r="results/$(basename $i .in)"
+	r="${RESULTDIR}/$(basename $i .in)"
 	sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BASENAME@,${BASENAME},g" $i >"$r"
 	[ -x "$i" ] && chmod 0755 "$r"
 done
 
 if [ "$ABF" = "1" ]; then
 	# Make sure the remaining scripts have sufficient access
-	chown -R omv:omv results
+	chown -R omv:omv ${RESULTDIR}
 fi
 
 printf '%s\n' 'Building has finished.'
