@@ -259,6 +259,14 @@ i686)
 	EFIARCH=i386-efi
 	DTBS=""
 	;;
+riscv64)
+	KERNELARCH=riscv
+	QEMUARCH=$ARCH
+	KERNELTARGET=vmlinux
+	BOOTEFI=boot${ARCH}.efi
+	EFIARCH=${ARCH}-efi
+	DTBS="dtbs"
+	;;
 *)
 	# Anything here is possibly wrong...
 	KERNELARCH=$ARCH
@@ -290,7 +298,7 @@ if [ -n "$KERNEL" ]; then
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
 # vim-common is for xxd, used to decode EDID information for pinebookpro
-HOSTDEPS="$HOSTDEPS bc curl make clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build kpartx util-linux gptfdisk e2fsprogs f2fs-tools"
+HOSTDEPS="$HOSTDEPS bc curl make pahole clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build kpartx util-linux gptfdisk e2fsprogs f2fs-tools"
 
 if [ -n "$UBOOT_CONFIG" ]; then
 	HOSTDEPS="$HOSTDEPS uboot-tools"
@@ -438,9 +446,9 @@ elif [ -n "$KERNEL" ]; then
 	git commit -am "Apply OpenMandriva patches" || :
 
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		make $SMPFLAGS ARCH=$KERNELARCH $KERNEL_CONFIG include/config/kernel.release
+		make $SMPFLAGS ARCH=$KERNELARCH $CCOMP $KERNEL_CONFIG include/config/kernel.release
 	else
-		make $SMPFLAGS ARCH=$KERNELARCH LLVM=1 $KERNEL_CONFIG include/config/kernel.release
+		make $SMPFLAGS ARCH=$KERNELARCH $CCOMP LLVM=1 $KERNEL_CONFIG include/config/kernel.release
 	fi
 	KERNELVERSION=$(cat include/config/kernel.release)
 	KERNELVERSION_NUM="$(printf '%s\n' $KERNELVERSION |cut -d- -f1)"
@@ -760,7 +768,7 @@ EOF
 		if [ "$USE_UEFI" = "yes" ]; then
 			printf '%s\n' "Creating ESP for GRUB."
 			mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
-			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -d /usr/lib/grub/$EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxterm_menu gfxmenu test all_video loadenv exfat ext2 part_msdos part_gpt loadenv ls chain multiboot multiboot2 btrfs xfs ntfs all_video efifwsetup efinet font probe video loopback gzio xzio zstd
+			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -d /usr/lib/grub/$EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxterm_menu gfxmenu test all_video loadenv exfat ext2 part_msdos part_gpt loadenv ls chain btrfs xfs ntfs all_video efifwsetup efinet font probe video loopback gzio xzio zstd
 		fi
 
 		if [ "$USE_SYSTEMD_UEFI" = "yes" ]; then
