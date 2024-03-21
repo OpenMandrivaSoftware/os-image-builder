@@ -1,0 +1,5 @@
+ARCH=riscv64
+KERNEL=https://github.com/sophgo/linux-riscv#sg2042-dev
+KERNEL_CONFIG=sophgo_mango_ubuntu_defconfig
+KERNEL_GCC=yes
+DTB=sophgo/mango-milkv-pioneer
