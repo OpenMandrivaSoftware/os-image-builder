@@ -1,0 +1,10 @@
+IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
+dd if=/dev/zero of=${IMAGE} bs=1M count=$((PADDED_EXPECTED_SIZE/1048576))
+parted -s ${IMAGE} \
+	mklabel gpt \
+	unit s \
+	mkpart boot fat32 2048 129024 \
+	mkpart root ${FSTYPE} 131072 100% \
+	toggle 1 boot
+PARTITIONS[2]="/:${FSTYPE}"
+PARTITIONS[1]='/boot:vfat'

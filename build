@@ -82,6 +82,7 @@ PACKAGES_FROM_CMDLINE=""
 PACKAGESETS="core"
 SERVICES="dbus-broker NetworkManager"
 WEAKDEPS=""
+HOSTDEPS="dnf5"
 if command -v clang-cpp &>/dev/null; then
 	CPP="clang-cpp"
 elif command -v cpp &>/dev/null; then
@@ -118,7 +119,7 @@ PRE_PACKAGES="${PRE_PACKAGES:-distro-release-repos}"
 [ -z "$FINAL" ] && FINAL=false
 OS_VERSION=""
 IDENTIFIER=""
-while getopts "d:Fi:K:n:o:p:P:r:s:S:u:v:w:W" opt; do
+while getopts "d:Fi:Kn:o:p:P:r:s:S:u:v:w:W" opt; do
 	case $opt in
 	d)
 		SDDMSESSION="$OPTARG"
@@ -128,6 +129,9 @@ while getopts "d:Fi:K:n:o:p:P:r:s:S:u:v:w:W" opt; do
 		;;
 	i)
 		IDENTIFIER="$OPTARG"
+		;;
+	K)
+		KEEP_KERNEL_RPM=true
 		;;
 	v)
 		OMV_VERSION="$OPTARG"
@@ -162,9 +166,6 @@ while getopts "d:Fi:K:n:o:p:P:r:s:S:u:v:w:W" opt; do
 		;;
 	W)
 		WEAKDEPS="--setopt=install_weak_deps=False"
-		;;
-	K)
-		KEEP_OLD_ROOT=true
 		;;
 	n)
 		IMAGENAME="${OPTARG}"
@@ -307,8 +308,8 @@ if [ -n "$UBOOT_CONFIG" ]; then
 	HOSTDEPS="$HOSTDEPS uboot-tools"
 fi
 
-if [ -n "$HOSTDEPS" ] && [ -z "$KEEP_OLD_ROOT" ]; then
-	if ! dnf -y --refresh --nogpgcheck install $HOSTDEPS; then
+if [ -n "$HOSTDEPS" ]; then
+	if ! dnf5 -y --refresh --nogpgcheck install $HOSTDEPS; then
 		for i in $HOSTDEPS; do
 			if ! rpm -q $i &>/dev/null; then
 				printf '%s\n' "Couldn't install needed HOST tools. Make sure you're running current ${BASE_DISTRO}"
@@ -375,7 +376,6 @@ fi
 # building everything else.
 # It is primarily useful while debugging package installation
 # or debugging bootup errors in the running system.
-#KEEP_KERNEL_RPM=true
 if [ -n "$KEEP_KERNEL_RPM" ]; then
 	ls $OURDIR/kernel-rpm/RPMS/*/*.rpm 2>/dev/null || unset KEEP_KERNEL_RPM
 fi
@@ -478,6 +478,7 @@ EOF
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 Summary:	kernel for $SHORTTARGET devices
+BuildRequires:	gnutar
 # Tarball generated from the $KERNELBRANCH branch
 # of $KERNELREPO
 # by os-image-builder
@@ -496,6 +497,7 @@ kernel for $SHORTTARGET devices
 %autosetup -p1 -n kernel
 
 %build
+export PATH=%{_libexecdir}/gnutar:${PATH}
 EOF
 
 	# CROSS_COMPILE_ARM32 is a Sony-ism, but doesn't hurt anywhere else, so we can specify it unconditionally
@@ -535,7 +537,7 @@ make $SMPFLAGS V=1 INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH $CCOMP I
 make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD || :
 mkdir -p %{buildroot}/boot
 EOF
-	if [ "$ARCH" = "x86_64" -o "$ARCH" = "znver1" ]; then
+	if [ "$ARCH" = "x86_64" -o "$ARCH" = "znver1" -o "$ARCH" = "riscv64" ]; then
 		cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 cp $KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
 EOF
@@ -571,350 +573,135 @@ ROOTDIR="${BASE_DISTRO}-$OMV_VERSION-$ARCH-root"
 
 # Make sure we don't have any dangerous bind mounts left...
 cleanup() {
-	for mp in /proc /sys /sys/firmware/efi/efivars /dev/pts /dev; do
-		[ -e "$OURDIR/$ROOTDIR$mp" ] && umount -Rq "$OURDIR/$ROOTDIR$mp" || :
+	# We can't umount a directory while it's our working directory, go to a safe place
+	cd "$OURDIR"
+	while cat /proc/mounts |grep -q $OURDIR/$ROOTDIR; do
+		umount -Rq $(cat /proc/mounts |grep $OURDIR/$ROOTDIR |head -n1 |awk '{print $2;}')
 	done
+	if [ -n "$TEMPROOT" -a -d "$TEMPROOT" ]; then
+		rm -rf "$TEMPROOT"
+	fi
 }
 trap "cleanup; exit 1" ERR SIGINT SIGTERM
+cleanup
 
-if [ -z "$KEEP_OLD_ROOT" ]; then
-	cleanup
-	rm -rf "$ROOTDIR"
+TEMPROOT="$(mktemp -d /tmp/rootXXXXXX)"
+if [ -z "$TEMPROOT" ]; then
+	echo "Creating a temporary directory failed. mktemp missing?" >&2
+	exit 1
 fi
 
-if [ ! -d "$ROOTDIR" ]; then
-	mkdir -p $ROOTDIR
-
-	# setup-rootfs can do things like create a filesystem and
-	# loopback mount it on $ROOTDIR -- useful for boards that
-	# need to generate a FS image file rather than a rootfs
-	# tarball or so.
-	[ -e $OURDIR/device/$TARGET/setup-rootfs ] && . $OURDIR/device/$TARGET/setup-rootfs
-
-	# Poor man's version of "dnf install --installroot=" --
-	# need to get the repository configs from rpm packages
-	# without having the repositories configured...
-	PKGS=${ABF_DOWNLOADS}/${VER_PREFIX}${OMV_VERSION}/repository/$ARCH/main/release/
-	printf '%s\n' $PKGS
-	curl -s -L $PKGS |grep '^<a' |cut -d'"' -f2 >PACKAGES
-	for i in $PRE_PACKAGES; do
-		P=$(grep "^$i-[0-9].*" PACKAGES |tail -n1)
-		if [ "$?" != "0" ]; then
-			printf '%s\n' "Can't find $i package for target" >&2
-			exit 1
-		fi
-		curl -O $PKGS/$P
-		rpm -r $OURDIR/$ROOTDIR -Uvh --ignorearch --nodeps $P
-	done
-
-	# Don't use mirrors when creating the image
-	sed -i -e '/mirror.openmandriva.org/d;s,^	,baseurl=,' "$OURDIR/$ROOTDIR"/etc/yum.repos.d/*.repo
-
-	if printf '%s\n' ${VER_PREFIX}${OMV_VERSION} |grep -q '^[0-9]'; then
-		DNF_VERSION=release
-		# This also needs to work before the rock symlink is updated on
-		# a new release...
-		dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-disabled rock-$ARCH
-		dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-disabled rock-updates-$ARCH
-		dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-enabled release-$ARCH
-		dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-enabled release-updates-$ARCH
-	else
-		DNF_VERSION="${VER_PREFIX}${OMV_VERSION}"
+# Poor man's version of "dnf5 install --installroot=" --
+# need to get the repository configs from rpm packages
+# without having the repositories configured...
+PKGS=${ABF_DOWNLOADS}/${VER_PREFIX}${OMV_VERSION}/repository/$ARCH/main/release/
+printf '%s\n' $PKGS
+curl -s -L $PKGS |grep '^<a' |cut -d'"' -f2 >PACKAGES
+for i in $PRE_PACKAGES; do
+	P=$(grep "^$i-[0-9].*" PACKAGES |tail -n1)
+	if [ "$?" != "0" ]; then
+		printf '%s\n' "Can't find $i package for target" >&2
+		exit 1
 	fi
+	curl -O $PKGS/$P
+	rpm -r $TEMPROOT -Uvh --ignorearch --nodeps $P
+done
 
-	if [ -n "$EXTRA_REPOS" ]; then
-		for i in $EXTRA_REPOS; do
-			dnf config-manager --installroot "$OURDIR/$ROOTDIR" --set-enabled $DNF_VERSION-$ARCH-$i
-		done
-	fi
+# Don't use mirrors when creating the image
+sed -i -e '/mirror.openmandriva.org/d;s,^	,baseurl=,' "$TEMPROOT"/etc/yum.repos.d/*.repo
 
-	if ! $NATIVEBUILD; then
-		# Make sure we can run %post scripts in the chroot
-		mkdir -p $OURDIR/$ROOTDIR/usr/bin
-		cp /usr/bin/qemu-$QEMUARCH-static $OURDIR/$ROOTDIR/usr/bin/
-	fi
-
-	# FIXME workaround for ldd being broken on aarch64 (at least in qemu)
-	# (causes dracut to miss bash's dependencies)
-	if [ "$ARCH" = "aarch64" ] && [ "$BASE_DISTRO" == "OpenMandriva-Lx" ]; then
-		PACKAGES="$PACKAGES ${XLDD}"
-	fi
-	if [ "$NEED_INITRD" != "no" ]; then
-		PACKAGES="$PACKAGES dracut"
-	fi
-	if [ "$USE_UEFI" = "yes" ]; then
-		PACKAGES="$PACKAGES efibootmgr grub2-efi"
-	fi
-	if [ "$USE_SYSTEMD_UEFI" = "yes" ]; then
-		PACKAGES="$PACKAGES efibootmgr systemd-boot"
-	fi
-
-	PACKAGES="$PACKAGES $HWPACKAGES"
-
-	# Mount relevant filesystems so %post scripts can access
-	# the likes of /dev/null and /dev/urandom
-	for mp in /proc /sys /sys/firmware/efi/efivars /dev /dev/pts; do
-		mkdir -p "$OURDIR/$ROOTDIR$mp" || :
-		mount --bind -o ro $mp "$OURDIR/$ROOTDIR$mp"
-	done
-
-	if [ -z $KEEP_OLD_ROOT ]; then
-		if ! dnf -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $WEAKDEPS $PACKAGES $KERNELRPM; then
-			if [ -e $OURDIR/$ROOTDIR/bin/sh ]; then
-				cat >&2 <<EOF
-WARNING: dnf returned an error code, but it looks like installation finished.
-This is likely something (relatively) harmless like a package's post-install
-script failing - but you may want to double-check.
-EOF
-			else
-				printf '%s\n' "ERROR: dnf failed without installing what looks like a workable system."
-				exit 1
-			fi
-		fi
-	fi
-
-	# FIXME (continued) workaround for ldd being
-	# broken on aarch64 (at least in qemu)
-	# (causes dracut to miss bash's dependencies)
-	if [ "$ARCH" = "aarch64" ] && [ "$BASE_DISTRO" == "OpenMandriva-Lx" ]; then
-		mv $OURDIR/$ROOTDIR/usr/bin/ldd $OURDIR/$ROOTDIR/usr/bin/ldd.glibc
-		ln -sf xldd $OURDIR/$ROOTDIR/usr/bin/ldd
-	fi
-
-# set up system environment, default root password is omv
-	systemd-firstboot --root="$OURDIR/$ROOTDIR" \
-		--locale="en_US.UTF-8" \
-		--keymap="us" \
-		--timezone="Europe/London" \
-		--hostname="omv-$(printf '%s\n' ${TARGET} | cut -d '/' -f 2 |sed -e 's,+,,g')" \
-		--root-password-hashed='$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0' \
-		--force
-
-# set up dirs
-	systemd-tmpfiles --root="$OURDIR/$ROOTDIR" -E --remove
-
-# set up users
-	systemd-sysusers --root="$OURDIR/$ROOTDIR" || :
-
-	# Remove anything created by systemd-tmpfiles and friends that will
-	# be hidden by tmpfs mounts anyway
-	rm -rf "$OURDIR/$ROOTDIR/run/* $OURDIR/$ROOTDIR/tmp/*"
-
-	# Remove anything created by systemd-tmpfiles and friends that will
-	# be hidden by tmpfs mounts anyway
-	rm -rf "$OURDIR/$ROOTDIR/run/* $OURDIR/$ROOTDIR/tmp/*"
-
-	if [ "$CREATE_DEFAULT_USER" != "no" ]; then
-		if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
-			# Create omv user (password omv)
-			printf '%s\n' 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
-			printf '%s\n' 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
-			printf '%s\n' 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
-			# Add the omv user to important groups...
-			for group in audio dialout input lp lpadmin network render sambashare screen storage tty users video wheel; do
-				sed -i -e "s,$group:.*\$,&omv," $OURDIR/$ROOTDIR/etc/group
-			done
-			cp -a $OURDIR/$ROOTDIR/etc/skel $OURDIR/$ROOTDIR/home/omv
-			chown -R 1001:1001 $OURDIR/$ROOTDIR/home/omv
-		fi
-
-		# If sddm is installed, set it up to autologin as omv
-		if [ -z "$SDDMSESSION" ]; then
-			for desktop in plasma lxqt openbox failsafe; do
-				if [ -e $OURDIR/$ROOTDIR/usr/share/xsessions/$desktop.desktop ]; then
-					SDDMSESSION=$desktop
-					break
-				fi
-			done
-			if [ -z "$SDDMSESSION" ]; then
-				for desktop in plasma-mobile plasmawayland weston; do
-					if [ -e "$OURDIR/$ROOTDIR"/usr/share/wayland-sessions/$desktop.desktop ]; then
-						SDDMSESSION=$desktop
-						break
-					fi
-				done
-			fi
-		fi
-		if [ -z "$NO_AUTOLOGIN" ] && [ -e "$OURDIR/$ROOTDIR/etc/sddm.conf" ]; then
-			sed -i -e "s,^User=,User=omv," $OURDIR/$ROOTDIR/etc/sddm.conf
-		fi
-		if [ -n "$SDDMSESSION" ] && [ -e "$OURDIR/$ROOTDIR/etc/sddm.conf" ]; then
-			sed -i -e "s,^Session=,Session=$SDDMSESSION," $OURDIR/$ROOTDIR/etc/sddm.conf
-		fi
-	fi
-	if [ -z "$KERNEL" ]; then
-		# Using packaged kernel -- let's determine KERNELVERSION
-		# nevertheless so we can run dracut and possibly configure
-		# bootloaders
-		KERNELVERSION=$(ls --sort=time $OURDIR/$ROOTDIR/boot/vmlinuz-* 2>/dev/null|head -n1 |sed -e 's,.*vmlinuz-,,')
-	fi
-	# Handle post-processing scripts needed by packagesets
-	for PACKAGESET in $PACKAGESETS; do
-		PACKAGESET_POST="$PACKAGESET.post"
-		PACKAGESET_POST_PATH="$OURDIR/packagesets/$PACKAGESET_POST"
-		if [ -e "$PACKAGESET_POST_PATH" ]; then
-			cp "$PACKAGESET_POST_PATH" "$OURDIR/$ROOTDIR/tmp/$PACKAGESET_POST"
-			chroot "$OURDIR/$ROOTDIR" "/tmp/$PACKAGESET_POST"
-			rm  "$OURDIR/$ROOTDIR/tmp/$PACKAGESET_POST"
-		fi
-	done
-
-	run setup-system-files
-	if [ -e $OURDIR/device/$TARGET/install-openmandriva.in ]; then
-		sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g" device/$TARGET/install-openmandriva.in >$OURDIR/$ROOTDIR/home/omv/install-openmandriva
-		chmod +x $OURDIR/$ROOTDIR/home/omv/install-openmandriva
-	fi
-	if [ "$NEED_INITRD" != "no" ] || [ "$USE_UEFI" = "yes" ] || [ "$USE_SYSTEMD_UEFI" != "yes" ] && [ -n "$KERNELVERSION" ]; then
-		if [ "$NEED_INITRD" != "no" ]; then
-			run generate-initrd
-		fi
-		if [ "$USE_UEFI" = "yes" ]; then
-			printf '%s\n' "Creating ESP for GRUB."
-			mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
-			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -d /usr/lib/grub/$EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxterm_menu gfxmenu test all_video loadenv exfat ext2 part_msdos part_gpt loadenv ls chain btrfs xfs ntfs all_video efifwsetup efinet font probe video loopback gzio xzio zstd
-		fi
-
-		if [ "$USE_SYSTEMD_UEFI" = "yes" ]; then
-			printf '%s\n' "Creating ESP for systemd-boot."
-			mkdir -p $OURDIR/$ROOTDIR/boot/efi
-			# create ESP directory scheme for systemd-boot
-			for i in "$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT" "$OURDIR/$ROOTDIR/boot/efi/EFI/Linux" "$OURDIR/$ROOTDIR/boot/efi/EFI/systemd" "$OURDIR/$ROOTDIR/boot/efi/loader/entries"; do
-				mkdir -p $i
-			done
-
-			if [ ! -s "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline ]; then
-				printf '%s\n' 'root=LABEL=OMVAA64' >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
-				for i in ${CMDLINE[@]}; do
-					printf '%s\n' "$i" >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
-				done
-			fi
-
-#			chroot "$OURDIR/$ROOTDIR" SYSTEMD_RELAX_ESP_CHECKS=1 bootctl install --esp-path=/boot/efi
-			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-${BOOTEFI} $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/${BOOTEFI}
-			cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-${BOOTEFI} $OURDIR/$ROOTDIR/boot/efi/EFI/systemd
-			MACH_ID=$(chroot $OURDIR/$ROOTDIR systemd-machine-id-setup --print)
-			mkdir -p "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID"
-			chroot "$OURDIR/$ROOTDIR" kernel-install -v add "$KERNELVERSION" "/boot/vmlinuz-$KERNELVERSION"
-# tricky part, looks like uboot does not support gziped kernel image in UEFI mode
-# so lets gunzip it
-			mv "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KERNELVERSION"/linux "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KERNELVERSION"/linux.gz
-			gunzip "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KERNELVERSION"/linux.gz
-			cat >$OURDIR/$ROOTDIR/boot/efi/loader/loader.conf<<EOF
-default $MACH_ID-$KERNELVERSION.conf
-timeout 10
-EOF
-			sed -i -e 's,boot\/efi\/,\/,g' "$OURDIR/$ROOTDIR"/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf
-			if [ -n "${DTB}" ] && ! grep -q devicetree $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf; then
-				install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KERNELVERSION/${DTB}.dtb" "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KERNELVERSION/dtb/${DTB}.dtb"
-				printf '%s\n' "devicetree "/$MACH_ID/$KERNELVERSION"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf
-			fi
-			dd if=/dev/random of="$OURDIR/$ROOTDIR/boot/efi/loader/"random-seed bs=512 count=1
-			chmod +x -R $OURDIR/$ROOTDIR/boot/efi
-		fi
-
-	fi
-
-	# Initialize the random seed to something, systemd might hang forever on
-	# e.g. an embedded board that doesn't get entropy
-	dd if=/dev/random of="$OURDIR/$ROOTDIR"/var/lib/systemd/random-seed bs=512 count=1
-	chmod 0600 "$OURDIR/$ROOTDIR"/var/lib/systemd/random-seed
-
-	# Make sure default services are started
-	for i in "$OURDIR/$ROOTDIR"/lib/systemd/system-preset/*.preset; do
-		while read r; do
-			TYPE="$(printf '%s\n' $r |awk '{ print $1; }')"
-			if [ "$TYPE" = "enable" ] || [ "$TYPE" = "disable" ]; then
-				[ "$(printf '%s\n' "$r" |awk '{ print $2; }')" = '*' ] && continue
-				chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl $r || :
-			fi
-		done < $i
-	done
-
-	# Some devices require special alsa configs to initialize
-	# (e.g. unmuted DAC).
-	# Since /var/lib/alsa/asound.state is restored (and stored) by
-	# our systemd files, it's better to just initialize that (and
-	# not overwrite newly saved states by a package update) than to
-	# ship the file in a package.
-	if [ -e "$OURDIR"/device/$TARGET/asound.state ]; then
-		mkdir -p "$OURDIR/$ROOTDIR"/var/lib/alsa
-		install -c -m 644 "$OURDIR"/device/$TARGET/asound.state "$OURDIR/$ROOTDIR"/var/lib/alsa/asound.state
-	fi
-
-	# Make sure key services are started even if they're omitted
-	# in the preset files
-	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
-	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/simplelogin.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable simplelogin
-	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/sddm.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
-	if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ] || [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/simplelogin.service" ]; then
-		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
-	else
-		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default multi-user.target
-	fi
-	# At least while we're mostly dealing with headless boards
-	[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sshd.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sshd
-	for i in $SERVICES; do
-		if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/$i.service" ]; then
-			chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable $i
-		else
-			printf '%s\n' "WARNING: Service $i requested, but not installed" >&2
-		fi
-	done
-
-	if [ -x "$OURDIR/$ROOTDIR"/usr/bin/fc-cache ]; then
-	    # set the timestamp on the directories to be a whole second
-	    # fc-cache looks at the nano second portion which will otherwise be
-	    # non-zero as we are on ext4, but then it will compare against the stamps
-	    # on the squashfs live image, squashfs only has second level timestamp resolution
-	    FCTIME=$(date +%Y%m%d%H%M.%S)
-	    chroot "$OURDIR/$ROOTDIR" find /usr/share/fonts -type d -exec touch -t "$FCTIME" {} \;
-	    chroot "$OURDIR/$ROOTDIR" fc-cache -rf
-	    chroot "$OURDIR/$ROOTDIR" /bin/mkdir -p /root/.cache/fontconfig/
-	    chroot "$OURDIR/$ROOTDIR" /bin/mkdir -p /home/omv/.cache/fontconfig/
-	fi
-
-	# Rebuild man-db
-	[ -x "$OURDIR/$ROOTDIR"/usr/bin/mandb ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/mandb --quiet
-
-	# Rebuild mime database
-	[ -x "$OURDIR/$ROOTDIR"/usr/bin/update-mime-database ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/update-mime-database /usr/share/mime
-
-	# Generate gconv-modules.cache
-	#[ -x "$OURDIR/$ROOTDIR"/usr/sbin/iconvconfig ] && chroot "$OURDIR/$ROOTDIR" /usr/sbin/iconvconfig
-
-	chroot "$OURDIR/$ROOTDIR" /sbin/ldconfig
-
-	for i in etc var; do
-	    printf "%s\n" 'File created by os-image-builder. See systemd-update-done.service(8).' > "$OURDIR/$ROOTDIR/$i"/.updated
-	done
-
-	cd "$OURDIR/$ROOTDIR"
-	run postprocess
-	cleanup
-	# There shouldn't be any files in the root filesystem. If there are any,
-	# they're probably core dump files generated by qemu while running systemctl
-	# and friends.
-	for i in *; do
-		[ -f "$i" ] && rm -f "$i"
-	done
-	cd ..
+if printf '%s\n' ${VER_PREFIX}${OMV_VERSION} |grep -q '^[0-9]'; then
+	DNF_VERSION=release
+	# This also needs to work before the rock symlink is updated on
+	# a new release...
+	dnf5 config-manager --installroot "$TEMPROOT" --set-disabled rock-$ARCH
+	dnf5 config-manager --installroot "$TEMPROOT" --set-disabled rock-updates-$ARCH
+	dnf5 config-manager --installroot "$TEMPROOT" --set-enabled release-$ARCH
+	dnf5 config-manager --installroot "$TEMPROOT" --set-enabled release-updates-$ARCH
 else
-	# Mount relevant filesystems so generate-bootimg can use
-	# the likes of /dev/null and /dev/urandom in chroot
-	for mp in /proc /sys /sys/firmware/efi/efivars /dev /dev/pts; do
-		mkdir -p "$OURDIR/$ROOTDIR$mp" || :
-		mount --bind -o ro $mp "$OURDIR/$ROOTDIR$mp"
+	DNF_VERSION="${VER_PREFIX}${OMV_VERSION}"
+fi
+
+if [ -n "$EXTRA_REPOS" ]; then
+	for i in $EXTRA_REPOS; do
+		dnf5 config-manager --installroot "$TEMPROOT" --set-enabled $DNF_VERSION-$ARCH-$i
 	done
 fi
 
-# Reinstall distro-release-repos to get mirrors back
+# FIXME workaround for ldd being broken in qemu on aarch64
+# (causes dracut to miss bash's dependencies)
+if [ "$ARCH" = "aarch64" ] && [ "$BASE_DISTRO" == "OpenMandriva-Lx" ]; then
+	PACKAGES="$P§ACKAGES ${XLDD}"
+fi
+if [ "$NEED_INITRD" != "no" ]; then
+	PACKAGES="$PACKAGES dracut"
+fi
+if [ "$USE_UEFI" = "yes" ]; then
+	PACKAGES="$PACKAGES efibootmgr grub2-efi"
+fi
+if [ "$USE_SYSTEMD_UEFI" = "yes" ]; then
+	PACKAGES="$PACKAGES efibootmgr systemd-boot"
+fi
 
-[ -z $KEEP_OLD_ROOT ] && dnf -y reinstall --installroot="$OURDIR/$ROOTDIR" --releasever=$OMV_VERSION --forcearch=$ARCH ${PRE_PACKAGES}
-[ -d "$OURDIR/$ROOTDIR/var/cache/dnf" ] && rm -rf "$OURDIR/$ROOTDIR/var/cache/dnf/*"
-BASENAME="${BASE_DISTRO}-${SHORTTARGET}-${OS_VERSION}"
+PACKAGES="$PACKAGES $HWPACKAGES"
 
-# generate-bootimg and generate-rootfs can write to results.
-# Wipe it clean and make sure it exists
+EXPECTED_SIZE=$(LC_ALL=C.utf-8 dnf5 --assumeno install --nogpgcheck --installroot="$TEMPROOT" --releasever=$OMV_VERSION --forcearch=$ARCH $WEAKDEPS $PACKAGES $KERNELRPM |grep -E 'After this operation .* will be used' |sed -E 's/After this operation (.*) will be used.*/\1/')
+echo "Expected size: $EXPECTED_SIZE"
+if [ -z "$EXPECTED_SIZE" ]; then
+	echo "Could not determine the expected size of the package set." >&2
+	echo "Probably the package set isn't installable, or the script needs to be" >&2
+	echo "adapted to a newer version of dnf." >&2
+	echo "Failed command:" >&2
+	echo LC_ALL=C.utf-8 dnf5 --assumeno install --nogpgcheck --installroot="$TEMPROOT" --releasever=$OMV_VERSION --forcearch=$ARCH $WEAKDEPS $PACKAGES $KERNELRPM
+	LC_ALL=C.utf-8 dnf5 --assumeno install --nogpgcheck --installroot="$TEMPROOT" --releasever=$OMV_VERSION --forcearch=$ARCH $WEAKDEPS $PACKAGES $KERNELRPM
+	# Keep TEMPROOT populated even after cleanup() so the user can debug it
+	unset TEMPROOT
+	exit 1
+fi
+# We use bc below because the result might be a fraction
+case $(echo $EXPECTED_SIZE |cut -d' ' -f2 |tr a-z A-Z) in
+BYTES)
+	EXPECTED_SIZE="$(echo $EXPECTED_SIZE |cut -d' ' -f1)"
+	;;
+KB)
+	EXPECTED_SIZE="$(echo $(echo $EXPECTED_SIZE |cut -d' ' -f1) '*' 1000 |bc -l)"
+	;;
+KIB)
+	EXPECTED_SIZE="$(echo $(echo $EXPECTED_SIZE |cut -d' ' -f1) '*' 1024 |bc -l)"
+	;;
+MB)
+	EXPECTED_SIZE="$(echo $(echo $EXPECTED_SIZE |cut -d' ' -f1) '*' 1000 '*' 1000 |bc -l)"
+	;;
+MIB)
+	EXPECTED_SIZE="$(echo $(echo $EXPECTED_SIZE |cut -d' ' -f1) '*' 1024 '*' 1024 |bc -l)"
+	;;
+GB)
+	EXPECTED_SIZE="$(echo $(echo $EXPECTED_SIZE |cut -d' ' -f1) '*' 1000 '*' 1000 '*' 1000 |bc -l)"
+	;;
+GIB)
+	EXPECTED_SIZE="$(echo $(echo $EXPECTED_SIZE |cut -d' ' -f1) '*' 1024 '*' 1024 '*' 1024 |bc -l)"
+	;;
+TB)
+	EXPECTED_SIZE="$(echo $(echo $EXPECTED_SIZE |cut -d' ' -f1) '*' 1000 '*' 1000 '*' 1000 '*' 1000 |bc -l)"
+	;;
+TIB)
+	EXPECTED_SIZE="$(echo $(echo $EXPECTED_SIZE |cut -d' ' -f1) '*' 1024 '*' 1024 '*' 1024 '*' 1024 |bc -l)"
+	;;
+PB)
+	EXPECTED_SIZE="$(echo $(echo $EXPECTED_SIZE |cut -d' ' -f1) '*' 1000 '*' 1000 '*' 1000 '*' 1000 '*' 1000 |bc -l)"
+	;;
+PIB)
+	EXPECTED_SIZE="$(echo $(echo $EXPECTED_SIZE |cut -d' ' -f1) '*' 1024 '*' 1024 '*' 1024 '*' 1024 '*' 1024 |bc -l)"
+	;;
+esac
+EXPECTED_SIZE=$(echo $EXPECTED_SIZE |cut -d. -f1)
+echo "Expected size in bytes: $EXPECTED_SIZE"
+# Add some space for filesystem overhead, files copied/created by %post scripts etc.
+PADDED_EXPECTED_SIZE=$(echo $EXPECTED_SIZE '*' 1.5 '+' 32 '*' 1024 '*' 1024 |bc -l |cut -d. -f1)
+echo "Padded size in bytes: $PADDED_EXPECTED_SIZE"
+
+# setup-partitions is the first per-device script that can touch results.
+# Wipe them clean now so we don't mix old and new results.
 if [ -n "${IMAGENAME}" ]; then
 	RESULTDIR="results/${IMAGENAME}"
 else
@@ -922,10 +709,316 @@ else
 fi
 rm -rf ${RESULTDIR} ; mkdir -p ${RESULTDIR}
 
+BASENAME="${BASE_DISTRO}-${SHORTTARGET}-${OS_VERSION}"
+IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
+[ -z "$FSTYPE" ] && FSTYPE=ext4
+declare -A PARTITIONS
+run setup-partitions
+
+rm -rf "$OURDIR/$ROOTDIR"
+mkdir -p "$OURDIR/$ROOTDIR"
+if [ -e "${IMAGE}" ]; then
+	losetup -D
+	losetup -fP ${IMAGE}
+	LOOPDEV=$(losetup -j ${IMAGE} |tail -n1 |cut -d: -f1)
+	if [ -z "${LOOPDEV}" ]; then
+		echo "Failed to find loop device for ${IMAGE}" >&2
+		exit 1
+	fi
+	rescanPartitions ${LOOPDEV}
+	if [ "${#PARTITIONS[@]}" -gt 0 ]; then
+		for i in "${!PARTITIONS[@]}"; do
+			MP=$(echo ${PARTITIONS[$i]}|cut -d: -f1)
+			FS=$(echo ${PARTITIONS[$i]}|cut -d: -f2)
+			case $FS in
+			swap)
+				mkswap -v1 ${LOOPDEV}p${i}
+				;;
+			*)
+				mkfs.$FS ${LOOPDEV}p${i}
+				mkdir -p ${OURDIR}/${ROOTDIR}${MP}
+				mount -o loop ${LOOPDEV}p${i} ${OURDIR}/${ROOTDIR}${MP}
+				;;
+			esac
+		done
+	fi
+else
+	# If setup-partitions didn't create an image file, it means we're creating
+	# something not contained in an image file, such as a rootfs tarball or a
+	# docker image
+	unset IMAGE
+fi
+
+# Mount relevant filesystems so %post scripts can access
+# the likes of /dev/null and /dev/urandom
+for mp in /proc /sys /sys/firmware/efi/efivars /dev /dev/pts; do
+	mkdir -p "$OURDIR/$ROOTDIR$mp" || :
+	mount --bind -o ro $mp "$OURDIR/$ROOTDIR$mp"
+done
+
+# Move the relevant dnf configs...
+mv "$TEMPROOT"/* "$OURDIR/$ROOTDIR"
+rm -rf "$TEMPROOT"
+unset TEMPROOT
+
+if ! $NATIVEBUILD; then
+	# Make sure we can run %post scripts in the chroot
+	mkdir -p $OURDIR/$ROOTDIR/usr/bin
+	cp /usr/bin/qemu-$QEMUARCH-static $OURDIR/$ROOTDIR/usr/bin/
+fi
+
+if ! dnf5 -y install --nogpgcheck --installroot=$OURDIR/$ROOTDIR --releasever=$OMV_VERSION --forcearch=$ARCH $WEAKDEPS $PACKAGES $KERNELRPM; then
+	if [ -e $OURDIR/$ROOTDIR/bin/sh ]; then
+		cat >&2 <<EOF
+WARNING: dnf returned an error code, but it looks like installation finished.
+This is likely something (relatively) harmless like a package's post-install
+script failing - but you may want to double-check.
+EOF
+	else
+		printf '%s\n' "ERROR: dnf failed without installing what looks like a workable system."
+		cleanup
+		exit 1
+	fi
+fi
+
+# FIXME (continued) workaround for ldd being
+# broken on aarch64 (at least in qemu)
+# (causes dracut to miss bash's dependencies)
+if [ "$ARCH" = "aarch64" ] && [ "$BASE_DISTRO" == "OpenMandriva-Lx" ]; then
+	mv $OURDIR/$ROOTDIR/usr/bin/ldd $OURDIR/$ROOTDIR/usr/bin/ldd.glibc
+	ln -sf xldd $OURDIR/$ROOTDIR/usr/bin/ldd
+fi
+
+# set up system environment, default root password is omv
+systemd-firstboot --root="$OURDIR/$ROOTDIR" \
+	--locale="en_US.UTF-8" \
+	--keymap="us" \
+	--timezone="Europe/London" \
+	--hostname="omv-$(printf '%s\n' ${TARGET} | cut -d '/' -f 2 |sed -e 's,+,,g')" \
+	--root-password-hashed='$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0' \
+	--force
+
+# set up users
+systemd-sysusers --root="$OURDIR/$ROOTDIR" || :
+
+# set up dirs
+systemd-tmpfiles --root="$OURDIR/$ROOTDIR" -E --remove
+
+# Remove anything created by systemd-tmpfiles and friends that will
+# be hidden by tmpfs mounts anyway
+rm -rf "$OURDIR/$ROOTDIR/run/* $OURDIR/$ROOTDIR/tmp/*"
+
+# Remove anything created by systemd-tmpfiles and friends that will
+# be hidden by tmpfs mounts anyway
+rm -rf "$OURDIR/$ROOTDIR/run/* $OURDIR/$ROOTDIR/tmp/*"
+
+if [ "$CREATE_DEFAULT_USER" != "no" ]; then
+	if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
+		# Create omv user (password omv)
+		printf '%s\n' 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
+		printf '%s\n' 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
+		printf '%s\n' 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
+		# Add the omv user to important groups...
+		for group in audio dialout input lp lpadmin network render sambashare screen storage tty users video wheel; do
+			sed -i -e "s,$group:.*\$,&omv," $OURDIR/$ROOTDIR/etc/group
+		done
+		cp -a $OURDIR/$ROOTDIR/etc/skel $OURDIR/$ROOTDIR/home/omv
+		chown -R 1001:1001 $OURDIR/$ROOTDIR/home/omv
+	fi
+
+	# If sddm is installed, set it up to autologin as omv
+	if [ -z "$SDDMSESSION" ]; then
+		for desktop in plasma lxqt openbox failsafe; do
+			if [ -e $OURDIR/$ROOTDIR/usr/share/xsessions/$desktop.desktop ]; then
+				SDDMSESSION=$desktop
+				break
+			fi
+		done
+		if [ -z "$SDDMSESSION" ]; then
+			for desktop in plasma-mobile plasmawayland weston; do
+				if [ -e "$OURDIR/$ROOTDIR"/usr/share/wayland-sessions/$desktop.desktop ]; then
+					SDDMSESSION=$desktop
+					break
+				fi
+			done
+		fi
+	fi
+	if [ -z "$NO_AUTOLOGIN" ] && [ -e "$OURDIR/$ROOTDIR/etc/sddm.conf" ]; then
+		sed -i -e "s,^User=,User=omv," $OURDIR/$ROOTDIR/etc/sddm.conf
+	fi
+	if [ -n "$SDDMSESSION" ] && [ -e "$OURDIR/$ROOTDIR/etc/sddm.conf" ]; then
+		sed -i -e "s,^Session=,Session=$SDDMSESSION," $OURDIR/$ROOTDIR/etc/sddm.conf
+	fi
+fi
+if [ -z "$KERNEL" ]; then
+	# Using packaged kernel -- let's determine KERNELVERSION
+	# nevertheless so we can run dracut and possibly configure
+	# bootloaders
+	KERNELVERSION=$(ls --sort=time $OURDIR/$ROOTDIR/boot/vmlinuz-* 2>/dev/null|head -n1 |sed -e 's,.*vmlinuz-,,')
+fi
+# Handle post-processing scripts needed by packagesets
+for PACKAGESET in $PACKAGESETS; do
+	PACKAGESET_POST="$PACKAGESET.post"
+	PACKAGESET_POST_PATH="$OURDIR/packagesets/$PACKAGESET_POST"
+	if [ -e "$PACKAGESET_POST_PATH" ]; then
+		cp "$PACKAGESET_POST_PATH" "$OURDIR/$ROOTDIR/tmp/$PACKAGESET_POST"
+		chroot "$OURDIR/$ROOTDIR" "/tmp/$PACKAGESET_POST"
+		rm  "$OURDIR/$ROOTDIR/tmp/$PACKAGESET_POST"
+	fi
+done
+
+run setup-system-files
+if [ -e $OURDIR/device/$TARGET/install-openmandriva.in ]; then
+	sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g" device/$TARGET/install-openmandriva.in >$OURDIR/$ROOTDIR/home/omv/install-openmandriva
+	chmod +x $OURDIR/$ROOTDIR/home/omv/install-openmandriva
+fi
+if [ "$NEED_INITRD" != "no" ] || [ "$USE_UEFI" = "yes" ] || [ "$USE_SYSTEMD_UEFI" != "yes" ] && [ -n "$KERNELVERSION" ]; then
+	if [ "$NEED_INITRD" != "no" ]; then
+		run generate-initrd
+	fi
+	if [ "$USE_UEFI" = "yes" ]; then
+		printf '%s\n' "Creating ESP for GRUB."
+		mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
+		chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -d /usr/lib/grub/$EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxterm_menu gfxmenu test all_video loadenv exfat ext2 part_msdos part_gpt loadenv ls chain btrfs xfs ntfs all_video efifwsetup efinet font probe video loopback gzio xzio zstd
+	fi
+
+	if [ "$USE_SYSTEMD_UEFI" = "yes" ]; then
+		printf '%s\n' "Creating ESP for systemd-boot."
+		mkdir -p $OURDIR/$ROOTDIR/boot/efi
+		# create ESP directory scheme for systemd-boot
+		for i in "$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT" "$OURDIR/$ROOTDIR/boot/efi/EFI/Linux" "$OURDIR/$ROOTDIR/boot/efi/EFI/systemd" "$OURDIR/$ROOTDIR/boot/efi/loader/entries"; do
+			mkdir -p $i
+		done
+
+		if [ ! -s "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline ]; then
+			printf '%s\n' 'root=LABEL=OMVAA64' >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
+			for i in ${CMDLINE[@]}; do
+				printf '%s\n' "$i" >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
+			done
+		fi
+
+#			chroot "$OURDIR/$ROOTDIR" SYSTEMD_RELAX_ESP_CHECKS=1 bootctl install --esp-path=/boot/efi
+		cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-${BOOTEFI} $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/${BOOTEFI}
+		cp -a "$OURDIR/$ROOTDIR"/usr/lib/systemd/boot/efi/systemd-${BOOTEFI} $OURDIR/$ROOTDIR/boot/efi/EFI/systemd
+		MACH_ID=$(chroot $OURDIR/$ROOTDIR systemd-machine-id-setup --print)
+		mkdir -p "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID"
+		chroot "$OURDIR/$ROOTDIR" kernel-install -v add "$KERNELVERSION" "/boot/vmlinuz-$KERNELVERSION"
+# tricky part, looks like uboot does not support gziped kernel image in UEFI mode
+# so lets gunzip it
+		mv "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KERNELVERSION"/linux "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KERNELVERSION"/linux.gz
+		gunzip "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KERNELVERSION"/linux.gz
+		cat >$OURDIR/$ROOTDIR/boot/efi/loader/loader.conf<<EOF
+default $MACH_ID-$KERNELVERSION.conf
+timeout 10
+EOF
+		sed -i -e 's,boot\/efi\/,\/,g' "$OURDIR/$ROOTDIR"/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf
+		if [ -n "${DTB}" ] && ! grep -q devicetree $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf; then
+			install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KERNELVERSION/${DTB}.dtb" "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KERNELVERSION/dtb/${DTB}.dtb"
+			printf '%s\n' "devicetree "/$MACH_ID/$KERNELVERSION"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf
+		fi
+		dd if=/dev/random of="$OURDIR/$ROOTDIR/boot/efi/loader/"random-seed bs=512 count=1
+		chmod +x -R $OURDIR/$ROOTDIR/boot/efi
+	fi
+
+fi
+
+# Initialize the random seed to something, systemd might hang forever on
+# e.g. an embedded board that doesn't get entropy
+dd if=/dev/random of="$OURDIR/$ROOTDIR"/var/lib/systemd/random-seed bs=512 count=1
+chmod 0600 "$OURDIR/$ROOTDIR"/var/lib/systemd/random-seed
+
+# Make sure default services are started
+for i in "$OURDIR/$ROOTDIR"/lib/systemd/system-preset/*.preset; do
+	while read r; do
+		TYPE="$(printf '%s\n' $r |awk '{ print $1; }')"
+		if [ "$TYPE" = "enable" ] || [ "$TYPE" = "disable" ]; then
+			[ "$(printf '%s\n' "$r" |awk '{ print $2; }')" = '*' ] && continue
+			chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl $r || :
+		fi
+	done < $i
+done
+
+# Some devices require special alsa configs to initialize
+# (e.g. unmuted DAC).
+# Since /var/lib/alsa/asound.state is restored (and stored) by
+# our systemd files, it's better to just initialize that (and
+# not overwrite newly saved states by a package update) than to
+# ship the file in a package.
+if [ -e "$OURDIR"/device/$TARGET/asound.state ]; then
+	mkdir -p "$OURDIR/$ROOTDIR"/var/lib/alsa
+	install -c -m 644 "$OURDIR"/device/$TARGET/asound.state "$OURDIR/$ROOTDIR"/var/lib/alsa/asound.state
+fi
+
+# Make sure key services are started even if they're omitted
+# in the preset files
+chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
+[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/simplelogin.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable simplelogin
+[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/sddm.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
+if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ] || [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/simplelogin.service" ]; then
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
+else
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default multi-user.target
+fi
+# At least while we're mostly dealing with headless boards
+[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sshd.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sshd
+for i in $SERVICES; do
+	if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/$i.service" ]; then
+		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable $i
+	else
+		printf '%s\n' "WARNING: Service $i requested, but not installed" >&2
+	fi
+done
+
+if [ -x "$OURDIR/$ROOTDIR"/usr/bin/fc-cache ]; then
+    # set the timestamp on the directories to be a whole second
+    # fc-cache looks at the nano second portion which will otherwise be
+    # non-zero as we are on ext4, but then it will compare against the stamps
+    # on the squashfs live image, squashfs only has second level timestamp resolution
+    FCTIME=$(date +%Y%m%d%H%M.%S)
+    chroot "$OURDIR/$ROOTDIR" find /usr/share/fonts -type d -exec touch -t "$FCTIME" {} \;
+    chroot "$OURDIR/$ROOTDIR" fc-cache -rf
+    chroot "$OURDIR/$ROOTDIR" /bin/mkdir -p /root/.cache/fontconfig/
+    chroot "$OURDIR/$ROOTDIR" /bin/mkdir -p /home/omv/.cache/fontconfig/
+fi
+
+# Rebuild man-db
+[ -x "$OURDIR/$ROOTDIR"/usr/bin/mandb ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/mandb --quiet
+
+# Rebuild mime database
+[ -x "$OURDIR/$ROOTDIR"/usr/bin/update-mime-database ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/update-mime-database /usr/share/mime
+
+# Generate gconv-modules.cache
+#[ -x "$OURDIR/$ROOTDIR"/usr/sbin/iconvconfig ] && chroot "$OURDIR/$ROOTDIR" /usr/sbin/iconvconfig
+
+chroot "$OURDIR/$ROOTDIR" /sbin/ldconfig
+
+for i in etc var; do
+    printf "%s\n" 'File created by os-image-builder. See systemd-update-done.service(8).' > "$OURDIR/$ROOTDIR/$i"/.updated
+done
+
+cd "$OURDIR/$ROOTDIR"
+run postprocess
+pushd /
+cleanup
+popd
+# There shouldn't be any files in the root filesystem. If there are any,
+# they're probably core dump files generated by qemu while running systemctl
+# and friends.
+for i in *; do
+	[ -f "$i" ] && rm -f "$i"
+done
+cd ..
+
+# Reinstall distro-release-repos to get mirrors back
+dnf5 -y reinstall --installroot="$OURDIR/$ROOTDIR" --releasever=$OMV_VERSION --forcearch=$ARCH ${PRE_PACKAGES}
+[ -d "$OURDIR/$ROOTDIR/var/cache/dnf" ] && rm -rf "$OURDIR/$ROOTDIR/var/cache/dnf/*"
+
 run generate-bootimg
 # Stuff in virtual filesystems should not make it to
 # root filesystems...
+pushd /
 cleanup
+popd
 run generate-rootfs
 
 xz -9ef ${RESULTDIR}/*.img &>/dev/null || :
