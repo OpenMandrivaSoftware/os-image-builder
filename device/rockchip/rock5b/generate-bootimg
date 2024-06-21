@@ -1,10 +1,13 @@
 # FIXME we need to figure out how to build those from source
-[ -d rkbin ] || git clone -b master https://github.com/radxa/rkbin.git
+[ -d rkbin ] || git clone -b develop-v2024.03 https://github.com/radxa/rkbin.git
+
+export UBOOT_EXTRAARGS="ROCKCHIP_TPL=$(pwd)/rkbin/bin/rk35/rk3588_ddr_lp4_2112MHz_lp5_2736MHz_eyescan_v1.11.bin BL31=$(pwd)/rkbin/bin/rk35/rk3588_bl31_v1.45.elf"
+
 . ${OURDIR}/helpers/build-uboot
 
 cd u-boot
-make BL31=../rkbin/bin/rk35/rk3588_bl31_v1.38.elf CROSS_COMPILE=aarch64-linux-gnu- EXTRAVERSION="-OpenMandriva" LDFLAGS="-fuse-ld=bfd" KBUILD_LDFLAGS="-fuse-ld=bfd" HOSTLDFLAGS="-fuse-ld=bfd" spl/u-boot-spl.bin u-boot.dtb u-boot.itb
-./tools/mkimage -n rk3588 -T rksd -d ../rkbin/bin/rk35/rk3588_ddr_lp4_2112MHz_lp5_2736MHz_v1.11.bin:spl/u-boot-spl.bin idbloader.img
-cp ../rkbin/bin/rk35/rk3588_spl_loader_v1.08.111.bin .
+#make BL31=../rkbin/bin/rk35/rk3588_bl31_v1.45.elf CROSS_COMPILE=aarch64-linux-gnu- EXTRAVERSION="-OpenMandriva" LDFLAGS="-fuse-ld=bfd" KBUILD_LDFLAGS="-fuse-ld=bfd" HOSTLDFLAGS="-fuse-ld=bfd" spl/u-boot-spl.bin u-boot.dtb u-boot.itb
+./tools/mkimage -n rk3588 -T rksd -d ../rkbin/bin/rk35/rk3588_ddr_lp4_2112MHz_lp5_2736MHz_eyescan_v1.11.bin:spl/u-boot-spl.bin idbloader.img
+cp ../rkbin/bin/rk35/rk3588_spl_loader_v1.15.113.bin .
 cp idbloader.img u-boot.itb ${OURDIR}/${ROOTDIR}/boot/
 cd ..

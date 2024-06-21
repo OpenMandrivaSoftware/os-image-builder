@@ -16,6 +16,7 @@ CONFIG_SERIAL_PRESENT=y
 CONFIG_GZIP=y
 CONFIG_CMD_UNZIP=y
 EOF
-make CROSS_COMPILE=aarch64-linux-gnu- EXTRAVERSION="-OpenMandriva" LDFLAGS="-fuse-ld=bfd" KBUILD_LDFLAGS="-fuse-ld=bfd" HOSTLDFLAGS="-fuse-ld=bfd"
-[ -n "$UBOOT_EXTRAS" ] && make CROSS_COMPILE=aarch64-linux-gnu- EXTRAVERSION="-OpenMandriva" LDFLAGS="-fuse-ld=bfd" KBUILD_LDFLAGS="-fuse-ld=bfd" HOSTLDFLAGS="-fuse-ld=bfd" $UBOOT_EXTRAS
+
+make CROSS_COMPILE=aarch64-linux-gnu- EXTRAVERSION="-OpenMandriva" LDFLAGS="-fuse-ld=bfd" KBUILD_LDFLAGS="-fuse-ld=bfd" HOSTLDFLAGS="-fuse-ld=bfd" $UBOOT_EXTRAARGS
+[ -n "$UBOOT_EXTRAS" ] && make CROSS_COMPILE=aarch64-linux-gnu- EXTRAVERSION="-OpenMandriva" LDFLAGS="-fuse-ld=bfd" KBUILD_LDFLAGS="-fuse-ld=bfd" HOSTLDFLAGS="-fuse-ld=bfd" $UBOOT_EXTRAS $UBOOT_EXTRAARGS
 cd ..
