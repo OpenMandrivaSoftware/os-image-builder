@@ -691,7 +691,7 @@ EOF
 		--force
 
 # set up dirs
-	systemd-tmpfiles --root="$OURDIR/$ROOTDIR" -E --remove
+	systemd-tmpfiles --root="$OURDIR/$ROOTDIR" -E --remove || :
 
 # set up users
 	systemd-sysusers --root="$OURDIR/$ROOTDIR" || :
