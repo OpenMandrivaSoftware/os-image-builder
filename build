@@ -518,7 +518,7 @@ kernel for $SHORTTARGET devices
 
 %prep
 %autosetup -p1 -n kernel
-%if %{vendor} == rosa
+%if "%{_vendor}" == "rosa"
 %define _modulesdir /usr/lib/modules
 grep -Irl /lib/modules | xargs sed -i -e 's,/lib/modules,%{_modulesdir},g'
 %endif
