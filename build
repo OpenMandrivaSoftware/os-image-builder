@@ -829,7 +829,7 @@ systemd-firstboot --root="$OURDIR/$ROOTDIR" \
 systemd-sysusers --root="$OURDIR/$ROOTDIR" || :
 
 # set up dirs
-systemd-tmpfiles --root="$OURDIR/$ROOTDIR" -E --remove
+systemd-tmpfiles --root="$OURDIR/$ROOTDIR" -E --remove || :
 
 # Remove anything created by systemd-tmpfiles and friends that will
 # be hidden by tmpfs mounts anyway
