@@ -497,6 +497,8 @@ kernel for $SHORTTARGET devices
 %if "%{_vendor}" == "rosa"
 %define _modulesdir /usr/lib/modules
 grep -Irl /lib/modules | xargs sed -i -e 's,/lib/modules,%{_modulesdir},g'
+%else
+%define _modulesdir /lib/modules
 %endif
 
 %build
@@ -553,7 +555,7 @@ EOF
 
 %files
 /boot/*
-/lib/modules/*
+%{_modulesdir}/*
 EOF
 	chown -R $BUILDUSER kernel-rpm
 	cd kernel-rpm
