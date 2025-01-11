@@ -711,10 +711,16 @@ echo "Padded size in bytes: $PADDED_EXPECTED_SIZE"
 
 # setup-partitions is the first per-device script that can touch results.
 # Wipe them clean now so we don't mix old and new results.
-if [ -n "${IMAGENAME}" ]; then
-	RESULTDIR="results/${IMAGENAME}"
+if [ "$ABF" = "1" ]; then
+	# ABF publishes everything that sits in the "results" directory,
+	# but doesn't handle subdirectories
+	RESULTDIR="results"
 else
-	RESULTDIR="results/${SHORTTARGET}"
+	if [ -n "${IMAGENAME}" ]; then
+		RESULTDIR="results/${IMAGENAME}"
+	else
+		RESULTDIR="results/${SHORTTARGET}"
+	fi
 fi
 rm -rf ${RESULTDIR} ; mkdir -p ${RESULTDIR}
 
