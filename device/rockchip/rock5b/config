@@ -4,6 +4,7 @@ unset KERNELBUNDLE
 # FIXME port the scripts in u-boot/arch/arm/mach-rockchip to python 3
 HOSTDEPS="$HOSTDEPS python2"
 HOSTDEPS="$HOSTDEPS parted"
+HOSTDEPS="$HOSTDEPS u-boot-rock5b-rk3588 u-boot-tools"
 HWPACKAGES_gui="mali-g610-firmware"
 # For rtl_nic/rtl8125b-2.fw -- FIXME kernel-firmware-extra needs to be split
 HWPACKAGES="kernel-firmware-extra"
@@ -38,7 +39,8 @@ KERNEL_EXTRACONFIG="--enable SYNC_FILE --disable DRM_PANFROST --enable DRM_PANTH
 #KERNEL_EXTRA_CFLAGS_GCC="-Wno-array-compare -Wno-dangling-pointer -Wno-address -Wno-stringop-overread"
 KERNEL_GCC=yes
 UBOOT="https://github.com/radxa/u-boot.git"
-UBOOT_VERSION="rk3xxx-2024.04"
+UBOOT_VERSION="next-dev-v2024.10"
+#UBOOT_VERSION="rk3xxx-2024.04"
 UBOOT_CONFIG="rock-5b-rk3588_defconfig"
 UBOOT_EXTRAS="spl/u-boot-spl.bin u-boot.dtb u-boot.itb"
 DTB="rockchip/rk3588-rock-5b"

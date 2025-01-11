@@ -3,5 +3,5 @@ if [ "$ARCH" = "x86_64" ] || [ "$ARCH" = "znver1" ] || [ "$ARCH" = "i686" ]; the
 else
 	# Loading Intel or AMD microcode doesn't seem to be useful on
 	# ARM, RISC-V or PPC...
-	chroot $OURDIR/$ROOTDIR /usr/sbin/dracut --gzip --no-early-microcode ${DRACUT_EXTRAS} -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
+	chroot $OURDIR/$ROOTDIR /usr/sbin/dracut --gzip --no-early-microcode --omit crypt ${DRACUT_EXTRAS} -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
 fi

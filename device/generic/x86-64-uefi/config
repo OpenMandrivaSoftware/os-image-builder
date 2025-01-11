@@ -1,7 +1,8 @@
 # Generic x86_64 board with UEFI support
 ARCH="x86_64"
-# Let's use a current kernel, it usually has more hardware support
-HWPACKAGES="kernel-release"
+# dosfsprogs is needed to generate the UEFI boot partition
+# when using install-openmandriva
+HWPACKAGES="kernel-server dosfstools"
 # Most boards have a PCIE-slot that may take a graphics card (so we
 # need radeon and nouveau), others have onboard graphics (typically
 # mali or adreno...)
