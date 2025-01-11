@@ -82,7 +82,7 @@ PACKAGES_FROM_CMDLINE=""
 PACKAGESETS="core"
 SERVICES="dbus-broker NetworkManager"
 WEAKDEPS=""
-HOSTDEPS=""
+HOSTDEPS="parted"
 
 if ! command -v dnf5 &>/dev/null; then
 	# Can't just handle this through HOSTDEPS because
