@@ -82,7 +82,14 @@ PACKAGES_FROM_CMDLINE=""
 PACKAGESETS="core"
 SERVICES="dbus-broker NetworkManager"
 WEAKDEPS=""
-HOSTDEPS="dnf5"
+HOSTDEPS=""
+
+if ! command -v dnf5 &>/dev/null; then
+	# Can't just handle this through HOSTDEPS because
+	# HOSTDEPS gets installed with dnf5
+	dnf -y install dnf5
+fi
+
 if command -v clang-cpp &>/dev/null; then
 	CPP="clang-cpp"
 elif command -v cpp &>/dev/null; then
