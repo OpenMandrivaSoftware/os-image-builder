@@ -1,11 +1,5 @@
 IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
 dd if=/dev/zero of=${IMAGE} bs=1M count=$((PADDED_EXPECTED_SIZE/1048576))
-parted -s ${IMAGE} \
-	mklabel gpt \
-	unit s \
-	mkpart boot fat32 32768 262143 \
-	mkpart root ${FSTYPE} 262144 100% \
-	toggle 1 boot
 
-PARTITIONS[2]="/:${FSTYPE}:OMVROOT"
-PARTITIONS[1]="/boot/efi:vfat:OMVUEFI"
+PARTITIONS=(":+256M:ef00:vfat:/boot/efi:OMVUEFI")
+PARTITIONS+=("::8304:${FSTYPE}:/:OMVROOT")

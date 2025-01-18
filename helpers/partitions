@@ -1,0 +1,130 @@
+# Get the partition separator for a device node
+# (the part, if any, between the device node's name
+# and the partition number in /dev -- e.g.
+# "p" for /dev/nvme0n1 (1st partition = /dev/nvme0n1p1)
+# or
+# "" for /dev/sda (1st partition = /dev/sda1)
+partitionSeparator() {
+	if [[ "$(basename $1)" =~ (sd|hd|vd)[a-z] ]]; then
+		echo ""
+	else
+		echo "p"
+	fi
+}
+
+# Rescan the partition table, and make sure any device nodes
+# for newly created partitions are created
+rescanPartitions () {
+	local i
+	local SEPARATOR="$(partitionSeparator $1)"
+
+	udevadm settle -t 5 &>/dev/null || :
+	partx -a $1 || :
+	partx -u $1
+	udevadm settle -t 5 &>/dev/null
+	# Workaround for /dev/loopXpY device nodes not being created
+	# inside the isobuilder container in ABF -- this shouldn't
+	# run in a normal environment (but can't hurt either)
+	for i in $(partx -go NR $1); do
+		if ! [ -e ${1}${SEPARATOR}${i} ]; then
+			local LDEV="$(basename $1)"
+			local NODE="$(cat /sys/block/$LDEV/${LDEV}${SEPARATOR}${i}/dev)"
+			mknod /dev/${LDEV}p${i} b ${NODE/:*/} ${NODE/*:/}
+		fi
+	done
+}
+
+# Partition and format a disk
+#
+# Usage:
+#	partition_disk DEVICE PARTITIONS
+#	DEVICE: Device file on which partitions will be created, e.g. /dev/sda, /dev/mmcblk0
+#	PARTITIONS: Name of an array containing the partition table in the following format:
+#		START:END:TYPE:FILESYSTEM:MOUNTPOINT:LABEL:ALIGNMENT:PARTNO
+#		START	Start of the partition (if left blank, start of free space will be used)
+#		END	End (or, if prefixed with +, size) of the partition (if left blank, the remains of the disk will be used)
+#		TYPE	Type (e.g. 8200 = swap, 8300 = Linux, ef00 = EFI boot, ...)
+#		FILESYSTEM	Filesystem (if left blank, will use a reasonable default)
+#		MOUNTPOINT	Mount point
+#		LABEL	Label
+#		ALIGNMENT	Alignment (set this to 1 if a partition needs to start at a non-standard location)
+#		PARTNO	Partition number (only required for boards requiring an odd
+#			partitioning layout, such as having partition 9 containing a
+#			bootloader before the rootfs or something). Usually this should not
+#			be set, and matches the index in the array (first element is partition 1)
+#
+#	Fields at the end that should remain blank/default can simply be omitted.
+#
+#	MOUNTPOINT is ignored by this function; it is there so we can pass the same partition array to other functions unmodified.
+#
+# Example:
+#	PARTITIONS=(":+256M:ef00::/boot/efi:EFIBoot") # Create a 256 MB EFI boot partition at the beginning of free space
+#	PARTITIONS+=(":+1G:8200") # Create a 1 GB swap partition at the beginning of free space (after the EFI boot partition)
+#	PARTITIONS+=(":+50G:8305:ext4") # Create a 50 GB ext4 partition at the beginning of free space (after the swap partition)
+#	PARTITIONS+=("::8300:ext4:/home:home:8") # Add a Linux ext4 partition with label home and partition number 8
+#	partition_disk /dev/sda PARTITIONS
+#
+partitionDisk() {
+	local DESTINATION="$1"
+	local PARRAY=$2[@]
+	local PARTITIONS=("${!PARRAY}")
+	local SEPARATOR="$(partitionSeparator $1)"
+	local i
+
+	local SGDISK_ARGS="--zap-all"
+	for i in ${!PARTITIONS[@]}; do
+		local PARTNO="$(echo ${PARTITIONS[$i]} |cut -d: -f8)"
+		[ -z "$PARTNO" ] && PARTNO=$((i+1))
+		local TYPE="$(echo ${PARTITIONS[$i]} |cut -d: -f3)"
+		local LABEL="$(echo ${PARTITIONS[$i]} |cut -d: -f6)"
+		local ALIGN="$(echo ${PARTITIONS[$i]} |cut -d: -f7)"
+		[ -n "$ALIGN" ] && SGDISK_ARGS="${SGDISK_ARGS} -a ${ALIGN}"
+		SGDISK_ARGS="${SGDISK_ARGS} -n ${PARTNO}:$(echo ${PARTITIONS[$i]} |cut -d: -f1-2)"
+		# Return to default alignment for subsequent partitions
+		[ -n "$ALIGN" ] && SGDISK_ARGS="${SGDISK_ARGS} -a 2048"
+		if [ -n "$TYPE" ]; then
+			SGDISK_ARGS="${SGDISK_ARGS} -t ${PARTNO}:${TYPE}"
+			[ "$TYPE" = "ef00" ] && SGDISK_ARGS="$SGDISK_ARGS -A ${PARTNO}:set:0"
+		fi
+		if [ -n "$LABEL" ]; then
+			SGDISK_ARGS="${SGDISK_ARGS} -c ${PARTNO}:${LABEL}"
+		fi
+	done
+	sgdisk $SGDISK_ARGS $DESTINATION
+	rescanPartitions $DESTINATION
+	for i in ${!PARTITIONS[@]}; do
+		echo "Creating ${PARTITIONS[$i]}"
+		local PARTNO=$(echo ${PARTITIONS[$i]} |cut -d: -f8)
+		[ -z "$PARTNO" ] && PARTNO=$((i+1))
+		local MKFSARGS=""
+		local FS="$(echo ${PARTITIONS[$i]} |cut -d: -f4)"
+		[ "$FS" = "-" ] && continue
+		local LABEL="$(echo ${PARTITIONS[$i]} |cut -d: -f6)"
+		if [ -z "$FS" ]; then
+			local TYPE=$(echo ${PARTITIONS[$i]} |cut -d: -f3)
+			case $TYPE in
+			ef00)
+				FS=vfat
+				;;
+			8200)
+				FS=swap
+				;;
+			*)
+				FS=${FSTYPE}
+				;;
+			esac
+		fi
+		case $FS in
+		*fat*)
+			MKFS=mkfs.vfat
+			[ -n "$LABEL" ] && MKFSARGS="$MKFSARGS -n ${LABEL}"
+			;;
+		*)
+			[ "$FS" = "swap" ] && MKFS=mkswap || MKFS=mkfs.$FS
+			[ -n "$LABEL" ] && MKFSARGS="$MKFSARGS -L ${LABEL}"
+			;;
+		esac
+		wipefs -a ${DESTINATION}${SEPARATOR}${PARTNO}
+		$MKFS $MKFSARGS ${DESTINATION}${SEPARATOR}${PARTNO}
+	done
+}

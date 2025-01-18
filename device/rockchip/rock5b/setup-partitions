@@ -1,18 +1,12 @@
 IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
 dd if=/dev/zero of=${IMAGE} bs=1M count=$((PADDED_EXPECTED_SIZE/1048576))
-parted -s ${IMAGE} \
-	mklabel gpt \
-	unit s \
-	mkpart boot fat32 32768 262143 \
-	mkpart root ${FSTYPE} 262144 100% \
-	mkpart idbloader 64 7167 \
-	mkpart vnvm 7168 7679 \
-	mkpart reserved_space 7680 8063 \
-	mkpart reserved1 8064 8127 \
-	mkpart uboot_env 8128 8191 \
-	mkpart reserved2 8192 16383 \
-	mkpart uboot 16384 32734 \
-	toggle 1 boot
 
-PARTITIONS[2]="/:${FSTYPE}"
-PARTITIONS[1]="/boot/efi:vfat"
+PARTITIONS=(":+256M:ef00:vfat:/boot/efi:EFIBOOT")
+PARTITIONS+=("::8305:${FSTYPE}:/:/")
+PARTITIONS+=("64:7167:8300:-:::1") # idbloader
+PARTITIONS+=("7168:7679:8300:-:::1") # vnvm
+PARTITIONS+=("7680:8063:8300:-:::1") # reserved_space
+PARTITIONS+=("8064:8127:8300:-:::1") # reserved1
+PARTITIONS+=("8128:8191:8300:-:::1") # uboot_env
+PARTITIONS+=("8192:16383:8300:-:::1") # reserved2
+PARTITIONS+=("16384:32734:8300:-:::1") # uboot

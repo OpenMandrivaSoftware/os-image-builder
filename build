@@ -51,22 +51,6 @@ isnative() {
 		return 1
 	fi
 }
-rescanPartitions () {
-	udevadm settle -t 5
-	partx -a $1 || :
-	partx -u $1
-	udevadm settle -t 5
-	# Workaround for /dev/loopXpY device nodes not being created
-	# inside the isobuilder container in ABF -- this shouldn't
-	# run in a normal environment (but can't hurt either)
-	for i in $(partx -go NR $1); do
-		if ! [ -e $1p$i ]; then
-			local LDEV="$(basename $1)"
-			local NODE="$(cat /sys/block/$LDEV/${LDEV}p${i}/dev)"
-			mknod /dev/${LDEV}p${i} b ${NODE/:*/} ${NODE/*:/}
-		fi
-	done
-}
 
 if [ "$(id -u)" != "0" ]; then
 	printf '%s\n' "Need root privileges to set ownership of extracted files."
@@ -77,12 +61,14 @@ fi
 OURDIR="$(realpath $(dirname $0))"
 cd "$OURDIR"
 
+. ./helpers/partitions
+
 PACKAGES=""
 PACKAGES_FROM_CMDLINE=""
 PACKAGESETS="core"
 SERVICES="dbus-broker NetworkManager"
 WEAKDEPS=""
-HOSTDEPS="parted"
+HOSTDEPS="gptfdisk"
 
 if ! command -v dnf5 &>/dev/null; then
 	# Can't just handle this through HOSTDEPS because
@@ -126,10 +112,13 @@ PRE_PACKAGES="${PRE_PACKAGES:-distro-release-repos}"
 [ -z "$FINAL" ] && FINAL=false
 OS_VERSION=""
 IDENTIFIER=""
-while getopts "d:Fi:Kn:o:p:P:r:s:S:u:v:w:W" opt; do
+while getopts "d:f:Fi:Kn:o:p:P:r:s:S:u:v:w:W" opt; do
 	case $opt in
 	d)
 		SDDMSESSION="$OPTARG"
+		;;
+	f)
+		FSTYPE="$OPTARG"
 		;;
 	F)
 		FINAL=true
@@ -727,7 +716,6 @@ rm -rf ${RESULTDIR} ; mkdir -p ${RESULTDIR}
 BASENAME="${BASE_DISTRO}-${SHORTTARGET}-${OS_VERSION}"
 IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
 [ -z "$FSTYPE" ] && FSTYPE=ext4
-declare -A PARTITIONS
 run setup-partitions
 
 rm -rf "$OURDIR/$ROOTDIR"
@@ -740,30 +728,36 @@ if [ -e "${IMAGE}" ]; then
 		echo "Failed to find loop device for ${IMAGE}" >&2
 		exit 1
 	fi
-	rescanPartitions ${LOOPDEV}
 	if [ "${#PARTITIONS[@]}" -gt 0 ]; then
-		for i in "${!PARTITIONS[@]}"; do
-			MP="$(echo ${PARTITIONS[$i]}|cut -d: -f1)"
-			FS="$(echo ${PARTITIONS[$i]}|cut -d: -f2)"
-			LABEL="$(echo ${PARTITIONS[$i]}|cut -d: -f3)"
-			MKFS_EXTRA_ARGS=""
-			if [ -n "$LABEL" ]; then
-				if echo $FS |grep -q fat; then
-					MKFS_EXTRA_ARGS="-n ${LABEL}"
+		partitionDisk ${LOOPDEV} PARTITIONS
+		# We have to mount all generated partitions at the right
+		# locations, which also means getting the order right
+		# (which may not necessarily be the same as the order
+		# on the disk because of nested mounts -- e.g. / has
+		# to be mounted before /boot, /boot has to be mounted
+		# before /boot/efi, ...
+		#
+		# So the order in which to try mounting partitions is
+		# shortest mount point to longest mount point
+		MOUNTS=$(for i in "${!PARTITIONS[@]}"; do
+			MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+			MPLEN="$(echo $MP |wc -c)"
+			echo $MPLEN.$i
+		done |sort -V |cut -d. -f2)
+		for i in $MOUNTS; do
+			echo "Mounting ${PARTITIONS[$i]}"
+			PARTNO="$(echo ${PARTITIONS[$i]} |cut -d: -f8)"
+			[ -z "$PARTNO" ] && PARTNO=$((i+1))
+			echo $MOUNTED |grep -q :${PARTNO}: && continue
+			MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+			if [ -n "$MP" ]; then
+				mkdir -p ${OURDIR}/${ROOTDIR}${MP}
+				if mount -o loop ${LOOPDEV}p${PARTNO} ${OURDIR}/${ROOTDIR}${MP}; then
+					MOUNTED="${MOUNTED}:${PARTNO}:"
 				else
-					MKFS_EXTRA_ARGS="-L ${LABEL}"
+					MOUNTFAILS=$((MOUNTFAILS+1))
 				fi
 			fi
-			case $FS in
-			swap)
-				mkswap -v1 $MKFS_EXTRA_ARGS ${LOOPDEV}p${i}
-				;;
-			*)
-				mkfs.$FS $MKFS_EXTRA_ARGS ${LOOPDEV}p${i}
-				mkdir -p ${OURDIR}/${ROOTDIR}${MP}
-				mount -o loop ${LOOPDEV}p${i} ${OURDIR}/${ROOTDIR}${MP}
-				;;
-			esac
 		done
 	fi
 else
@@ -905,10 +899,12 @@ done
 # Generate fstab
 if [ "${#PARTITIONS[@]}" -gt 0 ]; then
 	for i in "${!PARTITIONS[@]}"; do
-		MP="$(echo ${PARTITIONS[$i]}|cut -d: -f1)"
-		FS="$(echo ${PARTITIONS[$i]}|cut -d: -f2)"
-		LABEL="$(echo ${PARTITIONS[$i]}|cut -d: -f3)"
-		echo "/dev/disk/by-label/${LABEL} ${MP} ${FS} defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
+		FS="$(echo ${PARTITIONS[$i]}|cut -d: -f4)"
+		MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+		LABEL="$(echo ${PARTITIONS[$i]}|cut -d: -f6)"
+		if [ -n "$LABEL" ]; then
+			echo "/dev/disk/by-label/${LABEL} ${MP} ${FS} defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
+		fi
 	done
 fi
 

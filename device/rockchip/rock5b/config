@@ -3,7 +3,6 @@ unset KERNELBUNDLE
 
 # FIXME port the scripts in u-boot/arch/arm/mach-rockchip to python 3
 HOSTDEPS="$HOSTDEPS python2"
-HOSTDEPS="$HOSTDEPS parted"
 HOSTDEPS="$HOSTDEPS u-boot-rock5b-rk3588 u-boot-tools"
 HWPACKAGES_gui="mali-g610-firmware"
 # For rtl_nic/rtl8125b-2.fw -- FIXME kernel-firmware-extra needs to be split

@@ -206,5 +206,5 @@ before A, try renaming the files to e.g. 00-B.patch and 01-A.patch.
 Please submit any additional boards you're adding to the OpenMandriva project.
 
 ---
-(c) 2020 [Bernhard "bero" Rosenkränzer](mailto:bero@lindev.ch)
+(c) 2020-2025 [Bernhard "bero" Rosenkränzer](mailto:bero@lindev.ch)
 Released under the GPLv3.
