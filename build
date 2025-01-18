@@ -68,7 +68,7 @@ PACKAGES_FROM_CMDLINE=""
 PACKAGESETS="core"
 SERVICES="dbus-broker NetworkManager"
 WEAKDEPS=""
-HOSTDEPS="gptfdisk"
+HOSTDEPS="gptfdisk dosfstools"
 
 if ! command -v dnf5 &>/dev/null; then
 	# Can't just handle this through HOSTDEPS because
@@ -179,6 +179,31 @@ if [ -z "$1" ]; then
 	usage
 	exit 1
 fi
+
+[ -z "$FSTYPE" ] && FSTYPE=ext4
+
+# Make sure we have the right mkfs.* stuff
+case $FSTYPE in
+ext4)
+	HOSTDEPS="$HOSTDEPS e2fsprogs"
+	;;
+btrfs)
+	HOSTDEPS="$HOSTDEPS btrfs-progs"
+	;;
+xfs)
+	HOSTDEPS="$HOSTDEPS xfsprogs"
+	;;
+jfs)
+	HOSTDEPS="$HOSTDEPS jfsutils"
+	;;
+# Hope nobody is THAT insane, but...
+ntfs)
+	HOSTDEPS="$HOSTDEPS ntfsprogs"
+	;;
+exfat)
+	HOSTDEPS="$HOSTDEPS exfatprogs"
+	;;
+esac
 
 if [ -z "$OS_VERSION" ]; then
 	[ -n "$IDENTIFIER" ] && OS_VERSION="$IDENTIFIER-"
@@ -715,7 +740,6 @@ rm -rf ${RESULTDIR} ; mkdir -p ${RESULTDIR}
 
 BASENAME="${BASE_DISTRO}-${SHORTTARGET}-${OS_VERSION}"
 IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
-[ -z "$FSTYPE" ] && FSTYPE=ext4
 run setup-partitions
 
 rm -rf "$OURDIR/$ROOTDIR"
