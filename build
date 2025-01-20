@@ -933,9 +933,11 @@ if [ "${#PARTITIONS[@]}" -gt 0 ]; then
 fi
 
 run setup-system-files
-if [ -e $OURDIR/device/$TARGET/install-openmandriva.in ]; then
-	sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BOOTEFI@,${BOOTEFI},g" device/$TARGET/install-openmandriva.in >$OURDIR/$ROOTDIR/home/omv/install-openmandriva
-	chmod +x $OURDIR/$ROOTDIR/home/omv/install-openmandriva
+if ! [ "$OMIT_TEXTINSTALLER" =~ yes|true|1 ]; then
+	sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BOOTEFI@,${BOOTEFI},g" helpers/install-openmandriva.in >"$OURDIR/$ROOTDIR/home/omv/install-openmandriva"
+	mkdir -p "$OURDIR/$ROOTDIR/usr/share/om-text-installer"
+	cp helpers/partitions "$OURDIR/$ROOTDIR/usr/share/om-text-installer/"
+	chmod +x "$OURDIR/$ROOTDIR/home/omv/install-openmandriva"
 fi
 if [ "$NEED_INITRD" != "no" ] || [ "$USE_UEFI" = "yes" ] || [ "$USE_SYSTEMD_UEFI" != "yes" ] && [ -n "$KERNELVERSION" ]; then
 	if [ "$NEED_INITRD" != "no" ]; then

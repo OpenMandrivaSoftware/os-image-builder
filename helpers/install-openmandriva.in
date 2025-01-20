@@ -1,0 +1,251 @@
+#!/bin/bash
+if [ "$(id -u)" != "0" ]; then
+	echo "This script needs root access."
+	echo "The default root password of the live image is \"omv\"."
+	exec sudo $0 "$@"
+	exit 1
+fi
+
+. /usr/share/om-text-installer/partitions
+
+TOOLOUTPUT=/dev/null
+VERBOSE=""
+
+if [ -z "$(ls -A /sys/firmware/efi/efivars)" ]; then
+	USE_UEFI=false
+	USE_BIOS=true
+else
+	USE_UEFI=true
+	USE_BIOS=false
+fi
+
+while getopts "bBef:r:s:v" opt; do
+	case $opt in
+	b)
+		# Use BIOS boot
+		USE_UEFI=false
+		USE_BIOS=true
+		;;
+	B)
+		# Install both BIOS and UEFI boot environments
+		USE_UEFI=true
+		USE_BIOS=true
+		;;
+	e)
+		# Use UEFI boot even if it wasn't detected
+		USE_UEFI=true
+		USE_BIOS=false
+		;;
+	f)
+		FSTYPE="$OPTARG"
+		;;
+	r)
+		ROOTSIZE="$OPTARG"
+		;;
+	s)
+		SWAPSIZE="$OPTARG"
+		;;
+	v)
+		TOOLOUTPUT=/dev/stderr
+		VERBOSE=-v
+		;;
+	*)
+		echo "Unknown option $opt"
+		exit 1
+		;;
+	esac
+done
+shift $((OPTIND-1))
+
+[ -z "$FSTYPE" ] && FSTYPE="$(head -n1 /proc/mounts |cut -d' ' -f3)"
+[ -z "$FSTYPE" ] && FSTYPE="ext4"
+
+DESTINATION=/dev/sda
+[ -n "$1" ] && DESTINATION="$1"
+
+if ! [ -b "$DESTINATION" ]; then
+	echo "Invalid destination device $DESTINATION"
+	exit 1
+fi
+
+cat <<EOF
+WARNING: This script will overwrite the entire disk $1
+Press Ctrl-C if you don't want this to happen. Use $0 /dev/whatever to
+select a different target device.
+
+EOF
+
+if [ -e /etc/om-text-installer/help.blockdevs ]; then
+	cat /etc/om-text-installer/help.blockdevs
+	echo
+fi
+
+cat <<EOF
+At the moment, this install script doesn't support installing alongside
+another OS on the same disk - but you can install manually using the commands
+in the script (skipping over partitioning and mounting steps).
+
+Press Enter to continue or Ctrl-C to abort.
+EOF
+read
+
+DISKSIZE="$(gdisk -l $DESTINATION |grep "^Disk /" |awk '{ print $3; }')"
+# gdisk output is in sectors of 512 bytes
+DISKSIZE=$((DISKSIZE*512))
+# If the disk is large enough, we want a swap partition and a root/home split by default
+if [ "$DISKSIZE" -gt 100000000000 ]; then
+	[ -z "$SWAPSIZE" ] && SWAPSIZE=8G
+	[ -z "$ROOTSIZE" ] && ROOTSIZE=60G
+else
+	[ -z "$SWAPSIZE" ] && SWAPSIZE=0
+	[ -z "$ROOTSIZE" ] && ROOTSIZE=0
+fi
+
+echo "Setting up partition table..."
+case "$(uname -m)" in
+i?86)
+	ROOTTAG=8303
+	;;
+x86_64)
+	ROOTTAG=8304
+	;;
+aarch64)
+	ROOTTAG=8305
+	;;
+*)
+	ROOTTAG=8300
+	;;
+esac
+PN=1
+PARTITIONS=()
+if $USE_BIOS; then
+	PARTITIONS+=("34:2047:ef02:::BIOS:1")
+	PN=$((PN+1))
+fi
+if $USE_UEFI; then
+	PARTITIONS+=(":+256M:ef00:vfat:/boot/efi:/boot/efi")
+	UEFIDEV="${DESTINATION}${SEPARATOR}${PN}"
+	PN=$((PN+1))
+fi
+if [ "$SWAPSIZE" != 0 ]; then
+	PARTITIONS+=(":+${SWAPSIZE}:8200:swap")
+	SWAPDEV="${DESTINATION}${SEPARATOR}${PN}"
+	PN=$((PN+1))
+fi
+if [ "$ROOTSIZE" != 0 ]; then
+	PARTITIONS+=(":+${ROOTSIZE}:${ROOTTAG}:${FSTYPE}:/:/")
+	ROOTDEV="${DESTINATION}${SEPARATOR}${PN}"
+	PN=$((PN+1))
+	PARTITIONS+=("::8302:${FSTYPE}:/home:/home")
+	HOMEDEV="${DESTINATION}${SEPARATOR}${PN}"
+	PN=$((PN+1))
+else
+	PARTITIONS+=("::${ROOTTAG}:${FSTYPE}:/:/")
+	ROOTDEV="${DESTINATION}${SEPARATOR}${PN}"
+	PN=$((PN+1))
+fi
+
+if [ -z "$ROOTDEV" ]; then
+	echo "No root partition - apparently partitioning went wrong."
+	exit 1
+fi
+
+if [ -n "$UEFIDEV" ] && [ ! -b "$UEFIDEV" ]; then
+	echo "Device node for UEFI system partition $UEFIDEV didn't get created."
+	echo "Apparently partitioning went wrong."
+	exit 1
+fi
+if [ -n "$SWAPDEV" ] && [ ! -b "$SWAPDEV" ]; then
+	echo "Device node for Swap partition $SWAPDEV didn't get created."
+	echo "Apparently partitioning went wrong."
+	exit 1
+fi
+if [ -n "$ROOTDEV" ] && [ ! -b "$ROOTDEV" ]; then
+	echo "Device node for Root partition $ROOTDEV didn't get created."
+	echo "Apparently partitioning went wrong."
+	exit 1
+fi
+if [ -n "$HOMEDEV" ] && [ ! -b "$HOMEDEV" ]; then
+	echo "Device node for Home partition $HOMEDEV didn't get created."
+	echo "Apparently partitioning went wrong."
+	exit 1
+fi
+
+if [ -n "$UEFIDEV" ]; then
+	echo "Formatting UEFI partition..."
+	mkfs.vfat -n UEFI $UEFIDEV &>$TOOLOUTPUT
+fi
+if [ -n "$SWAPDEV" ]; then
+	echo "Formatting swap partition..."
+	mkswap -f $SWAPDEV &>$TOOLOUTPUT
+	swapon $SWAPDEV
+fi
+echo "Formatting / partition..."
+mkfs.$FSTYPE -F -L/ $ROOTDEV &>$TOOLOUTPUT
+ROOTUUID=$(/sbin/blkid $ROOTDEV |sed -e 's,.* UUID=",,;s,".*,,')
+if [ -n "$HOMEDEV" ]; then
+	echo "Formatting /home partition..."
+	mkfs.$FSTYPE -F -L/home $HOMEDEV &>$TOOLOUTPUT
+fi
+
+# Make sure efivarfs is mounted -- it might not be if
+# the kernel has been built with modular efivarfs and
+# the initramfs doesn't force load the module
+$USE_UEFI && mount -t efivarfs none /sys/firmware/efi/efivars
+
+mkdir -p /mnt/destination
+mount $ROOTDEV /mnt/destination
+if [ -n "$UEFIDEV" ]; then
+	mkdir -p /mnt/destination/boot/efi
+	mount $UEFIDEV /mnt/destination/boot/efi
+	for i in /dev /dev/pts /proc /sys /sys/firmware/efi/efivars; do
+		mkdir -p /mnt/destination$i || :
+		mount --bind $i /mnt/destination$i
+	done
+fi
+if [ -n "$HOMEDEV" ]; then
+	mkdir -p /mnt/destination/home
+	mount $HOMEDEV /mnt/destination/home
+fi
+
+echo "Copying OS..."
+tar c --one-file-system -f - / | (cd /mnt/destination && tar x $VERBOSE -f -)
+
+echo "Setting up system files..."
+echo "$ROOTDEV / $FSTYPE defaults,noatime 0 1" >/mnt/destination/etc/fstab
+[ -n "$SWAPDEV" ] && echo "$SWAPDEV swap swap defaults 0 1" >>/mnt/destination/etc/fstab
+[ -n "$UEFIDEV" ] && echo "$UEFIDEV /boot/efi vfat defaults,noatime 0 2" >>/mnt/destination/etc/fstab
+[ -n "$HOMEDEV" ] && echo "$HOMEDEV /home $FSTYPE defaults,noatime 0 2" >>/mnt/destination/etc/fstab
+
+if [ -n "$HOMEDEV" ]; then
+	cp -a /home/* /mnt/destination/home
+fi
+
+if [ -n "$UEFIDEV" ]; then
+	echo "Copying bootup files..."
+	cp -ax /boot/efi/* /mnt/destination/boot/efi/
+	echo "Registering with UEFI bootloader"
+	sed -i -e "s,^search .*,search --no-floppy --fs-uuid --set=root $ROOTUUID," /mnt/destination/boot/efi/EFI/BOOT/grub.cfg
+	sed -i -e "s,LABEL=OMVROOT,UUID=$ROOTUUID,g" /mnt/destination/boot/efi/EFI/BOOT/grub.cfg
+	cp /mnt/destination/boot/efi/EFI/BOOT/grub.cfg /mnt/destination/boot/efi/EFI/openmandriva/
+	cp /mnt/destination/boot/efi/EFI/BOOT/grub.cfg /mnt/destination/boot/grub2/
+	efibootmgr --create -L 'OpenMandriva Lx @OMV_VERSION@' -l '\EFI\BOOT\@BOOTEFI@' -d "$DESTINATION" -p $(echo $UEFIDEV |sed -e "s,$DESTINATION,,")
+	chroot /mnt/destination /usr/bin/grub2-install 
+fi
+if $USE_BIOS; then
+	chroot /mnt/destination /usr/bin/grub2-install $DESTINATION
+fi
+
+$USE_UEFI && umount /mnt/destination/sys/firmware/efi/efivars
+umount /mnt/destination/sys
+umount /mnt/destination/proc
+umount /mnt/destination/dev/pts
+umount /mnt/destination/dev
+
+echo "Cleaning up..."
+rm -f /mnt/destination/home/omv/install-openmandriva
+[ -n "$HOMEDEV" ] && umount /mnt/destination/home
+[ -n "$UEFIDEV" ] && umount /mnt/destination/boot/efi
+umount /mnt/destination
+
+echo "DONE! OpenMandriva should now be installed."
