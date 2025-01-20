@@ -236,7 +236,7 @@ fi
 if $USE_BIOS; then
 	echo "Installing BIOS grub bootloader"
 	BOOTEDUUID="$(cat /mnt/destination/boot/grub2/grub.cfg |grep -- '--set=root ' |head -n1 |sed -e 's,.*--set=root ,,')"
-	sed -i -e "s,$BOOTEDUUID,$ROOTUUID,g" /mnt/destination/boot/grub2/grub.cfg
+	sed -i -e "s,$BOOTEDUUID,$ROOTUUID,g" -E "s, root=[a-z0-9/]+, root=UUID=$ROOTUUID,g" /mnt/destination/boot/grub2/grub.cfg
 	chroot /mnt/destination /usr/bin/grub2-install --target=i386-pc $DESTINATION
 fi
 
