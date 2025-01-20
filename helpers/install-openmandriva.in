@@ -179,7 +179,7 @@ fi
 
 mkdir -p /mnt/destination
 mountAll ${DESTINATION} PARTITIONS /mnt/destination
-for i in /dev /dev/pts /proc /sys /sys/firmware/efi/efivars; do
+for i in /dev /proc /sys /sys/firmware/efi/efivars; do
 	mkdir -p /mnt/destination$i || :
 	mount --bind $i /mnt/destination$i || :
 done
