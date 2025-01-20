@@ -175,7 +175,7 @@ mountAll() {
 		MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
 		if [ -n "$MP" ]; then
 			mkdir -p "${MOUNTPOINT}${MP}"
-			mount -o loop ${DEVICE}${PARTNO} "${MOUNTPOINT}${MP}"
+			mount ${DEVICE}${PARTNO} "${MOUNTPOINT}${MP}"
 		fi
 	done
 }
