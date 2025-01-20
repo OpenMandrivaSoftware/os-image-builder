@@ -20,11 +20,17 @@ rescanPartitions () {
 
 	# Workaround for /dev/loopXpY not devices detected after
 	# sgdisk in abf (and probably other containers)
+	echo "Rescanning partitions on $1"
 	if echo $1 |grep -q '^/dev/loop'; then
+		ls -l /dev/loop*
+		losetup -l
 		udevadm settle -t 5 &>/dev/null || :
 		local FILE="$(losetup -l $1 |grep ^$1 |awk '{ print $6; }')"
 		losetup -d $1
 		losetup -P $1 ${FILE}
+		losetup -l
+		ls -l /dev/loop*
+		kpartx -uv $1
 	fi
 
 	udevadm settle -t 5 &>/dev/null || :
