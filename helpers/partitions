@@ -21,8 +21,12 @@ rescanPartitions () {
 	# Workaround for /dev/loopXpY not devices detected after
 	# sgdisk in abf (and probably other containers)
 	echo "Rescanning partitions on $1"
+	set -x
 	if echo $1 |grep -q '^/dev/loop'; then
 		ls -l /dev/loop*
+		for i in /sys/block/*/*/dev; do
+			echo $i; cat $i
+		done
 		losetup -l
 		udevadm settle -t 5 &>/dev/null || :
 		local FILE="$(losetup -l $1 |grep ^$1 |awk '{ print $6; }')"
@@ -35,7 +39,7 @@ rescanPartitions () {
 
 	udevadm settle -t 5 &>/dev/null || :
 	partx -a $1 || :
-	partx -u $1
+	partx -u $1 || :
 	udevadm settle -t 5 &>/dev/null
 	# Workaround for /dev/loopXpY device nodes not being created
 	# inside the isobuilder container in ABF -- this shouldn't
@@ -47,6 +51,7 @@ rescanPartitions () {
 			mknod /dev/${LDEV}p${i} b ${NODE/:*/} ${NODE/*:/}
 		fi
 	done
+	ls -l /dev/loop*
 }
 
 # Partition and format a disk
