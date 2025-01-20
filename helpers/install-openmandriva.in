@@ -209,8 +209,9 @@ for i in $MOUNTS; do
 	MP="$(echo ${PARTITIONS[$i]} |cut -d: -f5)"
 	UUID="$(blkid ${DESTINATION}${P}${PARTNO} |sed -e 's,.* UUID=",,;s,".*,,')"
 	if [ "$MP" = "/" ]; then
-		echo "UUID=${UUID} ${MP} ${FS} defaults,noatime 0 1" >>/mnt/destination/etc/fstab
 		ROOTUUID="${UUID}"
+		ROOTPUUID="$(blkid ${DESTINATION}${P}${PARTNO} |sed -e 's,.* PARTUUID=",,;s,".*,,')"
+		echo "PARTUUID=${ROOTPUUID} ${MP} ${FS} defaults,noatime 0 1" >>/mnt/destination/etc/fstab
 	elif [ -n "$MP" ]; then
 		echo "UUID=${UUID} ${MP} ${FS} defaults,noatime 0 2" >>/mnt/destination/etc/fstab
 	elif [ "$FS" = "swap" ]; then
@@ -237,7 +238,7 @@ if $USE_BIOS; then
 	echo "Installing BIOS grub bootloader"
 	BOOTEDUUID="$(cat /mnt/destination/boot/grub2/grub.cfg |grep -- '--set=root ' |head -n1 |sed -e 's,.*--set=root ,,')"
 	sed -i -e "s,$BOOTEDUUID,$ROOTUUID,g" /mnt/destination/boot/grub2/grub.cfg
-	sed -i -E "s, root=[a-z0-9/]+, root=UUID=$ROOTUUID,g" /mnt/destination/boot/grub2/grub.cfg
+	sed -i -E "s, root=[a-z0-9/]+, root=PARTUUID=$ROOTPUUID,g" /mnt/destination/boot/grub2/grub.cfg
 	chroot /mnt/destination /usr/bin/grub2-install --target=i386-pc $DESTINATION
 fi
 
