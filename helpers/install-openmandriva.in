@@ -57,6 +57,11 @@ while getopts "bBef:r:s:v" opt; do
 done
 shift $((OPTIND-1))
 
+if $USE_BIOS && ! [[ "$(uname -m)" =~ (i.86|x86_64) ]]; then
+	echo "BIOS is x86 only."
+	exit 1
+fi
+
 [ -z "$FSTYPE" ] && FSTYPE="$(head -n1 /proc/mounts |cut -d' ' -f3)"
 [ -z "$FSTYPE" ] && FSTYPE="ext4"
 
@@ -69,7 +74,7 @@ if ! [ -b "$DESTINATION" ]; then
 fi
 
 cat <<EOF
-WARNING: This script will overwrite the entire disk $1
+WARNING: This script will wipe and overwrite the entire disk $1
 Press Ctrl-C if you don't want this to happen. Use $0 /dev/whatever to
 select a different target device.
 
@@ -81,9 +86,23 @@ if [ -e /etc/om-text-installer/help.blockdevs ]; then
 fi
 
 cat <<EOF
-At the moment, this install script doesn't support installing alongside
-another OS on the same disk - but you can install manually using the commands
-in the script (skipping over partitioning and mounting steps).
+If you wish to use partition sizes other than this installer's defaults, pass
+parameters
+	-s X
+to set the size of a swap partition (e.g. 0 to not create a swap partition,
+or 2G to create a 2GiB swap partition)
+	-r X
+to split root and home partitions and set the size of the root partition to
+X, e.g. 20G for 20 GiB, with the home partition filling the rest of the disk.
+Setting -r 0 will not split / and /home and use all available space for the
+combined / and /home partition.
+
+All Linux partitions will be formatted using the $FSTYPE filesystem.
+Use -f FSTYPE (e.g. -f ext4 or -f btrfs) for a different choice.
+
+If you need a more complex partition table, e.g. leaving space for another OS,
+create a file in /etc/om-text-installer/partitions describing the
+partition/filesystem layout. See this script for the correct format.
 
 Press Enter to continue or Ctrl-C to abort.
 EOF
@@ -92,89 +111,60 @@ read
 DISKSIZE="$(gdisk -l $DESTINATION |grep "^Disk /" |awk '{ print $3; }')"
 # gdisk output is in sectors of 512 bytes
 DISKSIZE=$((DISKSIZE*512))
-# If the disk is large enough, we want a swap partition and a root/home split by default
-if [ "$DISKSIZE" -gt 100000000000 ]; then
-	[ -z "$SWAPSIZE" ] && SWAPSIZE=8G
-	[ -z "$ROOTSIZE" ] && ROOTSIZE=60G
-else
-	[ -z "$SWAPSIZE" ] && SWAPSIZE=0
-	[ -z "$ROOTSIZE" ] && ROOTSIZE=0
-fi
 
-echo "Setting up partition table..."
-case "$(uname -m)" in
-i?86)
-	ROOTTAG=8303
-	;;
-x86_64)
-	ROOTTAG=8304
-	;;
-aarch64)
-	ROOTTAG=8305
-	;;
-*)
-	ROOTTAG=8300
-	;;
-esac
-PN=1
-PARTITIONS=()
-if $USE_BIOS; then
-	PARTITIONS+=("34:2047:ef02:::BIOS:1")
-	PN=$((PN+1))
-fi
-if $USE_UEFI; then
-	PARTITIONS+=(":+256M:ef00:vfat:/boot/efi:UEFIBOOT")
-	UEFIDEV="${DESTINATION}${SEPARATOR}${PN}"
-	PN=$((PN+1))
-fi
-if [ "$SWAPSIZE" != 0 ]; then
-	PARTITIONS+=(":+${SWAPSIZE}:8200:swap")
-	SWAPDEV="${DESTINATION}${SEPARATOR}${PN}"
-	PN=$((PN+1))
-fi
-if [ "$ROOTSIZE" != 0 ]; then
-	PARTITIONS+=(":+${ROOTSIZE}:${ROOTTAG}:${FSTYPE}:/:/")
-	ROOTDEV="${DESTINATION}${SEPARATOR}${PN}"
-	PN=$((PN+1))
-	PARTITIONS+=("::8302:${FSTYPE}:/home:/home")
-	HOMEDEV="${DESTINATION}${SEPARATOR}${PN}"
-	PN=$((PN+1))
+if [ -e /etc/om-text-installer/partitions ]; then
+	. /etc/om-text-installer/partitions
 else
-	PARTITIONS+=("::${ROOTTAG}:${FSTYPE}:/:/")
-	ROOTDEV="${DESTINATION}${SEPARATOR}${PN}"
-	PN=$((PN+1))
-fi
+	# If the disk is large enough, we want a swap partition and a root/home split by default
+	if [ "$DISKSIZE" -gt 100000000000 ]; then
+		[ -z "$SWAPSIZE" ] && SWAPSIZE=8G
+		[ -z "$ROOTSIZE" ] && ROOTSIZE=60G
+	else
+		[ -z "$SWAPSIZE" ] && SWAPSIZE=0
+		[ -z "$ROOTSIZE" ] && ROOTSIZE=0
+	fi
 
-if [ -z "$ROOTDEV" ]; then
-	echo "No root partition - apparently partitioning went wrong."
-	exit 1
+	echo "Setting up partition table..."
+	case "$(uname -m)" in
+	i?86)
+		ROOTTAG=8303
+		;;
+	x86_64)
+		ROOTTAG=8304
+		;;
+	aarch64)
+		ROOTTAG=8305
+		;;
+	*)
+		ROOTTAG=8300
+		;;
+	esac
+	PN=1
+	PARTITIONS=()
+	if $USE_BIOS; then
+		PARTITIONS+=("34:2047:ef02:::BIOS:1")
+		PN=$((PN+1))
+	fi
+	if $USE_UEFI; then
+		PARTITIONS+=(":+256M:ef00:vfat:/boot/efi:UEFIBOOT")
+		PN=$((PN+1))
+	fi
+	if [ "$SWAPSIZE" != 0 ]; then
+		PARTITIONS+=(":+${SWAPSIZE}:8200:swap")
+		PN=$((PN+1))
+	fi
+	if [ "$ROOTSIZE" != 0 ]; then
+		PARTITIONS+=(":+${ROOTSIZE}:${ROOTTAG}:${FSTYPE}:/:/")
+		PN=$((PN+1))
+		PARTITIONS+=("::8302:${FSTYPE}:/home:/home")
+		PN=$((PN+1))
+	else
+		PARTITIONS+=("::${ROOTTAG}:${FSTYPE}:/:/")
+		PN=$((PN+1))
+	fi
 fi
 
 partitionDisk ${DESTINATION} PARTITIONS
-
-if [ -n "$UEFIDEV" ] && [ ! -b "$UEFIDEV" ]; then
-	echo "Device node for UEFI system partition $UEFIDEV didn't get created."
-	echo "Apparently partitioning went wrong."
-	exit 1
-fi
-if [ -n "$SWAPDEV" ] && [ ! -b "$SWAPDEV" ]; then
-	echo "Device node for Swap partition $SWAPDEV didn't get created."
-	echo "Apparently partitioning went wrong."
-	exit 1
-fi
-if [ -n "$ROOTDEV" ] && [ ! -b "$ROOTDEV" ]; then
-	echo "Device node for Root partition $ROOTDEV didn't get created."
-	echo "Apparently partitioning went wrong."
-	exit 1
-fi
-if [ -n "$HOMEDEV" ] && [ ! -b "$HOMEDEV" ]; then
-	echo "Device node for Home partition $HOMEDEV didn't get created."
-	echo "Apparently partitioning went wrong."
-	exit 1
-fi
-
-echo "Formatting / partition..."
-ROOTUUID=$(/sbin/blkid $ROOTDEV |sed -e 's,.* UUID=",,;s,".*,,')
 
 # Make sure efivarfs is mounted -- it might not be if
 # the kernel has been built with modular efivarfs and
@@ -191,21 +181,41 @@ for i in /dev /dev/pts /proc /sys /sys/firmware/efi/efivars; do
 done
 
 echo "Copying OS..."
-tar c --one-file-system -f - / | (cd /mnt/destination && tar x $VERBOSE -f -)
+P=$(partitionSeparator ${DESTINATION})
+MOUNTS=$(for i in "${!PARTITIONS[@]}"; do
+	MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+	MPLEN="$(echo $MP |wc -c)"
+	echo $MPLEN.$i
+done |sort -V |cut -d. -f2)
+for i in $MOUNTS; do
+	MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+	if [ -n "$MP" -a -d "$MP" ]; then
+		(cd ${MP} && tar c --one-file-system -f - .) | (cd /mnt/destination${MP} && tar x $VERBOSE -f -)
+	fi
+done
 
 echo "Setting up system files..."
-echo "$ROOTDEV / $FSTYPE defaults,noatime 0 1" >/mnt/destination/etc/fstab
-[ -n "$SWAPDEV" ] && echo "$SWAPDEV swap swap defaults 0 1" >>/mnt/destination/etc/fstab
-[ -n "$UEFIDEV" ] && echo "$UEFIDEV /boot/efi vfat defaults,noatime 0 2" >>/mnt/destination/etc/fstab
-[ -n "$HOMEDEV" ] && echo "$HOMEDEV /home $FSTYPE defaults,noatime 0 2" >>/mnt/destination/etc/fstab
 
-if [ -n "$HOMEDEV" ]; then
-	cp -a /home/* /mnt/destination/home
-fi
+# Set up fstab for the target filesystem rather than the current boot device
+rm -f /mnt/destination/etc/fstab
+for i in $MOUNTS; do
+	PARTNO="$(echo ${PARTITIONS[$i]} |cut -d: -f8)"
+	[ -z "$PARTNO" ] && PARTNO=$((i+1))
+	FS="$(echo ${PARTITIONS[$i]} |cut -d: -f4)"
+	MP="$(echo ${PARTITIONS[$i]} |cut -d: -f5)"
+	UUID="$(blkid ${DESTINATION}${P}${PARTNO} |sed -e 's,.* UUID=",,;s,".*,,')"
+	if [ "$MP" = "/" ]; then
+		echo "UUID=${UUID} ${MP} ${FS} defaults,noatime 0 1" >>/mnt/destination/etc/fstab
+		ROOTUUID="${UUID}"
+	elif [ -n "$MP" ]; then
+		echo "UUID=${UUID} ${MP} ${FS} defaults,noatime 0 2" >>/mnt/destination/etc/fstab
+	elif [ "$FS" = "swap" ]; then
+		echo "UUID=${UUID} swap swap defaults,noatime 0 1" >>/mnt/destination/etc/fstab
+	fi
+	[ "$MP" = "/boot/efi" ] && UEFIDEV="${DESTINATION}${P}${PARTNO}"
+done
 
-if [ -n "$UEFIDEV" ]; then
-	echo "Copying bootup files..."
-	cp -ax /boot/efi/* /mnt/destination/boot/efi/
+if $USE_UEFI; then
 	echo "Registering with UEFI bootloader"
 	sed -i -e "s,^search .*,search --no-floppy --fs-uuid --set=root $ROOTUUID," /mnt/destination/boot/efi/EFI/BOOT/grub.cfg
 	sed -i -e "s,LABEL=OMVROOT,UUID=$ROOTUUID,g" /mnt/destination/boot/efi/EFI/BOOT/grub.cfg
@@ -216,7 +226,7 @@ if [ -n "$UEFIDEV" ]; then
 fi
 if $USE_BIOS; then
 	echo "Installing BIOS grub bootloader"
-	chroot /mnt/destination /usr/bin/grub2-install $DESTINATION
+	chroot /mnt/destination /usr/bin/grub2-install --target=i386-pc $DESTINATION
 fi
 
 # Remove the installer from the already installed system
