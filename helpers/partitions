@@ -94,7 +94,6 @@ partitionDisk() {
 	sgdisk $SGDISK_ARGS $DESTINATION
 	rescanPartitions $DESTINATION
 	for i in ${!PARTITIONS[@]}; do
-		echo "Creating ${PARTITIONS[$i]}"
 		local PARTNO=$(echo ${PARTITIONS[$i]} |cut -d: -f8)
 		[ -z "$PARTNO" ] && PARTNO=$((i+1))
 		local MKFSARGS=""
@@ -169,7 +168,6 @@ mountAll() {
 		echo $MPLEN.$i
 	done |sort -V |cut -d. -f2)
 	for i in $MOUNTS; do
-		echo "Mounting ${PARTITIONS[$i]}"
 		PARTNO="$(echo ${PARTITIONS[$i]} |cut -d: -f8)"
 		[ -z "$PARTNO" ] && PARTNO=$((i+1))
 		MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
