@@ -21,23 +21,19 @@ rescanPartitions () {
 	sync
 	udevadm settle -t 5
 	partx -a $1 || :
-	if ! partx -u $1 ; then
+
+	TRIES=0
+	while ! partx -u $1 ; do
 		# This happens in abf (and possibly other containers)?
 		# Got to find out what's going on here...
+		echo "WARNING: partition rescan failed. This should not happen outside of ABF."
 		sleep 5s
-		partx -u $1
-		if false; then
-		ls -l /dev/loop*
-		losetup -l
-		local FILE="$(losetup -l $1 |grep ^$1 |awk '{ print $6; }')"
-		losetup -d $1
-		losetup -P $1 ${FILE}
-		losetup -l
-		ls -l /dev/loop*
-		kpartx -uv $1
-		ls -l /dev/mapper/loop*
+		TRIES=$((TRIES+1))
+		if [ "$TRIES" = 10 ]; then
+			echo "ERROR: partition rescan on $1 still failing after $TRIES attempts. Giving up."
+			exit 1
 		fi
-	fi
+	done
 
 	udevadm settle -t 5 &>/dev/null || :
 	partx -a $1 || :
@@ -53,7 +49,6 @@ rescanPartitions () {
 			mknod /dev/${LDEV}p${i} b ${NODE/:*/} ${NODE/*:/}
 		fi
 	done
-	ls -l /dev/loop*
 }
 
 # Partition and format a disk
