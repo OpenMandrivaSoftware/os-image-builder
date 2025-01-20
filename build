@@ -222,7 +222,7 @@ TARGET="$1"
 if ! [ -e device/$TARGET/config ]; then
 	# Allow abbreviations, e.g. db410c instead of qualcomm/db410c
 	for i in $(find device -name config); do
-		if printf '%s\n' $i |grep -q "$TARGET/config\$"; then
+		if printf '%s\n' $i |grep -q "/$TARGET/config\$"; then
 			TARGET="$(dirname $i |cut -d/ -f2-)"
 			break
 		fi
