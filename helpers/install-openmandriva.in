@@ -142,7 +142,7 @@ else
 	PN=1
 	PARTITIONS=()
 	if $USE_BIOS; then
-		PARTITIONS+=("34:2047:ef02:::BIOS:1")
+		PARTITIONS+=("34:2047:ef02:::BIOSBOOT:1")
 		PN=$((PN+1))
 	fi
 	if $USE_UEFI; then
@@ -215,6 +215,11 @@ for i in $MOUNTS; do
 	[ "$MP" = "/boot/efi" ] && UEFIDEV="${DESTINATION}${P}${PARTNO}"
 done
 
+# Rebuild the initramfs to adjust any mention of a rootfs UUID/LABEL
+for i in /mnt/destination/boot/vmlinuz-*; do
+	KERNELVERSION=$(echo $i |sed -e 's,.*vmlinuz-,,')
+	chroot /mnt/destination dracut --xz -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
+done
 if $USE_UEFI; then
 	echo "Registering with UEFI bootloader"
 	sed -i -e "s,^search .*,search --no-floppy --fs-uuid --set=root $ROOTUUID," /mnt/destination/boot/efi/EFI/BOOT/grub.cfg

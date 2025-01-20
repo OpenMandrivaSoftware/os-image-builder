@@ -896,7 +896,7 @@ if [ "${#PARTITIONS[@]}" -gt 0 ]; then
 		FS="$(echo ${PARTITIONS[$i]}|cut -d: -f4)"
 		MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
 		LABEL="$(echo ${PARTITIONS[$i]}|cut -d: -f6)"
-		if [ -n "$LABEL" ]; then
+		if [ -n "$LABEL" -a -n "${MP}" ]; then
 			echo "/dev/disk/by-label/${LABEL} ${MP} ${FS} defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
 		fi
 	done
