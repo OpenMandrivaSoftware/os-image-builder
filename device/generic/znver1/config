@@ -1,10 +1,10 @@
-# Generic znver1 board with UEFI support
+# Generic znver1 board
 ARCH="znver1"
-# Let's use a current kernel, it usually has more hardware support
-HWPACKAGES="kernel-release"
+# dosfsprogs is needed to generate the UEFI boot partition
+# when using install-openmandriva
+HWPACKAGES="kernel-server dosfstools"
 # Most boards have a PCIE-slot that may take a graphics card (so we
-# need radeon and nouveau), others have onboard graphics (typically
-# mali or adreno...)
+# need radeon and nouveau)
 HWPACKAGES_gui="$HWPACKAGES_gui lib64dri-drivers-radeon lib64dri-drivers-nouveau"
 # Let's support what people might drop into those PCI-E slots...
 HWPACKAGES="$HWPACKAGES pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode"

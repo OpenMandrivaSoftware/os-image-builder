@@ -1,5 +1,5 @@
-# Installing OpenMandriva Lx on x86_64 hardware
-To install OpenMandriva Lx on x86_64 hardware
+# Installing OpenMandriva Lx on AMD Zen x86_64 hardware
+To install OpenMandriva Lx on AMD Zen x86_64 hardware
 
 * Boot the OS image
 * Log in as user "omv" with password "omv"
