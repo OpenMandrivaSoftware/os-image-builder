@@ -108,7 +108,11 @@ Press Enter to continue or Ctrl-C to abort.
 EOF
 read
 
-DISKSIZE="$(gdisk -l $DESTINATION |grep "^Disk /" |awk '{ print $3; }')"
+# The "echo 1" typically does nothing, but is required to get past
+# gdisk prompting what to do ("Use current GPT" over "Create blank GPT")
+# when dealing with a corrupt partition table
+# (e.g. after dd if=/dev/zero of=/dev/sda bs=1M count=32)
+DISKSIZE="$(echo 1 |gdisk -l $DESTINATION |grep "^Disk /" |awk '{ print $3; }')"
 # gdisk output is in sectors of 512 bytes
 DISKSIZE=$((DISKSIZE*512))
 
