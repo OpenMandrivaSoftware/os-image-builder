@@ -20,11 +20,13 @@ rescanPartitions () {
 
 	sync
 	udevadm settle -t 5
-	sleep 5s
 	partx -a $1 || :
 	if ! partx -u $1 ; then
 		# This happens in abf (and possibly other containers)?
 		# Got to find out what's going on here...
+		sleep 5s
+		partx -u $1
+		if false; then
 		ls -l /dev/loop*
 		losetup -l
 		local FILE="$(losetup -l $1 |grep ^$1 |awk '{ print $6; }')"
@@ -34,6 +36,7 @@ rescanPartitions () {
 		ls -l /dev/loop*
 		kpartx -uv $1
 		ls -l /dev/mapper/loop*
+		fi
 	fi
 
 	udevadm settle -t 5 &>/dev/null || :
