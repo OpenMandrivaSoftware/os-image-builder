@@ -37,7 +37,7 @@ rescanPartitions () {
 # Partition and format a disk
 #
 # Usage:
-#	partition_disk DEVICE PARTITIONS
+#	partitionDisk DEVICE PARTITIONS
 #	DEVICE: Device file on which partitions will be created, e.g. /dev/sda, /dev/mmcblk0
 #	PARTITIONS: Name of an array containing the partition table in the following format:
 #		START:END:TYPE:FILESYSTEM:MOUNTPOINT:LABEL:ALIGNMENT:PARTNO
@@ -69,6 +69,7 @@ partitionDisk() {
 	local PARRAY=$2[@]
 	local PARTITIONS=("${!PARRAY}")
 	local SEPARATOR="$(partitionSeparator $1)"
+	local MKFS
 	local i
 
 	local SGDISK_ARGS="--zap-all"
@@ -106,6 +107,9 @@ partitionDisk() {
 			ef00)
 				FS=vfat
 				;;
+			ef02)
+				FS=""
+				;;
 			8200)
 				FS=swap
 				;;
@@ -125,6 +129,63 @@ partitionDisk() {
 			;;
 		esac
 		wipefs -a ${DESTINATION}${SEPARATOR}${PARTNO}
-		$MKFS $MKFSARGS ${DESTINATION}${SEPARATOR}${PARTNO}
+		[ -n "$FS" ] && $MKFS $MKFSARGS ${DESTINATION}${SEPARATOR}${PARTNO}
+	done
+}
+
+# Mount all partitions on a device under a given mount point
+#
+# This mounts all given partitions on a device (using the same
+# format passed to partitionDisk -- e.g. to mount a destination
+# filesystem hierarchy after it has been created with partitionDisk)
+#
+# We have to mount all generated partitions at the right
+# locations, which also means getting the order right
+# (which may not necessarily be the same as the order
+# on the disk because of nested mounts -- e.g. / has
+# to be mounted before /boot, /boot has to be mounted
+# before /boot/efi, ...
+#
+# So the order in which to try mounting partitions is
+# shortest mount point to longest mount point
+#
+# Usage:
+# 	mountAll DEVICE PARTITIONS MOUNTPOINT
+#
+mountAll() {
+	local DEVICE="$1$(partitionSeparator $1)"
+	local PARRAY=$2[@]
+	local PARTITIONS=("${!PARRAY}")
+	local MOUNTPOINT="$3"
+	local MOUNTS
+	local MP
+	local MPLEN
+	local PARTNO
+	local i
+
+	MOUNTS=$(for i in "${!PARTITIONS[@]}"; do
+		MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+		MPLEN="$(echo $MP |wc -c)"
+		echo $MPLEN.$i
+	done |sort -V |cut -d. -f2)
+	for i in $MOUNTS; do
+		echo "Mounting ${PARTITIONS[$i]}"
+		PARTNO="$(echo ${PARTITIONS[$i]} |cut -d: -f8)"
+		[ -z "$PARTNO" ] && PARTNO=$((i+1))
+		MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+		if [ -n "$MP" ]; then
+			mkdir -p "${MOUNTPOINT}${MP}"
+			mount -o loop ${DEVICE}${PARTNO} "${MOUNTPOINT}${MP}"
+		fi
+	done
+}
+
+# Unmount a mount point and all mountpoints inside it
+# Usage:
+# 	umountAll /mountpoint
+#
+umountAll() {
+	while cat /proc/mounts |grep -q "$1"; do
+		umount -Rq $(cat /proc/mounts |grep "$1" |head -n1 |awk '{print $2;}')
 	done
 }

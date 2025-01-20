@@ -123,7 +123,7 @@ if $USE_BIOS; then
 	PN=$((PN+1))
 fi
 if $USE_UEFI; then
-	PARTITIONS+=(":+256M:ef00:vfat:/boot/efi:/boot/efi")
+	PARTITIONS+=(":+256M:ef00:vfat:/boot/efi:UEFIBOOT")
 	UEFIDEV="${DESTINATION}${SEPARATOR}${PN}"
 	PN=$((PN+1))
 fi
@@ -150,6 +150,8 @@ if [ -z "$ROOTDEV" ]; then
 	exit 1
 fi
 
+partitionDisk ${DESTINATION} PARTITIONS
+
 if [ -n "$UEFIDEV" ] && [ ! -b "$UEFIDEV" ]; then
 	echo "Device node for UEFI system partition $UEFIDEV didn't get created."
 	echo "Apparently partitioning went wrong."
@@ -171,42 +173,22 @@ if [ -n "$HOMEDEV" ] && [ ! -b "$HOMEDEV" ]; then
 	exit 1
 fi
 
-if [ -n "$UEFIDEV" ]; then
-	echo "Formatting UEFI partition..."
-	mkfs.vfat -n UEFI $UEFIDEV &>$TOOLOUTPUT
-fi
-if [ -n "$SWAPDEV" ]; then
-	echo "Formatting swap partition..."
-	mkswap -f $SWAPDEV &>$TOOLOUTPUT
-	swapon $SWAPDEV
-fi
 echo "Formatting / partition..."
-mkfs.$FSTYPE -F -L/ $ROOTDEV &>$TOOLOUTPUT
 ROOTUUID=$(/sbin/blkid $ROOTDEV |sed -e 's,.* UUID=",,;s,".*,,')
-if [ -n "$HOMEDEV" ]; then
-	echo "Formatting /home partition..."
-	mkfs.$FSTYPE -F -L/home $HOMEDEV &>$TOOLOUTPUT
-fi
 
 # Make sure efivarfs is mounted -- it might not be if
 # the kernel has been built with modular efivarfs and
 # the initramfs doesn't force load the module
-$USE_UEFI && mount -t efivarfs none /sys/firmware/efi/efivars
+if $USE_UEFI; then
+	mount -t efivarfs none /sys/firmware/efi/efivars &>/dev/null || :
+fi
 
 mkdir -p /mnt/destination
-mount $ROOTDEV /mnt/destination
-if [ -n "$UEFIDEV" ]; then
-	mkdir -p /mnt/destination/boot/efi
-	mount $UEFIDEV /mnt/destination/boot/efi
-	for i in /dev /dev/pts /proc /sys /sys/firmware/efi/efivars; do
-		mkdir -p /mnt/destination$i || :
-		mount --bind $i /mnt/destination$i
-	done
-fi
-if [ -n "$HOMEDEV" ]; then
-	mkdir -p /mnt/destination/home
-	mount $HOMEDEV /mnt/destination/home
-fi
+mountAll $ROOTDEV PARTITIONS /mnt/destination
+for i in /dev /dev/pts /proc /sys /sys/firmware/efi/efivars; do
+	mkdir -p /mnt/destination$i || :
+	mount --bind $i /mnt/destination$i || :
+done
 
 echo "Copying OS..."
 tar c --one-file-system -f - / | (cd /mnt/destination && tar x $VERBOSE -f -)
@@ -233,19 +215,13 @@ if [ -n "$UEFIDEV" ]; then
 	chroot /mnt/destination /usr/bin/grub2-install 
 fi
 if $USE_BIOS; then
+	echo "Installing BIOS grub bootloader"
 	chroot /mnt/destination /usr/bin/grub2-install $DESTINATION
 fi
 
-$USE_UEFI && umount /mnt/destination/sys/firmware/efi/efivars
-umount /mnt/destination/sys
-umount /mnt/destination/proc
-umount /mnt/destination/dev/pts
-umount /mnt/destination/dev
-
-echo "Cleaning up..."
+# Remove the installer from the already installed system
 rm -f /mnt/destination/home/omv/install-openmandriva
-[ -n "$HOMEDEV" ] && umount /mnt/destination/home
-[ -n "$UEFIDEV" ] && umount /mnt/destination/boot/efi
-umount /mnt/destination
+
+umountAll /mnt/destination
 
 echo "DONE! OpenMandriva should now be installed."
