@@ -18,23 +18,22 @@ rescanPartitions () {
 	local i
 	local SEPARATOR="$(partitionSeparator $1)"
 
-	# Workaround for /dev/loopXpY not devices detected after
-	# sgdisk in abf (and probably other containers)
-	echo "Rescanning partitions on $1"
-	set -x
-	if echo $1 |grep -q '^/dev/loop'; then
+	sync
+	udevadm settle -t 5
+	sleep 5s
+	partx -a $1 || :
+	if ! partx -u $1 ; then
+		# This happens in abf (and possibly other containers)?
+		# Got to find out what's going on here...
 		ls -l /dev/loop*
-		for i in /sys/block/*/*/dev; do
-			echo $i; cat $i
-		done
 		losetup -l
-		udevadm settle -t 5 &>/dev/null || :
 		local FILE="$(losetup -l $1 |grep ^$1 |awk '{ print $6; }')"
 		losetup -d $1
 		losetup -P $1 ${FILE}
 		losetup -l
 		ls -l /dev/loop*
 		kpartx -uv $1
+		ls -l /dev/mapper/loop*
 	fi
 
 	udevadm settle -t 5 &>/dev/null || :
