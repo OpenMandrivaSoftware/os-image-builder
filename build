@@ -61,6 +61,8 @@ fi
 OURDIR="$(realpath $(dirname $0))"
 cd "$OURDIR"
 
+echo "os-image-builder rev. $(git rev-parse HEAD)"
+
 . ./helpers/partitions
 
 PACKAGES=""
