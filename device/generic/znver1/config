@@ -7,7 +7,9 @@ HWPACKAGES="kernel-server dosfstools"
 # need radeon and nouveau)
 HWPACKAGES_gui="$HWPACKAGES_gui lib64dri-drivers-radeon lib64dri-drivers-nouveau"
 # Let's support what people might drop into those PCI-E slots...
-HWPACKAGES="$HWPACKAGES pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode"
+HWPACKAGES="$HWPACKAGES pciutils"
+# Those are commonly needed, but let's not force them into a base image
+#HWPACKAGES="$HWPACKAGES kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode"
 # (this is the default anyway)
 # NEED_INITRD=yes
 USE_UEFI=yes
