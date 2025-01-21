@@ -5,3 +5,4 @@ if echo $PACKAGESETS |grep -q gui; then
 else
 	sed -i -e '/^@IF_GUI@/d' $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
 fi
+sed -i -E 's, root=[a-zA-Z0-9/=-]+, root=LABEL=OMVROOT,g' $OURDIR/$ROOTDIR/boot/grub2/grub.cfg
