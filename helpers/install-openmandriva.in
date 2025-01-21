@@ -19,7 +19,7 @@ else
 	USE_BIOS=false
 fi
 
-while getopts "bBef:r:s:v" opt; do
+while getopts "bBef:r:s:Sv" opt; do
 	case $opt in
 	b)
 		# Use BIOS boot
@@ -44,6 +44,9 @@ while getopts "bBef:r:s:v" opt; do
 		;;
 	s)
 		SWAPSIZE="$OPTARG"
+		;;
+	S)
+		SKIP_PROMPT=true
 		;;
 	v)
 		TOOLOUTPUT=/dev/stderr
@@ -73,19 +76,20 @@ if ! [ -b "$DESTINATION" ]; then
 	exit 1
 fi
 
-cat <<EOF
-WARNING: This script will wipe and overwrite the entire disk $1
-Press Ctrl-C if you don't want this to happen. Use $0 /dev/whatever to
-select a different target device.
+if [ "$SKIP_PROMPT" != "true" ]; then
+	cat <<EOF
+	WARNING: This script will wipe and overwrite the entire disk $1
+	Press Ctrl-C if you don't want this to happen. Use $0 /dev/whatever to
+	select a different target device.
 
 EOF
 
-if [ -e /etc/om-text-installer/help.blockdevs ]; then
-	cat /etc/om-text-installer/help.blockdevs
-	echo
-fi
+	if [ -e /etc/om-text-installer/help.blockdevs ]; then
+		cat /etc/om-text-installer/help.blockdevs
+		echo
+	fi
 
-cat <<EOF
+	cat <<EOF
 If you wish to use partition sizes other than this installer's defaults, pass
 parameters
 	-s X
@@ -106,7 +110,8 @@ partition/filesystem layout. See this script for the correct format.
 
 Press Enter to continue or Ctrl-C to abort.
 EOF
-read
+	read
+fi
 
 # The "echo 1" typically does nothing, but is required to get past
 # gdisk prompting what to do ("Use current GPT" over "Create blank GPT")
@@ -238,7 +243,7 @@ if $USE_BIOS; then
 	echo "Installing BIOS grub bootloader"
 	BOOTEDUUID="$(cat /mnt/destination/boot/grub2/grub.cfg |grep -- '--set=root ' |head -n1 |sed -e 's,.*--set=root ,,')"
 	sed -i -e "s,$BOOTEDUUID,$ROOTUUID,g" /mnt/destination/boot/grub2/grub.cfg
-	sed -i -E "s, root=[a-z0-9/]+, root=PARTUUID=$ROOTPUUID,g" /mnt/destination/boot/grub2/grub.cfg
+	sed -i -E "s, root=[A-Za-z0-9/=]+, root=PARTUUID=$ROOTPUUID,g" /mnt/destination/boot/grub2/grub.cfg
 	chroot /mnt/destination /usr/bin/grub2-install --target=i386-pc $DESTINATION
 fi
 
