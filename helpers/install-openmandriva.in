@@ -121,6 +121,23 @@ DISKSIZE="$(echo 1 |gdisk -l $DESTINATION |grep "^Disk /" |awk '{ print $3; }')"
 # gdisk output is in sectors of 512 bytes
 DISKSIZE=$((DISKSIZE*512))
 
+echo "Setting up partition table..."
+case "$(uname -m)" in
+i?86)
+	ROOTTAG=8303
+	;;
+x86_64)
+	ROOTTAG=8304
+	;;
+aarch64)
+	ROOTTAG=8305
+	;;
+*)
+	ROOTTAG=8300
+	;;
+esac
+PARTITIONS=()
+
 if [ -e /etc/om-text-installer/partitions ]; then
 	. /etc/om-text-installer/partitions
 else
@@ -133,43 +150,20 @@ else
 		[ -z "$ROOTSIZE" ] && ROOTSIZE=0
 	fi
 
-	echo "Setting up partition table..."
-	case "$(uname -m)" in
-	i?86)
-		ROOTTAG=8303
-		;;
-	x86_64)
-		ROOTTAG=8304
-		;;
-	aarch64)
-		ROOTTAG=8305
-		;;
-	*)
-		ROOTTAG=8300
-		;;
-	esac
-	PN=1
-	PARTITIONS=()
 	if $USE_BIOS; then
 		PARTITIONS+=("34:2047:ef02:::BIOSBOOT:1")
-		PN=$((PN+1))
 	fi
 	if $USE_UEFI; then
 		PARTITIONS+=(":+256M:ef00:vfat:/boot/efi:UEFIBOOT")
-		PN=$((PN+1))
 	fi
 	if [ "$SWAPSIZE" != 0 ]; then
 		PARTITIONS+=(":+${SWAPSIZE}:8200:swap")
-		PN=$((PN+1))
 	fi
 	if [ "$ROOTSIZE" != 0 ]; then
 		PARTITIONS+=(":+${ROOTSIZE}:${ROOTTAG}:${FSTYPE}:/:/")
-		PN=$((PN+1))
 		PARTITIONS+=("::8302:${FSTYPE}:/home:/home")
-		PN=$((PN+1))
 	else
 		PARTITIONS+=("::${ROOTTAG}:${FSTYPE}:/:/")
-		PN=$((PN+1))
 	fi
 fi
 
