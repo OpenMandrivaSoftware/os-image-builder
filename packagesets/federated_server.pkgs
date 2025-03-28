@@ -1,0 +1,24 @@
+// Packages that are used on federated.computer servers
+openssh-server
+btrfs-progs
+qemu-guest-agent
+zram-generator
+bind-utils
+git-core
+cronie
+netcat-openbsd
+apache-tools
+openssl
+curl
+traefik-certs-dumper
+duplicity
+duplicity-backend-b2
+duplicity-backend-local
+duplicity-backend-s3_boto3
+duplicity-backend-ssh_paramiko
+python-b2
+docker
+docker-compose
+htop
+strace
+ltrace

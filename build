@@ -365,7 +365,7 @@ else
 fi
 CPP="$CPP -undef -nostdinc -P -E -Wno-unused-command-line-argument -I$OURDIR/packagesets -DLIB(x)=${LIB}##x -DARCH_$ARCH=1 -DTARGET_$(printf '%s\n' $TARGET|sed -e 's,/,_,g;s,-,_,g')=1 -DTARGET_$(printf '%s' $SHORTTARGET|sed -e 's,/,_,g;s,-,_,g')=1"
 for ps in $PACKAGESETS; do
-	CPP="$CPP -DPACKAGESET_${ps}=1"
+	CPP="$CPP -DPACKAGESET_${ps//-/_}=1"
 done
 for p in $PACKAGES_FROM_CMDLINE; do
 	PACKAGES="$PACKAGES $(printf '%s' $p |$CPP -)"
