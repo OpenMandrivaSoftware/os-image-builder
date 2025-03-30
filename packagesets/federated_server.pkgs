@@ -22,3 +22,4 @@ docker-compose
 htop
 strace
 ltrace
+cloud-init
