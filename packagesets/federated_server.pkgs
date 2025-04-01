@@ -23,3 +23,5 @@ htop
 strace
 ltrace
 cloud-init
+// used by dumpcerts.service to see if certificates were renewed
+diffutils
