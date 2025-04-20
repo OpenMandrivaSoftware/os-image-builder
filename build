@@ -636,17 +636,17 @@ if printf '%s\n' ${VER_PREFIX}${OMV_VERSION} |grep -q '^[0-9]'; then
 	DNF_VERSION=release
 	# This also needs to work before the rock symlink is updated on
 	# a new release...
-	dnf5 config-manager --installroot "$TEMPROOT" setopt rock-$ARCH.enabled=false
-	dnf5 config-manager --installroot "$TEMPROOT" setopt rock-updates-$ARCH.enabled=false
-	dnf5 config-manager --installroot "$TEMPROOT" setopt release-$ARCH.enabled=true
-	dnf5 config-manager --installroot "$TEMPROOT" setopt release-updates-$ARCH.enabled=true
+	dnf5 config-manager --create-missing-dir --installroot "$TEMPROOT" setopt rock-$ARCH.enabled=false
+	dnf5 config-manager --create-missing-dir --installroot "$TEMPROOT" setopt rock-updates-$ARCH.enabled=false
+	dnf5 config-manager --create-missing-dir --installroot "$TEMPROOT" setopt release-$ARCH.enabled=true
+	dnf5 config-manager --create-missing-dir --installroot "$TEMPROOT" setopt release-updates-$ARCH.enabled=true
 else
 	DNF_VERSION="${VER_PREFIX}${OMV_VERSION}"
 fi
 
 if [ -n "$EXTRA_REPOS" ]; then
 	for i in $EXTRA_REPOS; do
-		dnf5 config-manager --installroot "$TEMPROOT" setopt $DNF_VERSION-$ARCH-$i.enabled=true
+		dnf5 config-manager --create-missing-dir --installroot "$TEMPROOT" setopt $DNF_VERSION-$ARCH-$i.enabled=true
 	done
 fi
 
