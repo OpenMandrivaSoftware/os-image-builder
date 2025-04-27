@@ -1,12 +1,12 @@
 IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
 dd if=/dev/zero of=${IMAGE} bs=1M count=$((PADDED_EXPECTED_SIZE/1048576))
 
-PARTITIONS=(":+256M:ef00:vfat:/boot/efi:EFIBOOT")
+PARTITIONS=("32768:+256M:ef00:vfat:/boot/efi:EFIBOOT")
 PARTITIONS+=("::8305:${FSTYPE}:/:/")
-PARTITIONS+=("64:7167:8300:-:::1") # idbloader
-PARTITIONS+=("7168:7679:8300:-:::1") # vnvm
-PARTITIONS+=("7680:8063:8300:-:::1") # reserved_space
-PARTITIONS+=("8064:8127:8300:-:::1") # reserved1
-PARTITIONS+=("8128:8191:8300:-:::1") # uboot_env
-PARTITIONS+=("8192:16383:8300:-:::1") # reserved2
-PARTITIONS+=("16384:32734:8300:-:::1") # uboot
+PARTITIONS+=("64:7167:8300:-::idbloader:1") # idbloader
+PARTITIONS+=("7168:7679:8300:-::vnvm:1") # vnvm
+PARTITIONS+=("7680:8063:8300:-::reserved_space:1") # reserved_space
+PARTITIONS+=("8064:8127:8300:-::reserved1:1") # reserved1
+PARTITIONS+=("8128:8191:8300:-::uboot_env:1") # uboot_env
+PARTITIONS+=("8192:16383:8300:-::reserved2:1") # reserved2
+PARTITIONS+=("16384:32734:8300:-::uboot:1") # uboot
