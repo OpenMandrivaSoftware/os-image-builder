@@ -20,6 +20,7 @@ python-b2
 docker
 docker-compose
 htop
+jq
 strace
 ltrace
 cloud-init
