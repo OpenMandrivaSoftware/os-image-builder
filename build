@@ -602,6 +602,7 @@ cleanup() {
 	if [ -n "$TEMPROOT" -a -d "$TEMPROOT" ]; then
 		rm -rf "$TEMPROOT"
 	fi
+	[ -n "$LOOPDEV" ] && losetup -d $LOOPDEV || :
 }
 trap "cleanup; exit 1" ERR SIGINT SIGTERM
 trap "cleanup" EXIT
