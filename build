@@ -8,16 +8,16 @@ listTargets() {
 	done
 }
 usage() {
-	printf '%s\n' "Usage: $0 [ -v VERSION ] target"
-	printf '%s\n' "	-v: Use ${BASE_DISTRO} VERSION (default: cooker)"
-	printf '%s\n' "	-K: Keep already existing build root (default: no)"
-	printf '%s\n' "Available targets:"
+	echo "Usage: $0 [ -v VERSION ] target"
+	echo "	-v: Use ${BASE_DISTRO} VERSION (default: cooker)"
+	echo "	-K: Keep already existing build root (default: no)"
+	echo "Available targets:"
 	listTargets
 }
 run() {
 	local SCRIPT="$1"
 	shift
-	printf '%s\n' "Running $SCRIPT"
+	echo "Running $SCRIPT"
 	if [ -e $OURDIR/device/$TARGET/$SCRIPT ]; then
 		. $OURDIR/device/$TARGET/$SCRIPT "$@"
 	else
@@ -33,14 +33,14 @@ run() {
 	fi
 }
 isnative() {
-	local CPU=$(printf '%s\n' $1 |cut -d- -f1)
-	local ABI=$(printf '%s\n' $1 |rev |cut -d- -f1 |rev)
+	local CPU=$(echo $1 |cut -d- -f1)
+	local ABI=$(echo $1 |rev |cut -d- -f1 |rev)
 	local NATIVECPU=$(uname -m)
 	local NATIVEABI=gnu
 	if ldd /bin/sh |grep -q musl; then
 		NATIVEABI=musl
 	fi
-	if printf '%s\n' $NATIVECPU |grep -q ^arm; then
+	if echo $NATIVECPU |grep -q ^arm; then
 		NATIVEABI="${NATIVEABI}eabihf"
 		NATIVECPU="armv7hnl"
 	fi
@@ -53,7 +53,7 @@ isnative() {
 }
 
 if [ "$(id -u)" != "0" ]; then
-	printf '%s\n' "Need root privileges to set ownership of extracted files."
+	echo "Need root privileges to set ownership of extracted files."
 	exec sudo $0 -u "$(id -un)" "$@"
 	exit 1
 fi
@@ -142,7 +142,7 @@ while getopts "d:f:Fi:Kn:o:p:P:r:s:S:u:v:w:W" opt; do
 		;;
 	P)
 		if ! [ -e "$OURDIR/packagesets/${OPTARG}.pkgs" ]; then
-			printf '%s\n' "Unknown packageset: ${OPTARG}" >&2
+			echo "Unknown packageset: ${OPTARG}" >&2
 			exit 1
 		fi
 		PACKAGESETS="$PACKAGESETS ${OPTARG}"
@@ -154,7 +154,7 @@ while getopts "d:f:Fi:Kn:o:p:P:r:s:S:u:v:w:W" opt; do
 		SERVICES="$SERVICES ${OPTARG}"
 		;;
 	S)
-		SERVICES="$(printf '%s\n' $SERVICES |sed -e "s,^${OPTARG} ,,;s, ${OPTARG} , ,;s,^${OPTARG}\$,,;s, ${OPTARG}\$,,")"
+		SERVICES="$(echo $SERVICES |sed -e "s,^${OPTARG} ,,;s, ${OPTARG} , ,;s,^${OPTARG}\$,,;s, ${OPTARG}\$,,")"
 		;;
 	u)
 		BUILDUSER="${OPTARG}"
@@ -169,7 +169,7 @@ while getopts "d:f:Fi:Kn:o:p:P:r:s:S:u:v:w:W" opt; do
 		IMAGENAME="${OPTARG}"
 		;;
 	*)
-		printf '%s\n' "Unknown option $opt" >&2
+		echo "Unknown option $opt" >&2
 		usage
 		exit 1
 		;;
@@ -224,20 +224,20 @@ TARGET="$1"
 if ! [ -e device/$TARGET/config ]; then
 	# Allow abbreviations, e.g. db410c instead of qualcomm/db410c
 	for i in $(find device -name config); do
-		if printf '%s\n' $i |grep -q "/$TARGET/config\$"; then
+		if echo $i |grep -q "/$TARGET/config\$"; then
 			TARGET="$(dirname $i |cut -d/ -f2-)"
 			break
 		fi
 	done
 fi
 if ! [ -e device/$TARGET/config ]; then
-	printf '%s\n' "Invalid target $TARGET"
+	echo "Invalid target $TARGET"
 	usage
 	exit 1
 fi
 SHORTTARGET="$(basename $TARGET)"
 
-printf '%s\n' "Building ${BASE_DISTRO} $OMV_VERSION image for $TARGET"
+echo "Building ${BASE_DISTRO} $OMV_VERSION image for $TARGET"
 run config
 [ -n "$HWPACKAGESETS" ] && PACKAGESETS="$PACKAGESETS $HWPACKAGESETS"
 
@@ -245,7 +245,7 @@ run config
 # Prepare host system
 # ===================================================================
 if [ -z "$ARCH" ]; then
-	printf '%s\n' "$TARGET doesn't specify ARCH, assuming aarch64" >&2
+	echo "$TARGET doesn't specify ARCH, assuming aarch64" >&2
 	ARCH=aarch64
 fi
 
@@ -335,8 +335,8 @@ if [ -n "$HOSTDEPS" ]; then
 	if ! dnf5 -y --refresh --nogpgcheck install $HOSTDEPS; then
 		for i in $HOSTDEPS; do
 			if ! rpm -q $i &>/dev/null; then
-				printf '%s\n' "Couldn't install needed HOST tools. Make sure you're running current ${BASE_DISTRO}"
-				printf '%s\n' "or install $i manually"
+				echo "Couldn't install needed HOST tools. Make sure you're running current ${BASE_DISTRO}"
+				echo "or install $i manually"
 				exit 1
 			fi
 		done
@@ -346,7 +346,7 @@ if [ -n "$HOSTDEPS" ]; then
 	# We also need ld-linux-aarch64.so.1 symlinked to where some binary headers expect it
 	if [ !"$ARCH" = "aarch64" ]; then
 		HOSTDEPS="$HOSTDEPS"
-		printf '%s\n' ':aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-aarch64-static:' >/proc/sys/fs/binfmt_misc/register || :
+		echo ':aarch64:M::\x7fELF\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\xb7:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff:/usr/bin/qemu-aarch64-static:' >/proc/sys/fs/binfmt_misc/register || :
 		[ -e /lib/ld-linux-aarch64.so.1 ] || ln -s /usr/$TRIPLET/lib/ld-linux-aarch64.so.1 /lib/
 	fi
 fi
@@ -358,22 +358,22 @@ fi
 # Also, re-parse packages specified on the command line in case they
 # contain macros
 # ===================================================================
-if printf '%s' $ARCH |grep -qE '(64|znver1)'; then
+if echo $ARCH |grep -qE '(64|znver1)'; then
 	LIB=lib64
 else
 	LIB=lib
 fi
-CPP="$CPP -undef -nostdinc -P -E -Wno-unused-command-line-argument -I$OURDIR/packagesets -DLIB(x)=${LIB}##x -DARCH_$ARCH=1 -DTARGET_$(printf '%s\n' $TARGET|sed -e 's,/,_,g;s,-,_,g')=1 -DTARGET_$(printf '%s' $SHORTTARGET|sed -e 's,/,_,g;s,-,_,g')=1"
+CPP="$CPP -undef -nostdinc -P -E -Wno-unused-command-line-argument -I$OURDIR/packagesets -DLIB(x)=${LIB}##x -DARCH_$ARCH=1 -DTARGET_$(echo $TARGET|sed -e 's,/,_,g;s,-,_,g')=1 -DTARGET_$(echo $SHORTTARGET|sed -e 's,/,_,g;s,-,_,g')=1"
 for ps in $PACKAGESETS; do
 	CPP="$CPP -DPACKAGESET_${ps//-/_}=1"
 done
 for p in $PACKAGES_FROM_CMDLINE; do
-	PACKAGES="$PACKAGES $(printf '%s' $p |$CPP -)"
+	PACKAGES="$PACKAGES $(echo $p |$CPP -)"
 done
 for ps in $PACKAGESETS; do
 	eval "XP=\${HWPACKAGES_${ps}}"
 	if [ -n "$XP" ]; then
-		PACKAGES="$PACKAGES $(printf '%s' $XP |$CPP -)"
+		PACKAGES="$PACKAGES $(echo $XP |$CPP -)"
 	fi
 	while read p; do
 		PACKAGES="$PACKAGES $p"
@@ -406,9 +406,9 @@ fi
 if [ -n "$KEEP_KERNEL_RPM" ]; then
 	KERNELRPM="$(ls $OURDIR/kernel-rpm/RPMS/*/*.rpm)"
 elif [ -n "$KERNEL" ]; then
-	printf '%s\n' "Building $TARGET kernel"
-	KERNELREPO="$(printf '%s' $KERNEL |cut -d'#' -f1)"
-	KERNELBRANCH="$(printf '%s' $KERNEL |cut -d'#' -f2-)"
+	echo "Building $TARGET kernel"
+	KERNELREPO="$(echo $KERNEL |cut -d'#' -f1)"
+	KERNELBRANCH="$(echo $KERNEL |cut -d'#' -f2-)"
 	[ -n "$KERNELBRANCH" ] && KERNELBRANCH="-b $KERNELBRANCH"
 	[ -z "$KERNEL_CONFIG" ] && KERNEL_CONFIG="defconfig"
 	rm -rf kernel
@@ -441,12 +441,12 @@ elif [ -n "$KERNEL" ]; then
 	[ -e scripts/lld-version.sh ] && sed -i -e "s,' ' -f 2,' ' -f 4," scripts/lld-version.sh
 	PN=1
 	for i in ${OURDIR}/device/${TARGET}/kernel-patches/*.patch ${OURDIR}/device/${TARGET}/kernel-patches/*.diff; do
-		printf '%s\n' "Applying $(basename $i)" >&2
+		echo "Applying $(basename $i)" >&2
 		[ -e "$i" ] && patch -p1 -b -z .b${PN}~ <$i
 		PN=$((PN+1))
 	done
 	for i in ${OURDIR}/device/${TARGET}/kernel-patches/*.gitpatch; do
-		printf '%s\n' "Applying $(basename $i)" >&2
+		echo "Applying $(basename $i)" >&2
 		[ -e "$i" ] && git apply $i
 	done
 	# Get rid of bracketed version identifier that freaks out
@@ -477,9 +477,9 @@ elif [ -n "$KERNEL" ]; then
 		make $SMPFLAGS ARCH=$KERNELARCH $CCOMP LLVM=1 $KERNEL_CONFIG include/config/kernel.release
 	fi
 	KERNELVERSION=$(cat include/config/kernel.release)
-	KERNELVERSION_NUM="$(printf '%s\n' $KERNELVERSION |cut -d- -f1)"
-	if printf '%s\n' $KERNELVERSION |grep -q -- -; then
-		KERNELVERSION_EXTRA="$(printf '%s\n' $KERNELVERSION |cut -d- -f2- |sed -e 's,-,.,g')"
+	KERNELVERSION_NUM="$(echo $KERNELVERSION |cut -d- -f1)"
+	if echo $KERNELVERSION |grep -q -- -; then
+		KERNELVERSION_EXTRA="$(echo $KERNELVERSION |cut -d- -f2- |sed -e 's,-,.,g')"
 	fi
 	cd ..
 
@@ -495,9 +495,9 @@ Version:	$KERNELVERSION_NUM
 EOF
 
 	if [ -n "$KERNELVERSION_EXTRA" ]; then
-		printf '%s\n' "Release:	0.$KERNELVERSION_EXTRA.1" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "Release:	0.$KERNELVERSION_EXTRA.1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		printf '%s\n' "Release:	1" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "Release:	1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 Summary:	kernel for $SHORTTARGET devices
@@ -542,19 +542,19 @@ EOF
 		fi
 	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		printf '%s\n' "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		printf '%s\n' "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
-		printf '%s\n' "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		printf '%s\n' "make syncconfig ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
-		printf '%s\n' "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "make syncconfig ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		printf '%s\n' "make syncconfig ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
-		printf '%s\n' "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "make syncconfig ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 
@@ -589,7 +589,7 @@ EOF
 	cd ..
 	KERNELRPM="$(ls $OURDIR/kernel-rpm/RPMS/*/*.rpm)"
 else
-	printf '%s\n' "KERNEL not specified in $TARGET config - assuming packaged kernel"
+	echo "KERNEL not specified in $TARGET config - assuming packaged kernel"
 fi
 
 # ===================================================================
@@ -624,12 +624,12 @@ fi
 # need to get the repository configs from rpm packages
 # without having the repositories configured...
 PKGS=${ABF_DOWNLOADS}/${VER_PREFIX}${OMV_VERSION}/repository/$ARCH/main/release/
-printf '%s\n' $PKGS
+echo $PKGS
 curl -s -L $PKGS |grep '^<a' |cut -d'"' -f2 >PACKAGES
 for i in $PRE_PACKAGES; do
 	P=$(grep "^$i-[0-9].*" PACKAGES |tail -n1)
 	if [ "$?" != "0" ]; then
-		printf '%s\n' "Can't find $i package for target" >&2
+		echo "Can't find $i package for target" >&2
 		exit 1
 	fi
 	curl -O $PKGS/$P
@@ -640,7 +640,7 @@ done
 sed -i -e '/mirror.openmandriva.org/d;s,^	,baseurl=,' "$TEMPROOT"/etc/yum.repos.d/*.repo
 
 mkdir -p $TEMPROOT/etc/dnf/repos.override.d
-if printf '%s\n' ${VER_PREFIX}${OMV_VERSION} |grep -q '^[0-9]'; then
+if echo ${VER_PREFIX}${OMV_VERSION} |grep -q '^[0-9]'; then
 	DNF_VERSION=release
 	# This also needs to work before the rock symlink is updated on
 	# a new release...
@@ -802,7 +802,7 @@ This is likely something (relatively) harmless like a package's post-install
 script failing - but you may want to double-check.
 EOF
 	else
-		printf '%s\n' "ERROR: dnf failed without installing what looks like a workable system."
+		echo "ERROR: dnf failed without installing what looks like a workable system."
 		cleanup
 		exit 1
 	fi
@@ -827,7 +827,7 @@ systemd-firstboot --root="$OURDIR/$ROOTDIR" \
 	--locale="en_US.UTF-8" \
 	--keymap="us" \
 	--timezone="Europe/London" \
-	--hostname="omv-$(printf '%s\n' ${TARGET} | cut -d '/' -f 2 |sed -e 's,+,,g')" \
+	--hostname="omv-$(echo ${TARGET} | cut -d '/' -f 2 |sed -e 's,+,,g')" \
 	--root-password-hashed='$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0' \
 	--force
 
@@ -848,9 +848,9 @@ rm -rf "$OURDIR/$ROOTDIR/run/* $OURDIR/$ROOTDIR/tmp/*"
 if [ "$CREATE_DEFAULT_USER" != "no" ]; then
 	if ! grep -q '^omv:' $OURDIR/$ROOTDIR/etc/passwd; then
 		# Create omv user (password omv)
-		printf '%s\n' 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
-		printf '%s\n' 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
-		printf '%s\n' 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
+		echo 'omv:x:1001:1001::/home/omv:/bin/bash' >>$OURDIR/$ROOTDIR/etc/passwd
+		echo 'omv:$6$rG3bQ92hkTNubV1p$5qPB9FoXBhNcSE1FOklCoEDowveAgjSf2cHYVwCENZaWtgpFQaRRRN5Ihwd8nuaKMdA1R1XouOasJ7u5dbiGt0:17302:0:99999:7:::' >>$OURDIR/$ROOTDIR/etc/shadow
+		echo 'omv:x:1001:' >>$OURDIR/$ROOTDIR/etc/group
 		# Add the omv user to important groups...
 		for group in audio dialout input lp lpadmin network render sambashare screen storage tty users video wheel; do
 			sed -i -e "s,$group:.*\$,&omv," $OURDIR/$ROOTDIR/etc/group
@@ -924,13 +924,13 @@ if [ "$NEED_INITRD" != "no" ] || [ "$USE_UEFI" = "yes" ] || [ "$USE_SYSTEMD_UEFI
 		run generate-initrd
 	fi
 	if [ "$USE_UEFI" = "yes" ]; then
-		printf '%s\n' "Creating ESP for GRUB."
+		echo "Creating ESP for GRUB."
 		mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
 		chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -d /usr/lib/grub/$EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxterm_menu gfxmenu test all_video loadenv exfat ext2 part_msdos part_gpt loadenv ls chain btrfs xfs ntfs all_video efifwsetup efinet font probe video loopback gzio xzio zstd
 	fi
 
 	if [ "$USE_SYSTEMD_UEFI" = "yes" ]; then
-		printf '%s\n' "Creating ESP for systemd-boot."
+		echo "Creating ESP for systemd-boot."
 		mkdir -p $OURDIR/$ROOTDIR/boot/efi
 		# create ESP directory scheme for systemd-boot
 		for i in "$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT" "$OURDIR/$ROOTDIR/boot/efi/EFI/Linux" "$OURDIR/$ROOTDIR/boot/efi/EFI/systemd" "$OURDIR/$ROOTDIR/boot/efi/loader/entries"; do
@@ -938,9 +938,9 @@ if [ "$NEED_INITRD" != "no" ] || [ "$USE_UEFI" = "yes" ] || [ "$USE_SYSTEMD_UEFI
 		done
 
 		if [ ! -s "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline ]; then
-			printf '%s\n' 'root=LABEL=OMVAA64' >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
+			echo 'root=LABEL=OMVAA64' >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
 			for i in ${CMDLINE[@]}; do
-				printf '%s\n' "$i" >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
+				echo "$i" >> "$OURDIR/$ROOTDIR"/usr/lib/kernel/cmdline
 			done
 		fi
 
@@ -961,7 +961,7 @@ EOF
 		sed -i -e 's,boot\/efi\/,\/,g' "$OURDIR/$ROOTDIR"/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf
 		if [ -n "${DTB}" ] && ! grep -q devicetree $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf; then
 			install -D -m644 "$OURDIR/$ROOTDIR/boot/dtb-$KERNELVERSION/${DTB}.dtb" "$OURDIR/$ROOTDIR/boot/efi/$MACH_ID/$KERNELVERSION/dtb/${DTB}.dtb"
-			printf '%s\n' "devicetree "/$MACH_ID/$KERNELVERSION"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf
+			echo "devicetree "/$MACH_ID/$KERNELVERSION"/dtb/$DTB.dtb" >> $OURDIR/$ROOTDIR/boot/efi/loader/entries/$MACH_ID-$KERNELVERSION.conf
 		fi
 		dd if=/dev/random of="$OURDIR/$ROOTDIR/boot/efi/loader/"random-seed bs=512 count=1
 		chmod +x -R $OURDIR/$ROOTDIR/boot/efi
@@ -977,9 +977,9 @@ chmod 0600 "$OURDIR/$ROOTDIR"/var/lib/systemd/random-seed
 # Make sure default services are started
 for i in "$OURDIR/$ROOTDIR"/lib/systemd/system-preset/*.preset; do
 	while read r; do
-		TYPE="$(printf '%s\n' $r |awk '{ print $1; }')"
+		TYPE="$(echo $r |awk '{ print $1; }')"
 		if [ "$TYPE" = "enable" ] || [ "$TYPE" = "disable" ]; then
-			[ "$(printf '%s\n' "$r" |awk '{ print $2; }')" = '*' ] && continue
+			[ "$(echo "$r" |awk '{ print $2; }')" = '*' ] && continue
 			chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl $r || :
 		fi
 	done < $i
@@ -1012,20 +1012,20 @@ for i in $SERVICES; do
 	if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/$i.service" ]; then
 		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable $i
 	else
-		printf '%s\n' "WARNING: Service $i requested, but not installed" >&2
+		echo "WARNING: Service $i requested, but not installed" >&2
 	fi
 done
 
 if [ -x "$OURDIR/$ROOTDIR"/usr/bin/fc-cache ]; then
-    # set the timestamp on the directories to be a whole second
-    # fc-cache looks at the nano second portion which will otherwise be
-    # non-zero as we are on ext4, but then it will compare against the stamps
-    # on the squashfs live image, squashfs only has second level timestamp resolution
-    FCTIME=$(date +%Y%m%d%H%M.%S)
-    chroot "$OURDIR/$ROOTDIR" find /usr/share/fonts -type d -exec touch -t "$FCTIME" {} \;
-    chroot "$OURDIR/$ROOTDIR" fc-cache -rf
-    chroot "$OURDIR/$ROOTDIR" /bin/mkdir -p /root/.cache/fontconfig/
-    chroot "$OURDIR/$ROOTDIR" /bin/mkdir -p /home/omv/.cache/fontconfig/
+	# set the timestamp on the directories to be a whole second
+	# fc-cache looks at the nano second portion which will otherwise be
+	# non-zero as we are on ext4, but then it will compare against the stamps
+	# on the squashfs live image, squashfs only has second level timestamp resolution
+	FCTIME=$(date +%Y%m%d%H%M.%S)
+	chroot "$OURDIR/$ROOTDIR" find /usr/share/fonts -type d -exec touch -t "$FCTIME" {} \;
+	chroot "$OURDIR/$ROOTDIR" fc-cache -rf
+	chroot "$OURDIR/$ROOTDIR" /bin/mkdir -p /root/.cache/fontconfig/
+	chroot "$OURDIR/$ROOTDIR" /bin/mkdir -p /home/omv/.cache/fontconfig/
 fi
 
 # Rebuild man-db
@@ -1040,7 +1040,7 @@ fi
 chroot "$OURDIR/$ROOTDIR" /sbin/ldconfig
 
 for i in etc var; do
-    printf "%s\n" 'File created by os-image-builder. See systemd-update-done.service(8).' > "$OURDIR/$ROOTDIR/$i"/.updated
+	echo 'File created by os-image-builder. See systemd-update-done.service(8).' > "$OURDIR/$ROOTDIR/$i"/.updated
 done
 
 cd "$OURDIR/$ROOTDIR"
@@ -1089,4 +1089,4 @@ else
 	chown -R ${BUILDUSER} ${RESULTDIR}
 fi
 
-printf '%s\n' 'Building has finished.'
+echo 'Building has finished.'
