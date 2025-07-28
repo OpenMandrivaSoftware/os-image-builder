@@ -773,7 +773,7 @@ fi
 
 # Mount relevant filesystems so %post scripts can access
 # the likes of /dev/null and /dev/urandom
-for mp in /proc /sys /sys/firmware/efi/efivars /dev /dev/pts; do
+for mp in /proc /sys /dev /dev/pts; do
 	mkdir -p "$OURDIR/$ROOTDIR$mp" || :
 	mount --bind -o ro $mp "$OURDIR/$ROOTDIR$mp"
 done
