@@ -6,14 +6,19 @@ jobs:
 - name: Build Docker image
   steps:
   - !UseTemplateStep
-    name: Build
-    templateName: Build
+    name: Build minimal Docker image
+    templateName: Build Docker image
     paramMatrix:
-    - name: target
+    - name: version
       secret: false
       valuesProvider: !SpecifiedValues
         values:
-        - - aarch64-rootfs
+        - - cooker
+    - name: architecture
+      secret: false
+      valuesProvider: !SpecifiedValues
+        values:
+        - - aarch64
     - name: extra-parameters
       secret: false
       valuesProvider: !SpecifiedValues
@@ -31,8 +36,8 @@ stepTemplates:
   - !CheckoutStep
     name: Checkout repository
     cloneCredential: !DefaultCredential {}
-    withLfs: true
-    withSubmodules: true
+    withLfs: false
+    withSubmodules: false
     cloneDepth: 1
     condition: SUCCESSFUL
     optional: false
@@ -45,15 +50,71 @@ stepTemplates:
         dnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh upgrade
         dnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git
 
-        ./build @param:extra-parameters@ @param:target@
+        ./build @param:extra-parameters@ -v @param:version@ @param:target@
     useTTY: true
     condition: SUCCESSFUL
     optional: false
   paramSpecs:
   - !TextParam
+    name: version
+    allowEmpty: false
+    multiline: false
+  - !TextParam
     name: target
     allowEmpty: false
     multiline: false
+  - !TextParam
+    name: extra-parameters
+    allowEmpty: true
+    multiline: false
+- name: Build Docker image
+  steps:
+  - !UseTemplateStep
+    name: Build
+    templateName: Build
+    paramMatrix:
+    - name: version
+      secret: false
+      valuesProvider: !PassthroughValues
+        paramName: version
+    - name: target
+      secret: false
+      valuesProvider: !SpecifiedValues
+        values:
+        - - '@param:architecture@-rootfs'
+    - name: extra-parameters
+      secret: false
+      valuesProvider: !SpecifiedValues
+        values:
+        - - '@param:extra-parameters@'
+    condition: SUCCESSFUL
+    optional: false
+  - !CommandStep
+    name: Test
+    runInContainer: false
+    interpreter: !DefaultInterpreter
+      commands: |
+        echo "test"
+    useTTY: true
+    condition: SUCCESSFUL
+    optional: false
+  paramSpecs:
+  - !TextParam
+    name: version
+    allowEmpty: false
+    multiline: false
+  - !ChoiceParam
+    name: architecture
+    allowMultiple: false
+    allowEmpty: false
+    choiceProvider: !SpecifiedChoices
+      choices:
+      - value: aarch64
+        color: '#0d87e9'
+      - value: x86-64
+        color: '#0d87e9'
+      - value: znver1
+        color: '#0d87e9'
   - !TextParam
     name: extra-parameters
     allowEmpty: false
