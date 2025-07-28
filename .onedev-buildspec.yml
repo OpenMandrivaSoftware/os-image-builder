@@ -50,6 +50,10 @@ jobs:
         color: '#0d87e9'
       - value: arm64
         color: '#0d87e9'
+  - !TextParam
+    name: extra-args
+    allowEmpty: true
+    multiline: false
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
