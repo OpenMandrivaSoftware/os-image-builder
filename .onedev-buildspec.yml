@@ -14,18 +14,20 @@ jobs:
       valuesProvider: !SpecifiedValues
         values:
         - - cooker
-    - name: architecture
+    - name: docker-arch
       secret: false
-      valuesProvider: !SpecifiedValues
-        values:
-        - - aarch64
-    - name: extra-parameters
+      valuesProvider: !PassthroughValues
+        paramName: docker-arch
+    - name: extra-args
       secret: false
-      valuesProvider: !SpecifiedValues
-        values:
-        - - -P core
+      valuesProvider: !IgnoreValues {}
     condition: SUCCESSFUL
     optional: false
+  paramSpecs:
+  - !TextParam
+    name: docker-arch
+    allowEmpty: false
+    multiline: false
   retryCondition: never
   maxRetries: 3
   retryDelay: 30
@@ -50,7 +52,7 @@ stepTemplates:
         dnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh upgrade
         dnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git
 
-        ./build @param:extra-parameters@ -v @param:version@ @param:target@
+        ./build @param:extra-args@ -v @param:version@ @param:target@
     useTTY: true
     condition: SUCCESSFUL
     optional: false
@@ -64,7 +66,7 @@ stepTemplates:
     allowEmpty: false
     multiline: false
   - !TextParam
-    name: extra-parameters
+    name: extra-args
     allowEmpty: true
     multiline: false
 - name: Build Docker image
@@ -79,23 +81,13 @@ stepTemplates:
         paramName: version
     - name: target
       secret: false
-      valuesProvider: !SpecifiedValues
-        values:
-        - - '@param:architecture@-rootfs'
-    - name: extra-parameters
+      valuesProvider: !ScriptingValues
+        scriptName: docker-arch-to-omv-build-target
+    - name: extra-args
       secret: false
       valuesProvider: !SpecifiedValues
         values:
-        - - '@param:extra-parameters@'
-    condition: SUCCESSFUL
-    optional: false
-  - !CommandStep
-    name: Test
-    runInContainer: false
-    interpreter: !DefaultInterpreter
-      commands: |
-        echo "test"
-    useTTY: true
+        - - -P core @param:extra-args@
     condition: SUCCESSFUL
     optional: false
   paramSpecs:
@@ -104,18 +96,16 @@ stepTemplates:
     allowEmpty: false
     multiline: false
   - !ChoiceParam
-    name: architecture
+    name: docker-arch
     allowMultiple: false
     allowEmpty: false
     choiceProvider: !SpecifiedChoices
       choices:
-      - value: aarch64
+      - value: amd64
         color: '#0d87e9'
-      - value: x86-64
-        color: '#0d87e9'
-      - value: znver1
+      - value: arm64
         color: '#0d87e9'
   - !TextParam
-    name: extra-parameters
-    allowEmpty: false
+    name: extra-args
+    allowEmpty: true
     multiline: false
