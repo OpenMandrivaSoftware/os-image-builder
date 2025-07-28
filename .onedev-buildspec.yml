@@ -2,3 +2,48 @@ version: 40
 imports:
 - projectPath: OpenMandriva/Software
   revision: mirroring
+jobs:
+- name: Build Docker image
+  steps:
+  - !UseTemplateStep
+    name: Build
+    templateName: Build
+    paramMatrix:
+    - name: target
+      secret: false
+      valuesProvider: !SpecifiedValues
+        values:
+        - - aarch64-rootfs
+    - name: extra-parameters
+      secret: false
+      valuesProvider: !SpecifiedValues
+        values:
+        - - -P core
+    condition: SUCCESSFUL
+    optional: false
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  timeout: 14400
+stepTemplates:
+- name: Build
+  steps:
+  - !CommandStep
+    name: Run build script in container
+    runInContainer: true
+    image: openmandriva/cooker
+    interpreter: !DefaultInterpreter
+      commands: |
+        ./build @param:extra-parameters@ @param:target@
+    useTTY: true
+    condition: SUCCESSFUL
+    optional: false
+  paramSpecs:
+  - !TextParam
+    name: target
+    allowEmpty: false
+    multiline: false
+  - !TextParam
+    name: extra-parameters
+    allowEmpty: false
+    multiline: false
