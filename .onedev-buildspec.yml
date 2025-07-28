@@ -43,7 +43,7 @@ stepTemplates:
     interpreter: !DefaultInterpreter
       commands: |
         dnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh upgrade
-        dnf --assumeyes --no-docs --setopt=install_weak_deps=False install systemd git
+        dnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git
 
         ./build @param:extra-parameters@ @param:target@
     useTTY: true
