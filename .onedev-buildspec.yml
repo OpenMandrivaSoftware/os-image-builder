@@ -74,7 +74,7 @@ stepTemplates:
     runInContainer: true
     image: openmandriva/cooker
     interpreter: !DefaultInterpreter
-      commands: "dnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh upgrade\ndnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git \\\n\tqemu-aarch64-static qemu-x86_64-static\n\n./build @param:extra-args@ -v @param:version@ @param:target@\n"
+      commands: "dnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh upgrade\ndnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git \\\n\tqemu-user-static-tapset qemu-aarch64-static qemu-x86_64-static\n\n./build @param:extra-args@ -v @param:version@ @param:target@\n"
     useTTY: true
     condition: SUCCESSFUL
     optional: false
