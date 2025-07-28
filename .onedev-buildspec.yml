@@ -76,7 +76,7 @@ stepTemplates:
     interpreter: !DefaultInterpreter
       commands: |
         dnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh upgrade
-        dnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git
+        dnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git qemu-user
 
         ./build @param:extra-args@ -v @param:version@ @param:target@
     useTTY: true
