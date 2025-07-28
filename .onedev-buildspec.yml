@@ -28,6 +28,14 @@ jobs:
 stepTemplates:
 - name: Build
   steps:
+  - !CheckoutStep
+    name: Checkout repository
+    cloneCredential: !DefaultCredential {}
+    withLfs: true
+    withSubmodules: true
+    cloneDepth: 1
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
     name: Run build script in container
     runInContainer: true
