@@ -28,17 +28,17 @@ jobs:
   - !CommandStep
     name: Push Docker image
     runInContainer: true
-    image: alpine
+    image: docker:dind
     interpreter: !DefaultInterpreter
       commands: |
         set -xe
 
-        sed -i 's/^#\(.*community\)/\1/' /etc/apk/repositories
-        apk update
-        apk add podman
-
-        echo "alias docker='podman'" >> ~/.bashrc
-        source ~/.bashrc
+        # Start the Docker daemon
+        dockerd-entrypoint.sh &
+        # Wait for the daemon to be ready
+        sleep 5
+        # Verify it's running
+        docker info
 
         docker buildx build \
           --platform linux/@param:docker-arch@ \
