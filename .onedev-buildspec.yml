@@ -46,16 +46,29 @@ jobs:
         architectures=("arm64" "amd64")
 
         for arch in "${architectures[@@]}"; do
-          if docker manifest inspect @server@/openmandriva/minimal:@param:version@.$arch >/dev/null 2>&1; then
-            manifest_args="$manifest_args --amend @server@/openmandriva/minimal:@param:version@.$arch"
+          image="@server@/openmandriva/minimal:@param:version@.$arch"
+          echo "🔍 Inspecting manifest for: $image"
+
+          manifest_json=$(docker manifest inspect "$image" 2>/dev/null)
+
+          if [ -n "$manifest_json" ]; then
+            echo "✅ Manifest found for $arch"
+            manifest_args="$manifest_args --amend $image"
+          else
+            echo "⚠️ No manifest found for $arch"
           fi
         done
 
+        final_image="@server@/openmandriva/minimal:@param:version@"
+
         if [ -n "$manifest_args" ]; then
-          docker manifest create @server@/openmandriva/minimal:@param:version@:latest $manifest_args
-          docker manifest push @server@/openmandriva/minimal:@param:version@:latest
+          echo "🛠 Creating manifest: $final_image"
+          docker manifest create "$final_image" $manifest_args
+
+          echo "📤 Pushing manifest: $final_image"
+          docker manifest push "$final_image"
         else
-          echo "No architecture-specific images found. Manifest not created."
+          echo "❌ No architecture-specific images found. Manifest not created."
         fi
     useTTY: true
     condition: SUCCESSFUL
