@@ -40,6 +40,8 @@ jobs:
     image: openmandriva/cooker
     interpreter: !DefaultInterpreter
       commands: |
+        set -xe
+
         manifest_args=""
         architectures=("arm64" "amd64")
 
