@@ -31,6 +31,10 @@ jobs:
     dockerfile: helpers/Dockerfile
     output: !RegistryOutput
       tags: '@server@/openmandriva/minimal:@param:version@'
+    registryLogins:
+    - registryUrl: '@server_url@'
+      userName: '@job_token@'
+      passwordSecret: package_writer_token
     platforms: linux/@param:docker-arch@
     condition: SUCCESSFUL
     optional: false
