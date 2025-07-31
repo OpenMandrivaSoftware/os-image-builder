@@ -28,14 +28,18 @@ jobs:
   - !CommandStep
     name: Push Docker image
     runInContainer: true
-    image: openmandriva/cooker
+    image: alpine
     interpreter: !DefaultInterpreter
       commands: |
         set -xe
 
-        dnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh install docker
+        apk add openrc  --no-cache
+        mkdir -p /run/openrc/exclusive
+        touch /run/openrc/softlevel
 
-        nohup dockerd > /var/log/dockerd.log 2>&1 &
+        apk add docker
+        service docker start
+        rc-update add docker
 
         docker buildx build \
           --platform linux/@param:docker-arch@ \
