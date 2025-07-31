@@ -33,13 +33,12 @@ jobs:
       commands: |
         set -xe
 
-        apk add openrc  --no-cache
-        mkdir -p /run/openrc/exclusive
-        touch /run/openrc/softlevel
+        sed -i 's/^#\(.*community\)/\1/' /etc/apk/repositories
+        apk update
+        apk add podman
 
-        apk add docker
-        service docker start
-        rc-update add docker
+        echo "alias docker='podman'" >> ~/.bashrc
+        source ~/.bashrc
 
         docker buildx build \
           --platform linux/@param:docker-arch@ \
