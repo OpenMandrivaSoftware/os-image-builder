@@ -25,6 +25,15 @@ jobs:
         - - -P core @param:extra-args@
     condition: SUCCESSFUL
     optional: false
+  - !BuildImageStep
+    name: Create Docker image
+    buildPath: OpenMandriva-Lx-@param:version@-@script:docker-arch-to-omv-build-target@-root
+    dockerfile: helpers/Dockerfile
+    output: !RegistryOutput
+      tags: '@server@/OpenMandriva:@param:version@'
+    platforms: linux/@param:docker-arch@
+    condition: SUCCESSFUL
+    optional: false
   paramSpecs:
   - !ChoiceParam
     name: version
