@@ -28,7 +28,7 @@ jobs:
   - !CommandStep
     name: Push Docker image
     runInContainer: true
-    image: OpenMandriva/Cooker
+    image: openmandriva/cooker
     interpreter: !DefaultInterpreter
       commands: |
         set -xe
