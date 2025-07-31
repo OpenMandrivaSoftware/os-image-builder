@@ -35,6 +35,8 @@ jobs:
 
         dnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh install docker
 
+        systemctl start docker
+
         docker buildx build \
           --platform linux/@param:docker-arch@ \
           -f helpers/Dockerfile \
