@@ -35,7 +35,7 @@ jobs:
 
         dnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh install docker
 
-        dockerd >/tmp/docker.stdout 2>/tmp/docker.stderr &
+        nohup dockerd > /var/log/dockerd.log 2>&1 &
 
         docker buildx build \
           --platform linux/@param:docker-arch@ \
