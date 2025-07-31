@@ -30,7 +30,7 @@ jobs:
     buildPath: output
     dockerfile: helpers/Dockerfile
     output: !RegistryOutput
-      tags: '@server@/OpenMandriva/os:@param:version@'
+      tags: '@server@/openmandriva/minimal:@param:version@'
     platforms: linux/@param:docker-arch@
     condition: SUCCESSFUL
     optional: false
