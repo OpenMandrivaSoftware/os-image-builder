@@ -27,10 +27,10 @@ jobs:
     optional: false
   - !BuildImageStep
     name: Create Docker image
-    buildPath: OpenMandriva-Lx-@param:version@-@script:docker-arch-to-omv-build-target@-root
+    buildPath: output
     dockerfile: helpers/Dockerfile
     output: !RegistryOutput
-      tags: '@server@/OpenMandriva:@param:version@'
+      tags: '@server@/openmandriva:@param:version@'
     platforms: linux/@param:docker-arch@
     condition: SUCCESSFUL
     optional: false
@@ -83,11 +83,7 @@ stepTemplates:
     runInContainer: true
     image: openmandriva/cooker
     interpreter: !DefaultInterpreter
-      commands: |
-        dnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh upgrade
-        dnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git
-
-        ./build @param:extra-args@ -v @param:version@ @param:target@
+      commands: "set -ex\n\ndnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh upgrade\ndnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git\n\n./build @param:extra-args@ -v @param:version@ @param:target@\n\nfolder=$(find . -maxdepth 1 -type d -name \"OpenMandriva-Lx-*\")\nif [ -n \"$folder\" ]; then\n\tmv \"$folder\" \"output\"\nfi\n"
     useTTY: true
     condition: SUCCESSFUL
     optional: false
