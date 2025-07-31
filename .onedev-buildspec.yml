@@ -25,17 +25,8 @@ jobs:
         - - -P core @param:extra-args@
     condition: SUCCESSFUL
     optional: false
-  - !BuildImageStep
-    name: Push Docker image
-    buildPath: output
-    dockerfile: helpers/Dockerfile
-    output: !RegistryOutput
-      tags: '@server@/openmandriva/minimal:@param:version@.@param:docker-arch@'
-    platforms: linux/@param:docker-arch@
-    condition: SUCCESSFUL
-    optional: false
   - !CommandStep
-    name: Push Docker manifest
+    name: Push Docker image
     runInContainer: true
     image: openmandriva/cooker
     interpreter: !DefaultInterpreter
@@ -43,6 +34,13 @@ jobs:
         set -xe
 
         dnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh install docker
+
+        docker buildx build \
+          --platform linux/@param:docker-arch@ \
+          -f helpers/Dockerfile \
+          -t @server@/openmandriva/minimal:@param:version@.@param:docker-arch@ \
+          --push \
+          output
 
         manifest_args=""
         architectures=("arm64" "amd64")
