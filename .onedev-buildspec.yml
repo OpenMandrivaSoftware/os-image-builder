@@ -28,14 +28,13 @@ jobs:
   - !CommandStep
     name: Push Docker image
     runInContainer: true
-    image: openmandriva/cooker
+    image: alpine
     interpreter: !DefaultInterpreter
       commands: |
         set -xe
 
-        dnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh install docker
-
-        systemctl start docker
+        apk add docker
+        service docker start
 
         docker buildx build \
           --platform linux/@param:docker-arch@ \
