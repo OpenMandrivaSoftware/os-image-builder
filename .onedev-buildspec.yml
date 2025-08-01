@@ -39,7 +39,7 @@ jobs:
         image_name="@property:registry_repo@/minimal"
         image_url="@server@/$image_name:$image_tag"
 
-        echo "🛠📤 Pushing and pushing image: $image_url.$current_arch"
+        echo "🛠📤 Building and pushing image: $image_url.$current_arch"
         podman build \
           --arch $current_arch \
           --os linux \
@@ -67,6 +67,8 @@ jobs:
             echo "⚠️ No manifest found for $arch"
           fi
         done
+
+        podman login "@server_url@" -u "@job_token@" -p "@secret:registry_token@"
 
         echo "📤 Pushing manifest: $image_base"
         podman push "$image_name:$image_tag" "docker://$image_url"
