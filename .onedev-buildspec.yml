@@ -36,8 +36,8 @@ jobs:
         current_arch=@param:docker-arch@
 
         image_tag="@param:version@"
-        image_name="@param:registry_repo@/minimal"
-        image_url="@param:registry_host@/$image_name:$image_tag"
+        image_name="@property:registry_repo@/minimal"
+        image_url="@property:registry_host@/$image_name:$image_tag"
 
         echo "🛠📤 Pushing and pushing image: $image_url.$current_arch"
         podman build \
