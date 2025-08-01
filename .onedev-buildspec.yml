@@ -68,7 +68,7 @@ jobs:
           fi
         done
 
-        podman login "@server_url@" -u "@job_token@" -p "@secret:registry_token@"
+        podman login "@server@" -u "@job_token@" -p "@secret:registry_token@"
 
         echo "📤 Pushing manifest: $image_base"
         podman push "$image_name:$image_tag" "docker://$image_url"
