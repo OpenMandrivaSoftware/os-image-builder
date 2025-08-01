@@ -39,6 +39,8 @@ jobs:
         image_name="@property:registry_repo@/minimal"
         image_url="@server@/$image_name:$image_tag"
 
+        podman login "@server@" -u "@job_token@" -p "@secret:registry_token@"
+
         echo "🛠📤 Building and pushing image: $image_url.$current_arch"
         podman build \
           --arch $current_arch \
@@ -62,16 +64,14 @@ jobs:
 
           if [ -n "$manifest_json" ]; then
             echo "✅ Manifest found for $arch"
-            podman manifest add "$image_name:$image_tag" "docker://$image_url.$current_arch"
+            podman manifest add "$image_name:$image_tag" "$image_url.$current_arch"
           else
             echo "⚠️ No manifest found for $arch"
           fi
         done
 
-        podman login "@server@" -u "@job_token@" -p "@secret:registry_token@"
-
         echo "📤 Pushing manifest: $image_base"
-        podman --log-level=debug push "$image_name:$image_tag" "docker://$image_url"
+        podman push "$image_name:$image_tag" "$image_url"
     useTTY: true
     condition: SUCCESSFUL
     optional: false
