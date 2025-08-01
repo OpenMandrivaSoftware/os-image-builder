@@ -55,19 +55,6 @@ jobs:
         manifest_args=""
         architectures=("arm64" "amd64")
 
-        echo "🛠📤 Building and pushing image: $image_url.$current_arch"
-        podman build \
-          --arch $current_arch \
-          --os linux \
-          -f helpers/Dockerfile \
-          -t "$image_url.$current_arch" \
-          output
-
-        podman push "$image_url.$current_arch"
-
-        manifest_args=""
-        architectures=("arm64" "amd64")
-
         echo "🛠 Creating manifest: $image_name:$image_tag"
         podman manifest create "$image_name:$image_tag"
 
