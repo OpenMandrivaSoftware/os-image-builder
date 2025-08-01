@@ -2,3 +2,146 @@ version: 40
 imports:
 - projectPath: OpenMandriva/Software
   revision: mirroring
+jobs:
+- name: Publish Docker image
+  jobExecutor: docker-with-mount-cap
+  steps:
+  - !UseTemplateStep
+    name: Build
+    templateName: Build
+    paramMatrix:
+    - name: version
+      secret: false
+      valuesProvider: !PassthroughValues
+        paramName: version
+    - name: target
+      secret: false
+      valuesProvider: !ScriptingValues
+        scriptName: docker-arch-to-omv-build-target
+    - name: extra-args
+      secret: false
+      valuesProvider: !SpecifiedValues
+        values:
+        - - -P core @param:extra-args@
+    condition: SUCCESSFUL
+    optional: false
+  - !CommandStep
+    name: Push Docker image
+    runInContainer: true
+    image: quay.io/podman/stable
+    interpreter: !DefaultInterpreter
+      commands: |
+        set -e
+
+        dnf install --assumeyes skopeo
+
+        current_arch=@param:docker-arch@
+
+        image_tag="@param:version@"
+        image_name="@property:registry_repo@/minimal"
+        image_url="@server@/$image_name:$image_tag"
+
+        podman login "@server@" -u "@job_token@" -p "@secret:registry_token@"
+
+        echo "🛠📤 Building and pushing image: $image_url.$current_arch"
+        podman build \
+          --arch $current_arch \
+          --os linux \
+          -f helpers/Dockerfile \
+          -t "$image_url.$current_arch" \
+          output
+        podman push "$image_url.$current_arch"
+
+        manifest_args=""
+        architectures=("arm64" "amd64")
+
+        echo "🛠 Creating manifest: $image_name:$image_tag"
+        podman manifest create "$image_name:$image_tag"
+
+        for arch in "${architectures[@@]}"; do
+          image="docker://$image_url.$arch"
+          echo "🔍 Inspecting remote image for: $image"
+
+          if skopeo inspect "$image" &>/dev/null; then
+            echo "✅ Remote image found for $arch"
+            podman manifest add \
+              --arch $arch \
+              --os linux \
+              "$image_name:$image_tag" \
+              "$image"
+          else
+            echo "⚠️ Remote image not found for $arch"
+          fi
+        done
+
+        echo "📤 Pushing manifest: $image_base"
+        podman push "$image_name:$image_tag" "docker://$image_url"
+    useTTY: true
+    condition: SUCCESSFUL
+    optional: false
+  paramSpecs:
+  - !ChoiceParam
+    name: version
+    allowMultiple: false
+    allowEmpty: false
+    choiceProvider: !SpecifiedChoices
+      choices:
+      - value: cooker
+        color: '#0d87e9'
+      - value: rolling
+        color: '#0d87e9'
+      - value: rock
+        color: '#0d87e9'
+    defaultValueProvider: !SpecifiedDefaultValue
+      value: cooker
+  - !ChoiceParam
+    name: docker-arch
+    allowMultiple: false
+    allowEmpty: false
+    choiceProvider: !SpecifiedChoices
+      choices:
+      - value: amd64
+        color: '#0d87e9'
+      - value: arm64
+        color: '#0d87e9'
+  - !TextParam
+    name: extra-args
+    allowEmpty: true
+    multiline: false
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  timeout: 14400
+stepTemplates:
+- name: Build
+  steps:
+  - !CheckoutStep
+    name: Checkout repository
+    cloneCredential: !DefaultCredential {}
+    withLfs: false
+    withSubmodules: false
+    cloneDepth: 1
+    condition: SUCCESSFUL
+    optional: false
+  - !CommandStep
+    name: Run build script in container
+    runInContainer: true
+    image: openmandriva/cooker
+    interpreter: !DefaultInterpreter
+      commands: "set -ex\n\necho insecure >> ~/.curlrc\n\ndnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh upgrade\ndnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git\n\n./build @param:extra-args@ -v @param:version@ @param:target@\n\nfolder=$(find . -maxdepth 1 -type d -name \"OpenMandriva-Lx-*\")\nif [ -n \"$folder\" ]; then\n\tmv \"$folder\" \"output\"\nfi\n"
+    useTTY: true
+    condition: SUCCESSFUL
+    optional: false
+  paramSpecs:
+  - !TextParam
+    name: version
+    allowEmpty: false
+    multiline: false
+  - !TextParam
+    name: target
+    allowEmpty: false
+    multiline: false
+  - !TextParam
+    name: extra-args
+    allowEmpty: true
+    multiline: false
