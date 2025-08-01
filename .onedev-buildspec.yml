@@ -62,7 +62,7 @@ jobs:
 
           if podman image inspect "$image" &>/dev/null; then
             echo "✅ Image found for $arch"
-            podman manifest add "$image_name:$image_tag" "$image_url.$arch"
+            podman manifest add "$image_name:$image_tag" "$image"
           else
             echo "⚠️ No image found for $arch"
           fi
