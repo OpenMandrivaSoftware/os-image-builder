@@ -71,7 +71,7 @@ jobs:
         podman login "@server@" -u "@job_token@" -p "@secret:registry_token@"
 
         echo "📤 Pushing manifest: $image_base"
-        podman push "$image_name:$image_tag" "docker://$image_url"
+        podman --log-level=debug push "$image_name:$image_tag" "docker://$image_url"
     useTTY: true
     condition: SUCCESSFUL
     optional: false
