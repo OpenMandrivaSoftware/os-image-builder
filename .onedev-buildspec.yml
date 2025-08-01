@@ -30,46 +30,7 @@ jobs:
     runInContainer: true
     image: quay.io/podman/stable
     interpreter: !DefaultInterpreter
-      commands: |
-        set -e
-
-        current_arch=@param:docker-arch@
-
-        image_tag="@param:version@"
-        image_name="@property:registry_repo@/minimal"
-        image_url="@server@/$image_name:$image_tag"
-
-        podman login "@server@" -u "@job_token@" -p "@secret:registry_token@"
-
-        echo "🛠📤 Building and pushing image: $image_url.$current_arch"
-        podman build \
-          --arch $current_arch \
-          --os linux \
-          -f helpers/Dockerfile \
-          -t "$image_url.$current_arch" \
-          output
-        podman push "$image_url.$current_arch"
-
-        manifest_args=""
-        architectures=("arm64" "amd64")
-
-        echo "🛠 Creating manifest: $image_name:$image_tag"
-        podman manifest create "$image_name:$image_tag"
-
-        for arch in "${architectures[@@]}"; do
-          image="$image_url.$arch"
-          echo "🔍 Inspecting manifest for: $image"
-
-          if podman image inspect "$image" &>/dev/null; then
-            echo "✅ Image found for $arch"
-            podman manifest add "$image_name:$image_tag" "$image"
-          else
-            echo "⚠️ No image found for $arch"
-          fi
-        done
-
-        echo "📤 Pushing manifest: $image_base"
-        podman push "$image_name:$image_tag" "$image_url"
+      commands: "set -e\n\ncurrent_arch=@param:docker-arch@\n\nimage_tag=\"@param:version@\"\nimage_name=\"@property:registry_repo@/minimal\"\nimage_url=\"@server@/$image_name:$image_tag\"\n\npodman login \"@server@\" -u \"@job_token@\" -p \"@secret:registry_token@\"\n\necho \"🛠📤 Building and pushing image: $image_url.$current_arch\"\npodman build \\\n  --arch $current_arch \\\n  --os linux \\\n  -f helpers/Dockerfile \\\n  -t \"$image_url.$current_arch\" \\\n  output\npodman push \"$image_url.$current_arch\"\n\nmanifest_args=\"\"\narchitectures=(\"arm64\" \"amd64\")\n\necho \"🛠 Creating manifest: $image_name:$image_tag\"\npodman manifest create \"$image_name:$image_tag\"\n\nfor arch in \"${architectures[@@]}\"; do\n  image=\"docker://$image_url.$arch\"\n  echo \"🔍 Inspecting manifest for: $image\"\n\n  if podman image inspect \"$image\" &>/dev/null; then\n    echo \"✅ Image found for $arch\"\n    podman manifest add\n\t  --arch $arch \\\n\t  --os linux \\\n\t  \"$image_name:$image_tag\" \\\n\t  \"$image\"\n  else\n    echo \"⚠️ No image found for $arch\"\n  fi\ndone\n\necho \"📤 Pushing manifest: $image_base\"\npodman push \"$image_name:$image_tag\" \"docker://$image_url\"\n"
     useTTY: true
     condition: SUCCESSFUL
     optional: false
