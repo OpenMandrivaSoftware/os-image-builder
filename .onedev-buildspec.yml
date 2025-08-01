@@ -60,11 +60,9 @@ jobs:
           image="$image_url.$arch"
           echo "🔍 Inspecting manifest for: $image"
 
-          manifest_json=$(podman manifest inspect "$image" 2>/dev/null)
-
-          if [ -n "$manifest_json" ]; then
+          if manifest_json=$(podman manifest inspect "$image" 2>/dev/null); then
             echo "✅ Manifest found for $arch"
-            podman manifest add "$image_name:$image_tag" "$image_url.$current_arch"
+            podman manifest add "$image_name:$image_tag" "$image_url.$arch"
           else
             echo "⚠️ No manifest found for $arch"
           fi
