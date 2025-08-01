@@ -28,53 +28,48 @@ jobs:
   - !CommandStep
     name: Push Docker image
     runInContainer: true
-    image: docker:dind
+    image: quay.io/podman/stable
     interpreter: !DefaultInterpreter
       commands: |
-        set -xe
+        set -e
 
-        # Start the Docker daemon
-        dockerd-entrypoint.sh &
-        # Wait for the daemon to be ready
-        sleep 5
-        # Verify it's running
-        docker info
+        current_arch=@param:docker-arch@
 
-        docker buildx build \
-          --platform linux/@param:docker-arch@ \
+        image_tag="@param:version@"
+        image_name="@param:registry_repo@/minimal"
+        image_url="@param:registry_host@/$image_name:$image_tag"
+
+        echo "🛠📤 Pushing and pushing image: $image_url.$current_arch"
+        podman build \
+          --arch $current_arch \
+          --os linux \
           -f helpers/Dockerfile \
-          -t @server@/openmandriva/minimal:@param:version@.@param:docker-arch@ \
-          --push \
+          -t "$image_url.$current_arch" \
           output
+        podman push "$image_url.$current_arch"
 
         manifest_args=""
         architectures=("arm64" "amd64")
 
+        echo "🛠 Creating manifest: $image_name:$image_tag"
+        podman manifest create "$image_name:$image_tag"
+
         for arch in "${architectures[@@]}"; do
-          image="@server@/openmandriva/minimal:@param:version@.$arch"
+          image="$image_url.$arch"
           echo "🔍 Inspecting manifest for: $image"
 
-          manifest_json=$(docker manifest inspect "$image" 2>/dev/null)
+          manifest_json=$(podman manifest inspect "$image" 2>/dev/null)
 
           if [ -n "$manifest_json" ]; then
             echo "✅ Manifest found for $arch"
-            manifest_args="$manifest_args --amend $image"
+            podman manifest add "$image_name:$image_tag" "docker://$image_url.$current_arch"
           else
             echo "⚠️ No manifest found for $arch"
           fi
         done
 
-        final_image="@server@/openmandriva/minimal:@param:version@"
-
-        if [ -n "$manifest_args" ]; then
-          echo "🛠 Creating manifest: $final_image"
-          docker manifest create "$final_image" $manifest_args
-
-          echo "📤 Pushing manifest: $final_image"
-          docker manifest push "$final_image"
-        else
-          echo "❌ No architecture-specific images found. Manifest not created."
-        fi
+        echo "📤 Pushing manifest: $image_base"
+        podman push "$image_name:$image_tag" "docker://$image_url"
     useTTY: true
     condition: SUCCESSFUL
     optional: false
