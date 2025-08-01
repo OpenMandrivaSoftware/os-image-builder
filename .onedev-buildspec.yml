@@ -37,7 +37,7 @@ jobs:
 
         image_tag="@param:version@"
         image_name="@property:registry_repo@/minimal"
-        image_url="@property:registry_host@/$image_name:$image_tag"
+        image_url="@server@/$image_name:$image_tag"
 
         echo "🛠📤 Pushing and pushing image: $image_url.$current_arch"
         podman build \
