@@ -126,7 +126,7 @@ stepTemplates:
   - !CommandStep
     name: Run build script in container
     runInContainer: true
-    image: openmandriva/cooker
+    image: openmandriva/minimal:cooker
     interpreter: !DefaultInterpreter
       commands: "set -ex\n\necho insecure >> ~/.curlrc\n\ndnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh upgrade\ndnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git\n\n./build @param:extra-args@ -v @param:version@ @param:target@\n\nfolder=$(find . -maxdepth 1 -type d -name \"OpenMandriva-Lx-*\")\nif [ -n \"$folder\" ]; then\n\tmv \"$folder\" \"output\"\nfi\n"
     useTTY: true
