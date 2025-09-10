@@ -22,7 +22,7 @@ jobs:
       secret: false
       valuesProvider: !SpecifiedValues
         values:
-        - - -P core @param:extra-args@
+        - - -P core -W @param:extra-args@
     condition: SUCCESSFUL
     optional: false
   - !CommandStep
