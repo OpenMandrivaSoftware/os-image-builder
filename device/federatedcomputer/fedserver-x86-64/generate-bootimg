@@ -1,0 +1,1 @@
+sed -i -E 's, root=[a-zA-Z0-9/=-]+, root=LABEL=/,g' $OURDIR/$ROOTDIR/boot/grub2/grub.cfg

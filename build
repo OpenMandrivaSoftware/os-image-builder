@@ -903,16 +903,27 @@ done
 # Generate fstab
 if [ "${#PARTITIONS[@]}" -gt 0 ]; then
 	for i in "${!PARTITIONS[@]}"; do
+		PARTNO="$(echo ${PARTITIONS[$i]} |cut -d: -f8)"
+		[ -z "$PARTNO" ] && PARTNO=$((i+1))
+		TYPE="$(echo ${PARTITIONS[$i]} |cut -d: -f3)"
 		FS="$(echo ${PARTITIONS[$i]}|cut -d: -f4)"
 		MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+		PARTUUID="$(blkid ${LOOPDEV}p${PARTNO} |sed -e 's,.*PARTUUID=",,;s,".*,,')"
 		LABEL="$(echo ${PARTITIONS[$i]}|cut -d: -f6)"
-		if [ -n "$LABEL" -a -n "${MP}" ]; then
-			echo "/dev/disk/by-label/${LABEL} ${MP} ${FS} defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
+		if [ -n "${PARTUUID}" -a -n "${MP}" ]; then
+			echo "PARTUUID=${PARTUUID} ${MP} ${FS} defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
+			#echo "/dev/sda${PARTNO} ${MP} ${FS} defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
+		elif [ -n "${LABEL}" -a -n "${MP}" ]; then
+			echo "PARTLABEL=${LABEL} ${MP} ${FS} defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
+		elif [ "${TYPE}" = "8200" ]; then
+			echo "PARTUUID=${PARTUUID} swap swap defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
+			#echo "/dev/sda${PARTNO} swap swap defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
 		fi
 	done
 fi
 
 run setup-system-files
+
 if ! [[ "$OMIT_TEXTINSTALLER" =~ (yes|true|1) ]]; then
 	sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BOOTEFI@,${BOOTEFI},g" helpers/install-openmandriva.in >"$OURDIR/$ROOTDIR/home/omv/install-openmandriva"
 	mkdir -p "$OURDIR/$ROOTDIR/usr/share/om-text-installer"
@@ -1063,24 +1074,7 @@ run generate-bootimg
 # root filesystems...
 cleanup
 
-#run generate-rootfs
-#
-#xz -9ef ${RESULTDIR}/*.img &>/dev/null || :
-#
-# All of the following are allowed to fail because not
-# every board needs/produces every one of them
-#mv *.img* ${RESULTDIR}/ 2>/dev/null || :
-#mv *.tar* ${RESULTDIR}/ 2>/dev/null || :
-#cp -a device/${TARGET}/*.md ${RESULTDIR}/ 2>/dev/null || :
-#cp -a device/${TARGET}/write2sd ${RESULTDIR}/ 2>/dev/null || :
-#cp -a device/${TARGET}/write2device ${RESULTDIR}/ 2>/dev/null || :
-#
-#for i in device/${TARGET}/*.md.in device/${TARGET}/write2sd.in device/${TARGET}/write2device.in; do
-#	[ -e "$i" ] || continue
-#	r="${RESULTDIR}/$(basename $i .in)"
-#	sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BASENAME@,${BASENAME},g" $i >"$r"
-#	[ -x "$i" ] && chmod 0755 "$r"
-#done
+run finalize
 
 if [ "$ABF" = "1" ]; then
 	# Make sure the remaining scripts have sufficient access

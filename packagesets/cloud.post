@@ -2,6 +2,9 @@
 systemctl enable cloud-config.target
 systemctl enable cloud-init.target
 systemctl enable cloud-init
+systemctl enable cloud-init-main
+systemctl enable cloud-init-network
+systemctl enable cloud-init-local
 systemctl enable cloud-config
 systemctl enable cloud-final
 systemctl enable NetworkManager

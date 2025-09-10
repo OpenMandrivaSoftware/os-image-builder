@@ -1,0 +1,29 @@
+chroot "${OURDIR}/${ROOTDIR}" grub2-install --target=i386-pc ${LOOPDEV}
+
+# Federated specific bits...
+cd "${OURDIR}/${ROOTDIR}/federated"
+btrfs subvolume create federated
+cd ..
+umount federated
+mount -o subvol=/federated "${LOOPDEV}p4" federated
+sed -i -e 's|/federated btrfs |/federated btrfs subvol=/federated,|' etc/fstab
+sed -i -e '/root/d' etc/ssh/denyusers
+sed -i -e 's,^#PermitRootLogin,PermitRootLogin,' etc/ssh/sshd_config
+# FIXME this is for testing only and needs to go
+#sed -i -e 's,^PermitRootLogin prohibit-password,PermitRootLogin yes,' etc/ssh/sshd_config
+cd federated
+git clone -b release https://installcore:65adb20cfdf4cd82def09e335ce1bbef01a01860@gitea.federated.computer/Federated_Computer/Core .
+cd ..
+if test -L "etc/resolv.conf"; then
+	rm -f "etc/resolv.conf"
+	echo 'nameserver 1.1.1.1' >etc/resolv.conf
+fi
+
+mv var/lib/docker federated
+ln -s /federated/docker var/lib/
+
+# Just to make sure we actually have the right image
+echo "IMAGE_BUILDTIME=$(date +%Y%m%d%H%M%S)" >>"${OURDIR}/${ROOTDIR}/etc/os-release"
+
+SERVICES="$SERVICES sshd cloud-config cloud-final cloud-init-local cloud-init-main cloud-init-network docker"
+OMIT_TEXTINSTALLER=1

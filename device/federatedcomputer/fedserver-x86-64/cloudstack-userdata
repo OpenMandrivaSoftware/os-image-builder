@@ -1,0 +1,21 @@
+#!/bin/sh
+base64 <<EOF
+Content-Type: multipart/mixed; boundary="//"
+MIME-Version: 1.0
+
+--//
+Content-Type: text/cloud-config; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="cloud-config.txt"
+
+#cloud-config
+growpart:
+  devices: [/federated, /dev/vda4]
+  mode: auto
+runcmd:
+  - btrfs filesystem resize max /federated
+  - echo "# VMID" >> /etc/federated
+  - echo "VMID={{ ds.meta_data.vmid }}' >>/etc/federated
+disable_root: false
+EOF

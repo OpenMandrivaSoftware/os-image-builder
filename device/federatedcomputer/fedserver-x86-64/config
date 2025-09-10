@@ -1,0 +1,4 @@
+# Generic x86_64 board
+ARCH="x86_64"
+HWPACKAGES="kernel-server pciutils cloud-init system-update sshd qemu-guest-agent docker"
+USE_UEFI=no
