@@ -39,43 +39,55 @@ jobs:
 
         image_tag="@param:version@"
         image_name="@property:registry_repo@/minimal"
-        image_url="@server@/$image_name:$image_tag"
+        image_url="$image_name:$image_tag"
 
-        podman login "@server@" -u "@job_token@" -p "@secret:registry_token@"
-
-        echo "🛠📤 Building and pushing image: $image_url.$current_arch"
+        echo "🛠 Building image: $image_url_arch"
         podman build \
           --arch $current_arch \
           --os linux \
           -f helpers/Dockerfile \
           -t "$image_url.$current_arch" \
           output
-        podman push "$image_url.$current_arch"
+
+        # Local registry
+        registry_url="@server@/$image_url"
+        echo "📤 Pushing image to: $registry_url.$current_arch"
+        podman login "@server@" -u "@job_token@" -p "@secret:local_registry_token@"
+        podman push "$image_url.$current_arch" "$registry_url.$current_arch"
 
         manifest_args=""
         architectures=("arm64" "amd64")
 
-        echo "🛠 Creating manifest: $image_name:$image_tag"
-        podman manifest create "$image_name:$image_tag"
+        echo "🛠 Creating manifest for: $image_url"
+        podman manifest create "$image_url"
 
         for arch in "${architectures[@@]}"; do
-          image="docker://$image_url.$arch"
-          echo "🔍 Inspecting remote image for: $image"
+          image="docker://$registry_url.$arch"
+          echo "🔍 Inspecting image at: $image"
 
           if skopeo inspect "$image" &>/dev/null; then
-            echo "✅ Remote image found for $arch"
+            echo "✅ Image found for: $arch"
             podman manifest add \
               --arch $arch \
               --os linux \
-              "$image_name:$image_tag" \
+              "$image_url" \
               "$image"
           else
-            echo "⚠️ Remote image not found for $arch"
+            echo "⚠️ Image not found for: $arch"
           fi
         done
 
-        echo "📤 Pushing manifest: $image_base"
-        podman push "$image_name:$image_tag" "docker://$image_url"
+        echo "📤 Pushing manifest to: $registry_url"
+        podman push "$image_url" "$registry_url"
+
+        # Remote registry
+        registry_url="@property:remote_registry@/$image_url"
+        echo "📤 Pushing image to: $registry_url.$current_arch"
+        podman login "@property:remote_registry@" -u "@secret:remote_registry_user@" -p "@secret:remote_registry_token@"
+        podman push "$image_url.$current_arch" "$registry_url.$current_arch"
+
+        echo "📤 Pushing manifest to: $registry_url"
+        podman push "$image_url" "$registry_url"
     useTTY: true
     condition: SUCCESSFUL
     optional: false
