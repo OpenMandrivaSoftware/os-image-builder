@@ -1,0 +1,24 @@
+ARG REGISTRY=docker.io
+
+FROM ${REGISTRY}/openmandriva/minimal:cooker
+
+RUN dnf5 --refresh --assumeyes --no-docs --setopt=install_weak_deps=False upgrade \
+ && rm -f /etc/localtime \
+ && ln -s /usr/share/zoneinfo/UTC /etc/localtime \
+ && dnf5 --assumeyes --setopt=install_weak_deps=False --no-docs install mock git coreutils curl sudo builder-c 'dnf-command(builddep)' 'dnf5-command(builddep)' procps-ng tar locales-en \
+ findutils util-linux wget rpmdevtools sed grep xz gnupg hostname python-yaml nosync python-magic \
+ && sed -i -e "s/Defaults    requiretty.*/ #Defaults    requiretty/g" /etc/sudoers \
+ && echo "%mock ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
+ && usermod -a -G mock omv \
+ && cp -a /etc/skel /home/omv \
+ && chown -R omv:omv /home/omv \
+ && chown -R omv:mock /etc/mock \
+ && dnf5 --assumeyes autoremove \
+ && dnf5 clean all \
+ && rm -rf /var/cache/libdnf5/* \
+ && rm -rf /usr/share/man/ /usr/share/cracklib /usr/share/doc /usr/share/licenses /tmp/*
+
+RUN rm -rf /var/cache/libdnf5/* \
+ && rm -rf /var/lib/rpm/__db.*
+
+ENTRYPOINT ["/usr/bin/builder"]

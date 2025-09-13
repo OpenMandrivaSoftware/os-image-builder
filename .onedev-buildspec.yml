@@ -78,6 +78,49 @@ jobs:
   maxRetries: 3
   retryDelay: 30
   timeout: 14400
+- name: Build builder image (Docker)
+  jobExecutor: docker-with-mount-cap
+  steps:
+  - !UseTemplateStep
+    name: Checkout repository
+    templateName: Checkout
+    condition: SUCCESSFUL
+    optional: false
+  - !UseTemplateStep
+    name: Push to registry
+    templateName: Push image (Docker)
+    paramMatrix:
+    - name: docker-arch
+      secret: false
+      valuesProvider: !PassthroughValues
+        paramName: docker-arch
+    - name: dockerfile-path
+      secret: false
+      valuesProvider: !SpecifiedValues
+        values:
+        - - helpers/Dockerfile_builder
+    - name: image-url
+      secret: false
+      valuesProvider: !SpecifiedValues
+        values:
+        - - openmandriva/builder:latest
+    condition: SUCCESSFUL
+    optional: false
+  paramSpecs:
+  - !ChoiceParam
+    name: docker-arch
+    allowMultiple: false
+    allowEmpty: false
+    choiceProvider: !SpecifiedChoices
+      choices:
+      - value: amd64
+        color: '#0d87e9'
+      - value: arm64
+        color: '#0d87e9'
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  timeout: 14400
 stepTemplates:
 - name: Checkout
   steps:
@@ -132,6 +175,8 @@ stepTemplates:
 
         current_arch=@param:docker-arch@
         image_url="@param:image-url@"
+
+        mkdir -p output
 
         echo "🛠 Building image: $image_url_arch"
         podman build \
