@@ -3,7 +3,7 @@ imports:
 - projectPath: OpenMandriva/Software
   revision: mirroring
 jobs:
-- name: Publish Docker image
+- name: Build minimal image (Docker)
   jobExecutor: docker-with-mount-cap
   steps:
   - !UseTemplateStep
@@ -25,8 +25,103 @@ jobs:
         - - -P core -W @param:extra-args@
     condition: SUCCESSFUL
     optional: false
+  - !UseTemplateStep
+    name: Push to registry
+    templateName: Push image (Docker)
+    paramMatrix:
+    - name: docker-arch
+      secret: false
+      valuesProvider: !PassthroughValues
+        paramName: docker-arch
+    - name: dockerfile-path
+      secret: false
+      valuesProvider: !SpecifiedValues
+        values:
+        - - helpers/Dockerfile
+    - name: image-url
+      secret: false
+      valuesProvider: !SpecifiedValues
+        values:
+        - - openmandriva/minimal:@param:version@
+    condition: SUCCESSFUL
+    optional: false
+  paramSpecs:
+  - !ChoiceParam
+    name: version
+    allowMultiple: false
+    allowEmpty: false
+    choiceProvider: !SpecifiedChoices
+      choices:
+      - value: cooker
+        color: '#0d87e9'
+      - value: rolling
+        color: '#0d87e9'
+      - value: rock
+        color: '#0d87e9'
+    defaultValueProvider: !SpecifiedDefaultValue
+      value: cooker
+  - !ChoiceParam
+    name: docker-arch
+    allowMultiple: false
+    allowEmpty: false
+    choiceProvider: !SpecifiedChoices
+      choices:
+      - value: amd64
+        color: '#0d87e9'
+      - value: arm64
+        color: '#0d87e9'
+  - !TextParam
+    name: extra-args
+    allowEmpty: true
+    multiline: false
+  retryCondition: never
+  maxRetries: 3
+  retryDelay: 30
+  timeout: 14400
+stepTemplates:
+- name: Checkout
+  steps:
+  - !CheckoutStep
+    name: Checkout repository
+    cloneCredential: !DefaultCredential {}
+    withLfs: false
+    withSubmodules: false
+    cloneDepth: 1
+    condition: SUCCESSFUL
+    optional: false
+- name: Build
+  steps:
+  - !UseTemplateStep
+    name: Checkout repository
+    templateName: Checkout
+    condition: SUCCESSFUL
+    optional: false
   - !CommandStep
-    name: Push Docker image
+    name: Run build script in container
+    runInContainer: true
+    image: openmandriva/minimal:cooker
+    interpreter: !DefaultInterpreter
+      commands: "set -ex\n\necho insecure >> ~/.curlrc\n\ndnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh upgrade\ndnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git\n\n./build @param:extra-args@ -v @param:version@ @param:target@\n\nfolder=$(find . -maxdepth 1 -type d -name \"OpenMandriva-Lx-*\")\nif [ -n \"$folder\" ]; then\n\tmv \"$folder\" \"output\"\nfi\n"
+    useTTY: true
+    condition: SUCCESSFUL
+    optional: false
+  paramSpecs:
+  - !TextParam
+    name: version
+    allowEmpty: false
+    multiline: false
+  - !TextParam
+    name: target
+    allowEmpty: false
+    multiline: false
+  - !TextParam
+    name: extra-args
+    allowEmpty: true
+    multiline: false
+- name: Push image (Docker)
+  steps:
+  - !CommandStep
+    name: Push to registry
     runInContainer: true
     image: quay.io/podman/stable
     interpreter: !DefaultInterpreter
@@ -36,16 +131,13 @@ jobs:
         dnf install --assumeyes skopeo
 
         current_arch=@param:docker-arch@
-
-        image_tag="@param:version@"
-        image_name="@property:registry_repo@/minimal"
-        image_url="$image_name:$image_tag"
+        image_url="@param:image-url@"
 
         echo "🛠 Building image: $image_url_arch"
         podman build \
           --arch $current_arch \
           --os linux \
-          -f helpers/Dockerfile \
+          -f "@param:dockerfile-path@" \
           -t "$image_url.$current_arch" \
           output
 
@@ -92,68 +184,15 @@ jobs:
     condition: SUCCESSFUL
     optional: false
   paramSpecs:
-  - !ChoiceParam
-    name: version
-    allowMultiple: false
-    allowEmpty: false
-    choiceProvider: !SpecifiedChoices
-      choices:
-      - value: cooker
-        color: '#0d87e9'
-      - value: rolling
-        color: '#0d87e9'
-      - value: rock
-        color: '#0d87e9'
-    defaultValueProvider: !SpecifiedDefaultValue
-      value: cooker
-  - !ChoiceParam
+  - !TextParam
     name: docker-arch
-    allowMultiple: false
-    allowEmpty: false
-    choiceProvider: !SpecifiedChoices
-      choices:
-      - value: amd64
-        color: '#0d87e9'
-      - value: arm64
-        color: '#0d87e9'
-  - !TextParam
-    name: extra-args
-    allowEmpty: true
-    multiline: false
-  retryCondition: never
-  maxRetries: 3
-  retryDelay: 30
-  timeout: 14400
-stepTemplates:
-- name: Build
-  steps:
-  - !CheckoutStep
-    name: Checkout repository
-    cloneCredential: !DefaultCredential {}
-    withLfs: false
-    withSubmodules: false
-    cloneDepth: 1
-    condition: SUCCESSFUL
-    optional: false
-  - !CommandStep
-    name: Run build script in container
-    runInContainer: true
-    image: openmandriva/minimal:cooker
-    interpreter: !DefaultInterpreter
-      commands: "set -ex\n\necho insecure >> ~/.curlrc\n\ndnf --assumeyes --no-docs --setopt=install_weak_deps=False --refresh upgrade\ndnf --assumeyes --no-docs --setopt=install_weak_deps=False install timezone systemd git\n\n./build @param:extra-args@ -v @param:version@ @param:target@\n\nfolder=$(find . -maxdepth 1 -type d -name \"OpenMandriva-Lx-*\")\nif [ -n \"$folder\" ]; then\n\tmv \"$folder\" \"output\"\nfi\n"
-    useTTY: true
-    condition: SUCCESSFUL
-    optional: false
-  paramSpecs:
-  - !TextParam
-    name: version
     allowEmpty: false
     multiline: false
   - !TextParam
-    name: target
+    name: dockerfile-path
     allowEmpty: false
     multiline: false
   - !TextParam
-    name: extra-args
-    allowEmpty: true
+    name: image-url
+    allowEmpty: false
     multiline: false
