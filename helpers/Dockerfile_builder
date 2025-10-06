@@ -5,8 +5,10 @@ FROM ${REGISTRY}/openmandriva/minimal:cooker
 RUN dnf5 --refresh --assumeyes --no-docs --setopt=install_weak_deps=False upgrade \
  && rm -f /etc/localtime \
  && ln -s /usr/share/zoneinfo/UTC /etc/localtime \
- && dnf5 --assumeyes --setopt=install_weak_deps=False --no-docs install mock git coreutils curl sudo builder-c 'dnf-command(builddep)' 'dnf5-command(builddep)' procps-ng tar locales-en \
+ && dnf5 --assumeyes --setopt=install_weak_deps=False --no-docs install mock git coreutils curl sudo builder-c 'dnf5-command(builddep)' procps-ng tar locales-en \
  findutils util-linux wget rpmdevtools sed grep xz gnupg hostname python-yaml nosync python-magic \
+ && ls -l /usr/bin/sudo \
+ && chown 0:0 /usr/bin/sudo && chmod 4755 /usr/bin/sudo \
  && sed -i -e "s/Defaults    requiretty.*/ #Defaults    requiretty/g" /etc/sudoers \
  && echo "%mock ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
  && usermod -a -G mock omv \
