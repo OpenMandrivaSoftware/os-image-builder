@@ -1,8 +1,4 @@
-basesystem-minimal
-distro-release-common
-distro-release-OpenMandriva
-distro-release-repos
-distro-release-repos-keys
+#include "rootfs.pkgs"
 systemd-console
 systemd-coredump
 systemd-locale
@@ -10,17 +6,8 @@ systemd-cryptsetup
 systemd-analyze
 systemd-hwdb
 systemd-polkit
-less
-neovim
-psmisc
-procps-ng
 gptfdisk
 kpartx
-timezone
-locales-en
-dnf
-dnf-plugins-core
-sudo
 usbutils
 passwd
 sysfsutils

@@ -22,7 +22,7 @@ jobs:
       secret: false
       valuesProvider: !SpecifiedValues
         values:
-        - - -P core -W @param:extra-args@
+        - - -P rootfs -W @param:extra-args@
     condition: SUCCESSFUL
     optional: false
   - !UseTemplateStep

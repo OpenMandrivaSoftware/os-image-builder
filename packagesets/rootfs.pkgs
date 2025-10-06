@@ -1,0 +1,16 @@
+// Extremely minimal: Not even bootable, to be used for
+// chroots, containers etc.
+basesystem-minimal
+distro-release-common
+distro-release-OpenMandriva
+distro-release-repos
+distro-release-repos-keys
+less
+neovim
+psmisc
+procps-ng
+timezone
+locales-en
+dnf
+dnf-plugins-core
+sudo
