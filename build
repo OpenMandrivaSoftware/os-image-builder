@@ -937,7 +937,11 @@ if [ "$NEED_INITRD" != "no" ] || [ "$USE_UEFI" = "yes" ] || [ "$USE_SYSTEMD_UEFI
 	if [ "$USE_UEFI" = "yes" ]; then
 		echo "Creating ESP for GRUB."
 		mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
-		chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -d /usr/lib/grub/$EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxterm_menu gfxmenu test all_video loadenv exfat ext2 part_msdos part_gpt loadenv ls chain btrfs xfs ntfs all_video efifwsetup efinet font probe video loopback gzio xzio zstd
+		if echo $PACKAGESETS |grep -q gui; then
+			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -d /usr/lib/grub/$EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxterm_menu gfxmenu test all_video loadenv exfat ext2 part_msdos part_gpt loadenv ls chain btrfs xfs ntfs all_video efifwsetup efinet font probe video loopback gzio xzio zstd
+		else
+			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -d /usr/lib/grub/$EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file test loadenv exfat ext2 part_msdos part_gpt loadenv ls chain btrfs xfs ntfs all_video efifwsetup efinet font probe loopback gzio xzio zstd
+		fi
 	fi
 
 	if [ "$USE_SYSTEMD_UEFI" = "yes" ]; then
