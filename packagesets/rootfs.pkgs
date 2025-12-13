@@ -12,5 +12,4 @@ procps-ng
 timezone
 locales-en
 dnf
-dnf-plugins-core
 sudo
