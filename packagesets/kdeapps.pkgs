@@ -3,18 +3,19 @@ okular
 okular-pdf
 karbon
 gwenview
-krita
 kmail
-kvirc
 ktorrent
 plasma-systemmonitor
 discover
 discover-backend-packagekit
 dnfdragora
-libreoffice-kde5
+libreoffice-kde6
 libreoffice-writer
 libreoffice-calc
 libreoffice-impress
 libreoffice-help-en_US
 libreoffice-style-breeze
 libreoffice-draw
+helium
+// Apparently an implicit dependency of chromium SSL (FIXME check if this is true for helium)
+LIB(freebl3)

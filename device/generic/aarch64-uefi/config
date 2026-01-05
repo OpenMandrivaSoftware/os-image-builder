@@ -3,10 +3,6 @@ ARCH="aarch64"
 # dosfsprogs is needed to generate the UEFI boot partition
 # when using install-openmandriva
 HWPACKAGES="kernel-server dosfstools"
-# Most boards have a PCIE-slot that may take a graphics card (so we
-# need radeon and nouveau), others have onboard GPUs (panfrost, lima
-# etnaviv, freedreno)
-HWPACKAGES_gui="$HWPACKAGES_gui lib64dri-drivers-radeon lib64dri-drivers-nouveau lib64dri-drivers-freedreno lib64dri-drivers-panfrost lib64dri-drivers-freedreno lib64dri-drivers-lima"
 # Commonly needed, but shouldn't be in a base image
 #HWPACKAGES="$HWPACKAGES pciutils kernel-firmware kernel-firmware-extra iwlwifi-agn-ucode"
 # (this is the default anyway)

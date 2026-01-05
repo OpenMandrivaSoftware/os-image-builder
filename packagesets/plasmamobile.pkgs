@@ -18,7 +18,6 @@ kdeplasma-addons
 kwallet
 marble
 bluez
-qtbluetooth5
 bluez-qt
 bluedevil
 pulseaudio-module-bluetooth
@@ -31,8 +30,8 @@ om-camera
 ledcontrol
 // Used by qt5-qtsensors to read the accelerometer
 iio-sensor-proxy
-// And qt5-qtpositioning
-qt5-qtpositioning
+// And qt6-qtpositioning
+qt6-qtpositioning
 geoclue
 gpsd
 AmbientLight

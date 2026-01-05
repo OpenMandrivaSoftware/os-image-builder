@@ -1,10 +1,9 @@
 wayland-tools
 xwayland
-qt5-qtwayland
 LIB(va-wayland2)
 kwayland-server
 kwayland-integration
 kwayland
 egl-wayland
 gstreamer1.0-wayland
-kwin-wayland
+kwin

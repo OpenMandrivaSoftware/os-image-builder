@@ -1,4 +1,4 @@
-#include "kde.pkgs"
-kwin-wayland
+#include "plasma.pkgs"
+kwin
 plasma-workspace-wayland
 kwindowsystem-wayland

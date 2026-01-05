@@ -1,15 +1,15 @@
 #include "gui.pkgs"
-task-plasma6-minimal
-plasma6-sddm
-plasma6-sddm-theme-breeze
+task-plasma-minimal
+sddm
+sddm-theme-breeze
 LIB(GLESv1_CM1)
 LIB(GLESv2_2)
 LIB(OpenGL0)
 LIB(OpenVG0)
-plasma6-pa
+plasma-pa
 distro-release-desktop
 distro-release-indexhtml
-distro-release-desktop-Plasma6
+distro-release-desktop-Plasma
 distro-release-repos-pkgprefs
 ffmpeg
 mpv
