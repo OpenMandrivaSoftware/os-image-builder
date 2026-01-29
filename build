@@ -861,14 +861,14 @@ if [ "$CREATE_DEFAULT_USER" != "no" ]; then
 
 	# If sddm is installed, set it up to autologin as omv
 	if [ -z "$SDDMSESSION" ]; then
-		for desktop in plasma lxqt openbox failsafe; do
+		for desktop in plasmax11 plasma lxqt openbox failsafe; do
 			if [ -e $OURDIR/$ROOTDIR/usr/share/xsessions/$desktop.desktop ]; then
 				SDDMSESSION=$desktop
 				break
 			fi
 		done
 		if [ -z "$SDDMSESSION" ]; then
-			for desktop in plasma-mobile plasmawayland weston; do
+			for desktop in plasma-mobile plasma weston; do
 				if [ -e "$OURDIR/$ROOTDIR"/usr/share/wayland-sessions/$desktop.desktop ]; then
 					SDDMSESSION=$desktop
 					break
