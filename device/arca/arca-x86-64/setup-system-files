@@ -1,0 +1,24 @@
+chroot "${OURDIR}/${ROOTDIR}" grub2-install --target=i386-pc ${LOOPDEV}
+
+# Federated specific bits...
+cd "${OURDIR}/${ROOTDIR}/srv"
+btrfs subvolume create srv
+cd ..
+umount srv
+mount -o subvol=/srv "${LOOPDEV}p5" srv
+sed -i -e 's|/srv btrfs |/srv btrfs subvol=/srv,|' etc/fstab
+sed -i -e '/root/d' etc/ssh/denyusers
+sed -i -e 's,^#PermitRootLogin,PermitRootLogin,' etc/ssh/sshd_config
+if test -L "etc/resolv.conf"; then
+	rm -f "etc/resolv.conf"
+	echo 'nameserver 1.1.1.1' >etc/resolv.conf
+fi
+
+mv var/lib/docker srv
+ln -s /srv/docker var/lib/
+
+# Just to make sure we actually have the right image
+echo "IMAGE_BUILDTIME=$(date +%Y%m%d%H%M%S)" >>"${OURDIR}/${ROOTDIR}/etc/os-release"
+
+SERVICES="$SERVICES sshd cloud-config cloud-final cloud-init-local cloud-init-main cloud-init-network docker"
+OMIT_TEXTINSTALLER=1

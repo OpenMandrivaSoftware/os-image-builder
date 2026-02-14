@@ -1,0 +1,4 @@
+# Generic Zen board
+ARCH="znver1"
+HWPACKAGES="kernel-server pciutils cloud-init system-update sshd qemu-guest-agent docker docker-compose"
+USE_UEFI=no

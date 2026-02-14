@@ -1,0 +1,6 @@
+sed -i -E 's, root=[a-zA-Z0-9/=-]+, root=LABEL=/,g' $OURDIR/$ROOTDIR/boot/grub2/grub.cfg
+# Enable output to both the virtual VGA/EFIFB and serial console if any
+sed -i -E 's| quiet| quiet console=tty0 console=ttyS0 earlyprintk=ttyS0,115200n1|g' $OURDIR/$ROOTDIR/boot/grub2/grub.cfg
+cp -f $OURDIR/$ROOTDIR/boot/grub2/grub.cfg $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+# Currently BIOS grub has echo, but UEFI grub doesn't
+sed -i -e '/echo/d' $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg

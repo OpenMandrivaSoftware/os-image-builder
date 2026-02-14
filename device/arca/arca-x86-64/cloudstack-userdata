@@ -11,11 +11,11 @@ Content-Disposition: attachment; filename="cloud-config.txt"
 
 #cloud-config
 growpart:
-  devices: [/federated, /dev/vda4]
+  devices: [/srv, /dev/vda5]
   mode: auto
 runcmd:
-  - btrfs filesystem resize max /federated
-  - echo "# VMID" >> /etc/federated
-  - echo "VMID={{ ds.meta_data.vmid }}' >>/etc/federated
+  - btrfs filesystem resize max /srv
+  - echo "# VMID" >> /etc/arca
+  - echo "VMID={{ ds.meta_data.vmid }}' >>/etc/arca
 disable_root: false
 EOF

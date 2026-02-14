@@ -1,4 +1,7 @@
-// Packages that are used on federated.computer servers
+// Packages that are used on arca servers
+#include "core.pkgs"
+#include "network.pkgs"
+#include "cloud.pkgs"
 openssh-server
 btrfs-progs
 qemu-guest-agent
@@ -26,3 +29,8 @@ ltrace
 cloud-init
 // used by dumpcerts.service to see if certificates were renewed
 diffutils
+// Let's keep OM up to date
+system-update
+// Needed by some provider backends in cloud-init.
+// Better safe than sorry.
+dhcp-client

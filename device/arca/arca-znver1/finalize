@@ -1,0 +1,2 @@
+qemu-img convert -O qcow2 "${IMAGE}" "${IMAGE/.img/.qcow2}"
+#rm -r "${IMAGE}"
