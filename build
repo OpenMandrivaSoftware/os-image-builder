@@ -433,11 +433,6 @@ elif [ -n "$KERNEL" ]; then
 		cd ..
 	fi
 	cd kernel
-	# Bogus naming, e.g. "rock-5b.config", in some kernels
-	if echo $KERNEL_CONFIG |grep -q '\.config'; then
-		cp arch/arm64/configs/${KERNEL_CONFIG} arch/arm64/configs/${KERNEL_CONFIG/.config/_defconfig}
-		KERNEL_CONFIG=${KERNEL_CONFIG/.config/_defconfig}
-	fi
 	[ -e scripts/lld-version.sh ] && sed -i -e "s,' ' -f 2,' ' -f 4," scripts/lld-version.sh
 	PN=1
 	for i in ${OURDIR}/device/${TARGET}/kernel-patches/*.patch ${OURDIR}/device/${TARGET}/kernel-patches/*.diff; do
@@ -454,8 +449,10 @@ elif [ -n "$KERNEL" ]; then
 	sed -i -E 's,(.*)"\["(.*)"\]"(.*),\1"-"\2""\3,' drivers/scsi/aacraid/linit.c
 	run download_kernel_extras
 
-	[ -e ${OURDIR}/device/${TARGET}/../generic/${KERNEL_CONFIG} ] && cp -f ${OURDIR}/device/${TARGET}/../generic/${KERNEL_CONFIG} arch/${KERNELARCH}/configs/
-	[ -e ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} ] && cp -f ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} arch/${KERNELARCH}/configs/
+	if ! echo ${KERNEL_CONFIG} |grep -q ' '; then
+		[ -e ${OURDIR}/device/${TARGET}/../generic/${KERNEL_CONFIG} ] && cp -f ${OURDIR}/device/${TARGET}/../generic/${KERNEL_CONFIG} arch/${KERNELARCH}/configs/
+		[ -e ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} ] && cp -f ${OURDIR}/device/${TARGET}/${KERNEL_CONFIG} arch/${KERNELARCH}/configs/
+	fi
 	# Get rid of trailing + in version identifiers
 	sed -i -e 's,"+","",g' scripts/setlocalversion
 	if [ -n "$KERNEL_EXTRA_CFLAGS_GCC" ] && [ "$KERNEL_GCC" = "yes" ]; then
@@ -472,15 +469,16 @@ elif [ -n "$KERNEL" ]; then
 	git commit -am "Apply OpenMandriva patches" || :
 
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		make $SMPFLAGS ARCH=$KERNELARCH $CCOMP $KERNEL_CONFIG include/config/kernel.release
+		make $SMPFLAGS ARCH=$KERNELARCH $CCOMP defconfig include/config/kernel.release
 	else
-		make $SMPFLAGS ARCH=$KERNELARCH $CCOMP LLVM=1 $KERNEL_CONFIG include/config/kernel.release
+		make $SMPFLAGS ARCH=$KERNELARCH $CCOMP LLVM=1 defconfig include/config/kernel.release
 	fi
 	KERNELVERSION=$(cat include/config/kernel.release)
 	KERNELVERSION_NUM="$(echo $KERNELVERSION |cut -d- -f1)"
 	if echo $KERNELVERSION |grep -q -- -; then
 		KERNELVERSION_EXTRA="$(echo $KERNELVERSION |cut -d- -f2- |sed -e 's,-,.,g')"
 	fi
+	make $SMPFLAGS ARCH=$KERNELARCH $CCOMP LLVM=1 mrproper
 	cd ..
 
 	rm -rf kernel-rpm
@@ -541,19 +539,31 @@ EOF
 			KERNEL_LD="LD=/usr/bin/$TRIPLET-ld.bfd"
 		fi
 	fi
-	if [ "$KERNEL_GCC" = "yes" ]; then
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+	if echo ${KERNEL_CONFIG} |grep -q ' '; then
+		echo "export ARCH=$KERNELARCH" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		[[ -n "$CCOMP" ]] && echo "export $CCOMP" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
+export CC=clang
+export LLVM=1
+export CLANG_TRIPLE=$TRIPLET-
+./scripts/kconfig/merge_config.sh -m $KERNEL_CONFIG
+EOF
 	else
-		echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		if [ "$KERNEL_GCC" = "yes" ]; then
+			echo "%make_build $SMPFLAGS ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		else
+			echo "%make_build $SMPFLAGS ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1 $KERNEL_CONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
+		fi
 	fi
 	if [ -n "$KERNEL_EXTRACONFIG" ]; then
 		echo "scripts/config $KERNEL_EXTRACONFIG" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
+	if echo ${KERNEL_CONFIG} |grep -q ' '; then
+		echo "make olddefconfig" >>kernel-rpm/kernel-$SHORTTARGET.spec
+	fi
 	if [ "$KERNEL_GCC" = "yes" ]; then
-		echo "make syncconfig ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
 		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	else
-		echo "make syncconfig ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 		echo "%make_build $KERNELTARGET $DTBS modules ARCH=$KERNELARCH CLANG_TRIPLE=$TRIPLET- $CCOMP CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- CC=clang LLVM=1" >>kernel-rpm/kernel-$SHORTTARGET.spec
 	fi
 	cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
