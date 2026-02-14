@@ -15,3 +15,4 @@ sysfsutils
 dbus-broker
 e2fsprogs
 dracut-modules-growroot
+rootfiles
