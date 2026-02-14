@@ -3,3 +3,4 @@ ARCH="x86_64"
 HWPACKAGES="kernel-server pciutils cloud-init system-update sshd qemu-guest-agent docker"
 USE_UEFI=yes
 CMDLINE="console=tty0 console=ttyS0,115200n8 earlyprintk=ttyS0"
+SERVICES="$SERVICES sshd qemu-guest-agent docker cloud-config cloud-final cloud-init-hotplugd cloud-init-local cloud-init-main cloud-init-network"
