@@ -1,2 +1,1 @@
-qemu-img convert -O qcow2 "${IMAGE}" "${IMAGE/.img/.qcow2}"
-#rm -r "${IMAGE}"
+../arca-x86-64/finalize

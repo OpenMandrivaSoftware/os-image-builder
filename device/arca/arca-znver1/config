@@ -1,4 +1,4 @@
-# Generic Zen board
+# Inherit the x86_64 build, just override the architecture
+. ${OURDIR}/device/arca/arca-x86-64/config
+
 ARCH="znver1"
-HWPACKAGES="kernel-server pciutils cloud-init system-update sshd qemu-guest-agent docker docker-compose"
-USE_UEFI=no

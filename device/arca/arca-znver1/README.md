@@ -1,4 +1,8 @@
-# fedserver images
-fedserver images are essentially custom builds of OpenMandriva Server for
-federated.computer. They're unlikely to be useful to you unless you happen
-to be federated.computer (or you're trying to reproduce their work).
+# arca images
+Arca images are essentially custom builds of OpenMandriva Server for
+Arca on znver1 hosts.
+
+They differ from the regular server images by putting a btrfs /srv at the
+end of the disk (growing to maximum size) so /srv - expected to contain most
+data at Arca - can be expanded without having to risk any changes in /
+or other parts relevant to the OS.
