@@ -15,7 +15,7 @@ growpart:
   mode: auto
 runcmd:
   - btrfs filesystem resize max /srv
-  - echo "# VMID" >> /etc/arca
-  - echo "VMID={{ ds.meta_data.vmid }}' >>/etc/arca
+  - echo "# VMID" >> /etc/pelicanus
+  - echo "VMID={{ ds.meta_data.vmid }}' >>/etc/pelicanus
 disable_root: false
 EOF
