@@ -1,0 +1,3 @@
+cd "${OURDIR}/${ROOTDIR}"
+tar cJf ${OURDIR}/${RESULTDIR}/${BASENAME}.tar.xz .
+cd -
