@@ -51,35 +51,188 @@ rescanPartitions () {
 	done
 }
 
+# ---------------------------------------------------------------------------
+# Partition entry format (colon-separated):
+#	START:END:TYPE:FILESYSTEM:MOUNTPOINT:LABEL:ALIGNMENT:PARTNO:SUBVOL:MOUNTOPTS
+#
+#	START	Start of the partition (blank = start of free space)
+#	END	End (or, if prefixed with +, size) of the partition
+#		(blank = remainder of the disk)
+#	TYPE	GPT type (e.g. 8200 = swap, 8300 = Linux, ef00 = EFI boot, ...)
+#	FILESYSTEM	Filesystem (blank = reasonable default from TYPE/FSTYPE;
+#			"-" = do not format)
+#	MOUNTPOINT	Where to mount in the target hierarchy
+#	LABEL	Partition / filesystem label
+#	ALIGNMENT	sgdisk -a value (use 1 for non-standard starts)
+#	PARTNO	Partition number (blank = array index + 1 for real partitions;
+#			for subvolume-only entries, blank = previous real PARTNO)
+#	SUBVOL	btrfs subvolume to create and mount (see below)
+#	MOUNTOPTS	Extra mount/fstab options (comma-separated), beyond defaults
+#
+# Fields at the end that should remain blank/default can simply be omitted.
+#
+# Subvolume-only entries (additional mounts on an existing btrfs partition):
+#	Leave START, END and TYPE empty and either set PARTNO to the existing
+#	partition number or omit it to reuse the previous real partition, e.g.:
+#	  PARTITIONS+=("::8304:btrfs:/:OMVROOT:::@")
+#	  PARTITIONS+=("::::/home::::@home")
+#
+# btrfs subvolumes:
+#	If FILESYSTEM resolves to btrfs (or the entry is subvolume-only) and
+#	SUBVOL is omitted, a conventional name is chosen:
+#	  /       -> @
+#	  /home   -> @home
+#	  /srv    -> @srv
+#	  /var/log -> @var/log
+#	Set SUBVOL=- to use the top-level volume (no named subvolume).
+#	For root-on-subvolume, the subvolume is also set as the btrfs default
+#	so the kernel can mount it via root= without rootflags/dracut fstab.
+# ---------------------------------------------------------------------------
+
+# Field from a partition entry (1-based, like cut -f)
+partitionEntryField() {
+	echo "$1" | cut -d: -f"$2"
+}
+
+# True if this entry only adds a mount/subvolume on an existing partition
+# (START, END and TYPE are all empty).
+isSubvolumeOnlyEntry() {
+	[ -z "$(partitionEntryField "$1" 1)" ] && \
+	[ -z "$(partitionEntryField "$1" 2)" ] && \
+	[ -z "$(partitionEntryField "$1" 3)" ]
+}
+
+# Resolve filesystem name for an entry (may be empty for unformatted /
+# subvolume-only lines). Uses global FSTYPE when TYPE implies a Linux FS.
+resolveFilesystem() {
+	local entry="$1"
+	local fs="$(partitionEntryField "$entry" 4)"
+	if [ "$fs" = "-" ]; then
+		echo ""
+		return
+	fi
+	if [ -n "$fs" ]; then
+		echo "$fs"
+		return
+	fi
+	if isSubvolumeOnlyEntry "$entry"; then
+		# Additional mount on an existing filesystem — assume btrfs
+		# (the only FS where multi-mount entries make sense here).
+		echo "btrfs"
+		return
+	fi
+	local type="$(partitionEntryField "$entry" 3)"
+	case $type in
+	ef00)
+		echo vfat
+		;;
+	ef02)
+		echo ""
+		;;
+	8200)
+		echo swap
+		;;
+	*)
+		echo "${FSTYPE}"
+		;;
+	esac
+}
+
+# Default subvolume name for a mount point (@, @home, @var/log, ...)
+defaultSubvolumeForMountpoint() {
+	local mp="$1"
+	if [ -z "$mp" ]; then
+		echo ""
+	elif [ "$mp" = "/" ]; then
+		echo "@"
+	else
+		echo "@${mp#/}"
+	fi
+}
+
+# Resolve subvolume name: explicit SUBVOL, "-" = none, empty = default for btrfs
+resolveSubvolume() {
+	local entry="$1"
+	local fs="$2"
+	local mp="$3"
+	local subvol="$(partitionEntryField "$entry" 9)"
+
+	if [ "$subvol" = "-" ]; then
+		echo ""
+		return
+	fi
+	if [ -n "$subvol" ]; then
+		echo "$subvol"
+		return
+	fi
+	if [ "$fs" = "btrfs" ] && [ -n "$mp" ]; then
+		defaultSubvolumeForMountpoint "$mp"
+		return
+	fi
+	echo ""
+}
+
+# Mount/fstab options: defaults[,subvol=...][,MOUNTOPTS]
+resolveMountOptions() {
+	local entry="$1"
+	local fs="$2"
+	local mp="$3"
+	local subvol="$(resolveSubvolume "$entry" "$fs" "$mp")"
+	local extra="$(partitionEntryField "$entry" 10)"
+	local opts="defaults"
+
+	[ -n "$subvol" ] && opts="${opts},subvol=${subvol}"
+	[ -n "$extra" ] && opts="${opts},${extra}"
+	echo "$opts"
+}
+
+# Populate RESOLVED_PARTNOS[i] for each entry in the named PARTITIONS array.
+# Real partitions: explicit PARTNO or (array index + 1).
+# Subvolume-only entries: explicit PARTNO or the previous real partition's number.
+resolvePartitionNumbers() {
+	local PARRAY=$1[@]
+	local PARTITIONS=("${!PARRAY}")
+	local i
+	local partno
+	local last_partno=""
+
+	RESOLVED_PARTNOS=()
+	for i in "${!PARTITIONS[@]}"; do
+		partno="$(partitionEntryField "${PARTITIONS[$i]}" 8)"
+		if isSubvolumeOnlyEntry "${PARTITIONS[$i]}"; then
+			if [ -z "$partno" ]; then
+				partno="$last_partno"
+			fi
+			if [ -z "$partno" ]; then
+				echo "ERROR: subvolume-only partition entry #$((i+1)) has no PARTNO and no previous partition" >&2
+				return 1
+			fi
+		else
+			if [ -z "$partno" ]; then
+				partno=$((i+1))
+			fi
+			last_partno="$partno"
+		fi
+		RESOLVED_PARTNOS[$i]="$partno"
+	done
+}
+
 # Partition and format a disk
 #
 # Usage:
 #	partitionDisk DEVICE PARTITIONS
 #	DEVICE: Device file on which partitions will be created, e.g. /dev/sda, /dev/mmcblk0
-#	PARTITIONS: Name of an array containing the partition table in the following format:
-#		START:END:TYPE:FILESYSTEM:MOUNTPOINT:LABEL:ALIGNMENT:PARTNO
-#		START	Start of the partition (if left blank, start of free space will be used)
-#		END	End (or, if prefixed with +, size) of the partition (if left blank, the remains of the disk will be used)
-#		TYPE	Type (e.g. 8200 = swap, 8300 = Linux, ef00 = EFI boot, ...)
-#		FILESYSTEM	Filesystem (if left blank, will use a reasonable default)
-#		MOUNTPOINT	Mount point
-#		LABEL	Label
-#		ALIGNMENT	Alignment (set this to 1 if a partition needs to start at a non-standard location)
-#		PARTNO	Partition number (only required for boards requiring an odd
-#			partitioning layout, such as having partition 9 containing a
-#			bootloader before the rootfs or something). Usually this should not
-#			be set, and matches the index in the array (first element is partition 1)
+#	PARTITIONS: Name of an array containing the partition table (see format above)
 #
-#	Fields at the end that should remain blank/default can simply be omitted.
-#
-#	MOUNTPOINT is ignored by this function; it is there so we can pass the same partition array to other functions unmodified.
+#	MOUNTPOINT / SUBVOL / MOUNTOPTS are ignored by this function; they are
+#	used by mountAll and fstab generation so the same array can be shared.
 #
 # Example:
-#	PARTITIONS=(":+256M:ef00::/boot/efi:EFIBoot") # Create a 256 MB EFI boot partition at the beginning of free space
-#	PARTITIONS+=(":+1G:8200") # Create a 1 GB swap partition at the beginning of free space (after the EFI boot partition)
-#	PARTITIONS+=(":+50G:8305:ext4") # Create a 50 GB ext4 partition at the beginning of free space (after the swap partition)
-#	PARTITIONS+=("::8300:ext4:/home:home:8") # Add a Linux ext4 partition with label home and partition number 8
-#	partition_disk /dev/sda PARTITIONS
+#	PARTITIONS=(":+256M:ef00::/boot/efi:EFIBoot")
+#	PARTITIONS+=(":+1G:8200")
+#	PARTITIONS+=(":+50G:8305:btrfs:/:root:::@")
+#	PARTITIONS+=("::::/home::::@home")
+#	partitionDisk /dev/sda PARTITIONS
 #
 partitionDisk() {
 	local DESTINATION="$1"
@@ -88,14 +241,25 @@ partitionDisk() {
 	local SEPARATOR="$(partitionSeparator $1)"
 	local MKFS
 	local i
+	local PARTNO
+	local TYPE
+	local LABEL
+	local ALIGN
+	local FS
+	local MKFSARGS
+	local FORMATTED=""
+
+	resolvePartitionNumbers "$2" || return 1
 
 	local SGDISK_ARGS="--zap-all"
 	for i in ${!PARTITIONS[@]}; do
-		local PARTNO="$(echo ${PARTITIONS[$i]} |cut -d: -f8)"
-		[ -z "$PARTNO" ] && PARTNO=$((i+1))
-		local TYPE="$(echo ${PARTITIONS[$i]} |cut -d: -f3)"
-		local LABEL="$(echo ${PARTITIONS[$i]} |cut -d: -f6)"
-		local ALIGN="$(echo ${PARTITIONS[$i]} |cut -d: -f7)"
+		if isSubvolumeOnlyEntry "${PARTITIONS[$i]}"; then
+			continue
+		fi
+		PARTNO="${RESOLVED_PARTNOS[$i]}"
+		TYPE="$(partitionEntryField "${PARTITIONS[$i]}" 3)"
+		LABEL="$(partitionEntryField "${PARTITIONS[$i]}" 6)"
+		ALIGN="$(partitionEntryField "${PARTITIONS[$i]}" 7)"
 		[ -n "$ALIGN" ] && SGDISK_ARGS="${SGDISK_ARGS} -a ${ALIGN}"
 		SGDISK_ARGS="${SGDISK_ARGS} -n ${PARTNO}:$(echo ${PARTITIONS[$i]} |cut -d: -f1-2)"
 		# Return to default alignment for subsequent partitions
@@ -112,29 +276,20 @@ partitionDisk() {
 	sync
 	rescanPartitions $DESTINATION
 	for i in ${!PARTITIONS[@]}; do
-		local PARTNO=$(echo ${PARTITIONS[$i]} |cut -d: -f8)
-		[ -z "$PARTNO" ] && PARTNO=$((i+1))
-		local MKFSARGS=""
-		local FS="$(echo ${PARTITIONS[$i]} |cut -d: -f4)"
-		[ "$FS" = "-" ] && continue
-		local LABEL="$(echo ${PARTITIONS[$i]} |cut -d: -f6)"
-		if [ -z "$FS" ]; then
-			local TYPE=$(echo ${PARTITIONS[$i]} |cut -d: -f3)
-			case $TYPE in
-			ef00)
-				FS=vfat
-				;;
-			ef02)
-				FS=""
-				;;
-			8200)
-				FS=swap
-				;;
-			*)
-				FS=${FSTYPE}
-				;;
-			esac
+		if isSubvolumeOnlyEntry "${PARTITIONS[$i]}"; then
+			continue
 		fi
+		PARTNO="${RESOLVED_PARTNOS[$i]}"
+		# Only format each partition once (multi-subvol shares one PARTNO)
+		case " ${FORMATTED} " in
+		*" ${PARTNO} "*) continue ;;
+		esac
+		FS="$(partitionEntryField "${PARTITIONS[$i]}" 4)"
+		[ "$FS" = "-" ] && continue
+		FS="$(resolveFilesystem "${PARTITIONS[$i]}")"
+		[ -z "$FS" ] && continue
+		LABEL="$(partitionEntryField "${PARTITIONS[$i]}" 6)"
+		MKFSARGS=""
 		case $FS in
 		*fat*)
 			MKFS=mkfs.vfat
@@ -146,7 +301,79 @@ partitionDisk() {
 			;;
 		esac
 		wipefs -a ${DESTINATION}${SEPARATOR}${PARTNO}
-		[ -n "$FS" ] && $MKFS $MKFSARGS ${DESTINATION}${SEPARATOR}${PARTNO}
+		$MKFS $MKFSARGS ${DESTINATION}${SEPARATOR}${PARTNO}
+		FORMATTED="${FORMATTED} ${PARTNO}"
+	done
+}
+
+# Create btrfs subvolumes for all entries that need them (top-level mount).
+# Also sets the default subvolume when / lives on a named subvolume so the
+# kernel can mount root without rootflags.
+prepareBtrfsSubvolumes() {
+	local DEVNODE="$1"	# full device node including separator prefix, e.g. /dev/sda or /dev/loop0p
+	local PARRAY=$2[@]
+	local PARTITIONS=("${!PARRAY}")
+	local i j
+	local PARTNO FS MP SUBVOL
+	local TMP
+	local PREPARED=""
+	local NEED_DEFAULT
+	local DEFAULT_PATH
+
+	for i in "${!PARTITIONS[@]}"; do
+		PARTNO="${RESOLVED_PARTNOS[$i]}"
+		FS="$(resolveFilesystem "${PARTITIONS[$i]}")"
+		[ "$FS" = "btrfs" ] || continue
+		MP="$(partitionEntryField "${PARTITIONS[$i]}" 5)"
+		SUBVOL="$(resolveSubvolume "${PARTITIONS[$i]}" "$FS" "$MP")"
+		# Still prepare the FS if we might set-default even without named subvols? No.
+		case " ${PREPARED} " in
+		*" ${PARTNO} "*) continue ;;
+		esac
+
+		# Any named subvolume on this partition?
+		local ANY=0
+		NEED_DEFAULT=""
+		DEFAULT_PATH=""
+		for j in "${!PARTITIONS[@]}"; do
+			[ "${RESOLVED_PARTNOS[$j]}" = "$PARTNO" ] || continue
+			local jfs jmp jsub
+			jfs="$(resolveFilesystem "${PARTITIONS[$j]}")"
+			[ "$jfs" = "btrfs" ] || continue
+			jmp="$(partitionEntryField "${PARTITIONS[$j]}" 5)"
+			jsub="$(resolveSubvolume "${PARTITIONS[$j]}" "$jfs" "$jmp")"
+			if [ -n "$jsub" ]; then
+				ANY=1
+				if [ "$jmp" = "/" ]; then
+					NEED_DEFAULT=1
+					DEFAULT_PATH="$jsub"
+				fi
+			fi
+		done
+		[ "$ANY" = "1" ] || continue
+
+		TMP="$(mktemp -d "${TMPDIR:-/var/tmp}/btrfs-subvol-XXXXXX")"
+		mount "${DEVNODE}${PARTNO}" "$TMP"
+		for j in "${!PARTITIONS[@]}"; do
+			[ "${RESOLVED_PARTNOS[$j]}" = "$PARTNO" ] || continue
+			local jfs jmp jsub jparent
+			jfs="$(resolveFilesystem "${PARTITIONS[$j]}")"
+			[ "$jfs" = "btrfs" ] || continue
+			jmp="$(partitionEntryField "${PARTITIONS[$j]}" 5)"
+			jsub="$(resolveSubvolume "${PARTITIONS[$j]}" "$jfs" "$jmp")"
+			[ -n "$jsub" ] || continue
+			if [ ! -e "${TMP}/${jsub}" ]; then
+				jparent="$(dirname "${TMP}/${jsub}")"
+				mkdir -p "$jparent"
+				btrfs subvolume create "${TMP}/${jsub}"
+			fi
+		done
+		if [ -n "$NEED_DEFAULT" ] && [ -n "$DEFAULT_PATH" ]; then
+			btrfs subvolume set-default "${TMP}/${DEFAULT_PATH}"
+		fi
+		umount "$TMP"
+		rmdir "$TMP"
+		PREPARED="${PREPARED} ${PARTNO}"
 	done
 }
 
@@ -170,7 +397,9 @@ partitionDisk() {
 # 	mountAll DEVICE PARTITIONS MOUNTPOINT
 #
 mountAll() {
-	local DEVICE="$1$(partitionSeparator $1)"
+	local DEVBASE="$1"
+	local SEPARATOR="$(partitionSeparator $1)"
+	local DEVICE="${DEVBASE}${SEPARATOR}"
 	local PARRAY=$2[@]
 	local PARTITIONS=("${!PARRAY}")
 	local MOUNTPOINT="$3"
@@ -178,20 +407,27 @@ mountAll() {
 	local MP
 	local MPLEN
 	local PARTNO
+	local FS
+	local SUBVOL
+	local OPTS
 	local i
 
+	resolvePartitionNumbers "$2" || return 1
+	prepareBtrfsSubvolumes "${DEVICE}" "$2"
+
 	MOUNTS=$(for i in "${!PARTITIONS[@]}"; do
-		MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+		MP="$(partitionEntryField "${PARTITIONS[$i]}" 5)"
 		MPLEN="$(echo $MP |wc -c)"
 		echo $MPLEN.$i
 	done |sort -V |cut -d. -f2)
 	for i in $MOUNTS; do
-		PARTNO="$(echo ${PARTITIONS[$i]} |cut -d: -f8)"
-		[ -z "$PARTNO" ] && PARTNO=$((i+1))
-		MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+		PARTNO="${RESOLVED_PARTNOS[$i]}"
+		MP="$(partitionEntryField "${PARTITIONS[$i]}" 5)"
 		if [ -n "$MP" ]; then
+			FS="$(resolveFilesystem "${PARTITIONS[$i]}")"
+			OPTS="$(resolveMountOptions "${PARTITIONS[$i]}" "$FS" "$MP")"
 			mkdir -p "${MOUNTPOINT}${MP}"
-			mount ${DEVICE}${PARTNO} "${MOUNTPOINT}${MP}"
+			mount -o "${OPTS}" ${DEVICE}${PARTNO} "${MOUNTPOINT}${MP}"
 		fi
 	done
 }

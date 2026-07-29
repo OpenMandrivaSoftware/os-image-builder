@@ -2,3 +2,8 @@
 task-lxqt
 sddm
 pavucontrol-qt
+// Let's pull in a few tools from Plasma until LXQt has equivalents
+kwrite
+okular
+// And a current browser
+helium-qt6

@@ -325,7 +325,7 @@ if [ -n "$KERNEL" ]; then
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
 # vim-common is for xxd, used to decode EDID information for pinebookpro
-HOSTDEPS="$HOSTDEPS bc curl make pahole clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build kpartx util-linux gptfdisk e2fsprogs f2fs-tools"
+HOSTDEPS="$HOSTDEPS bc curl make pahole clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build kpartx util-linux gptfdisk e2fsprogs f2fs-tools btrfs-progs"
 
 if [ -n "$UBOOT_CONFIG" ]; then
 	HOSTDEPS="$HOSTDEPS u-boot-tools"
@@ -914,22 +914,22 @@ done
 
 # Generate fstab
 if [ "${#PARTITIONS[@]}" -gt 0 ]; then
+	resolvePartitionNumbers PARTITIONS
+	PSEP="$(partitionSeparator ${LOOPDEV})"
 	for i in "${!PARTITIONS[@]}"; do
-		PARTNO="$(echo ${PARTITIONS[$i]} |cut -d: -f8)"
-		[ -z "$PARTNO" ] && PARTNO=$((i+1))
-		TYPE="$(echo ${PARTITIONS[$i]} |cut -d: -f3)"
-		FS="$(echo ${PARTITIONS[$i]}|cut -d: -f4)"
-		MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
-		PARTUUID="$(blkid ${LOOPDEV}p${PARTNO} |sed -e 's,.*PARTUUID=",,;s,".*,,')"
-		LABEL="$(echo ${PARTITIONS[$i]}|cut -d: -f6)"
+		PARTNO="${RESOLVED_PARTNOS[$i]}"
+		TYPE="$(partitionEntryField "${PARTITIONS[$i]}" 3)"
+		FS="$(resolveFilesystem "${PARTITIONS[$i]}")"
+		MP="$(partitionEntryField "${PARTITIONS[$i]}" 5)"
+		PARTUUID="$(blkid ${LOOPDEV}${PSEP}${PARTNO} |sed -e 's,.*PARTUUID=",,;s,".*,,')"
+		LABEL="$(partitionEntryField "${PARTITIONS[$i]}" 6)"
+		OPTS="$(resolveMountOptions "${PARTITIONS[$i]}" "$FS" "$MP")"
 		if [ -n "${PARTUUID}" -a -n "${MP}" ]; then
-			echo "PARTUUID=${PARTUUID} ${MP} ${FS} defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
-			#echo "/dev/sda${PARTNO} ${MP} ${FS} defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
+			echo "PARTUUID=${PARTUUID} ${MP} ${FS} ${OPTS} 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
 		elif [ -n "${LABEL}" -a -n "${MP}" ]; then
-			echo "PARTLABEL=${LABEL} ${MP} ${FS} defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
-		elif [ "${TYPE}" = "8200" ]; then
+			echo "PARTLABEL=${LABEL} ${MP} ${FS} ${OPTS} 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
+		elif [ "${TYPE}" = "8200" ] || [ "$FS" = "swap" ]; then
 			echo "PARTUUID=${PARTUUID} swap swap defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
-			#echo "/dev/sda${PARTNO} swap swap defaults 0 1" >>"${OURDIR}/${ROOTDIR}/etc/fstab"
 		fi
 	done
 fi
@@ -937,9 +937,9 @@ fi
 run setup-system-files
 
 if ! [[ "$OMIT_TEXTINSTALLER" =~ (yes|true|1) ]]; then
-	sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BOOTEFI@,${BOOTEFI},g" helpers/install-openmandriva.in >"$OURDIR/$ROOTDIR/home/omv/install-openmandriva"
+	sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BOOTEFI@,${BOOTEFI},g" "${OURDIR}"/helpers/install-openmandriva.in >"$OURDIR/$ROOTDIR/home/omv/install-openmandriva"
 	mkdir -p "$OURDIR/$ROOTDIR/usr/share/om-text-installer"
-	cp helpers/partitions "$OURDIR/$ROOTDIR/usr/share/om-text-installer/"
+	cp "${OURDIR}"/helpers/partitions "$OURDIR/$ROOTDIR/usr/share/om-text-installer/"
 	chmod +x "$OURDIR/$ROOTDIR/home/omv/install-openmandriva"
 fi
 if [ "$NEED_INITRD" != "no" ] || [ "$USE_UEFI" = "yes" ] || [ "$USE_SYSTEMD_UEFI" != "yes" ] && [ -n "$KERNELVERSION" ]; then
@@ -1092,7 +1092,7 @@ if [[ -n "${LOOPDEV}" ]]; then
 	# overwrite remnants of deleted temporary files etc. with something more
 	# compression friendly
         for i in "${!PARTITIONS[@]}"; do
-                MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+                MP="$(partitionEntryField "${PARTITIONS[$i]}" 5)"
 		[[ -z "$MP" ]] && continue
 		echo "=== Cleaning up $MP ==="
 		dd if=/dev/zero of=${OURDIR}/${ROOTDIR}${MP}/temp-cleanup || :

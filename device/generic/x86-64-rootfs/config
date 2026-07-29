@@ -5,3 +5,4 @@ ARCH="x86_64"
 HWPACKAGES_gui="$HWPACKAGES_gui lib64dri-drivers-radeon lib64dri-drivers-nouveau lib64dri-drivers-intel"
 # No kernel, no initrd
 NEED_INITRD=no
+USE_UEFI=no

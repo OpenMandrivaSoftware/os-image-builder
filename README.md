@@ -186,8 +186,87 @@ as cloud-init)
 
 In addition to the `config` file, you can override the default behavior by creating
 scriptlets called `generate-initrd`, `generate-rootfs`, `generate-bootimg`,
-`setup-system-files`, `download_kernel_extras` and `postprocess`.
+`setup-partitions`, `setup-system-files`, `download_kernel_extras` and `postprocess`.
 Please refer to existing target devices to see what goes into those scripts.
+
+Partition layout (`setup-partitions`)
+-------------------------------------
+Disk images are partitioned via a `PARTITIONS` bash array consumed by helpers
+in `helpers/partitions` (`partitionDisk`, `mountAll`, and fstab generation in
+`build`). Each entry is a colon-separated record:
+
+`START:END:TYPE:FILESYSTEM:MOUNTPOINT:LABEL:ALIGNMENT:PARTNO:SUBVOL:MOUNTOPTS`
+
+| Field | Meaning |
+|-------|---------|
+| `START` | Partition start (blank = start of free space) |
+| `END` | End, or size if prefixed with `+` (blank = rest of disk) |
+| `TYPE` | GPT type code (`ef00` EFI, `8200` swap, `8300`/`8304`/… Linux, …) |
+| `FILESYSTEM` | Filesystem to create (blank = default from type / `-f` `FSTYPE`; `-` = do not format) |
+| `MOUNTPOINT` | Where to mount in the target root (blank = not mounted, e.g. swap) |
+| `LABEL` | Partition / filesystem label |
+| `ALIGNMENT` | `sgdisk -a` value (use `1` for non-standard starts) |
+| `PARTNO` | Partition number (blank = array index + 1 for real partitions) |
+| `SUBVOL` | btrfs subvolume name (see below) |
+| `MOUNTOPTS` | Extra mount/fstab options (comma-separated), in addition to `defaults` |
+
+Trailing fields may be omitted when left blank.
+
+Example (BIOS + EFI + root):
+
+```bash
+PARTITIONS=("34:2047:ef02:::BIOSBOOT:1")
+PARTITIONS+=(":+256M:ef00:vfat:/boot/efi:OMVUEFI")
+PARTITIONS+=("::8304:${FSTYPE}:/:OMVROOT")
+```
+
+### btrfs subvolumes
+
+For btrfs mounts, named subvolumes are created and used **before** packages are
+installed, and the matching `subvol=` option is written to `/etc/fstab`.
+
+If `SUBVOL` is omitted on a btrfs entry (or a subvolume-only entry), a conventional
+name is derived from the mount point:
+
+| Mount point | Default subvolume |
+|-------------|-------------------|
+| `/` | `@` |
+| `/home` | `@home` |
+| `/srv` | `@srv` |
+| `/var/log` | `@var/log` |
+| other `/path` | `@path` (leading `/` stripped; nested paths keep `/`) |
+
+Set `SUBVOL=-` to mount the top-level volume with no named subvolume.
+
+When `/` lives on a named subvolume, that subvolume is also made the btrfs
+**default** subvolume so the kernel can mount root via `root=` / `PARTUUID=`
+without relying on `rootflags=` or dracut `--fstab` (which has been fragile in
+the past). After boot, fstab still lists `subvol=@` (etc.) for the real system.
+
+Explicit subvolume example:
+
+```bash
+PARTITIONS+=("::8300:btrfs:/home:/home:::@home")
+# LABEL=/home, empty ALIGNMENT and PARTNO, SUBVOL=@home
+```
+
+### Several subvolumes on one btrfs partition
+
+Use a normal partition entry for geometry/mkfs, then **subvolume-only** lines
+(empty `START`, `END`, and `TYPE`) for extra mounts. Those lines share the
+previous partition’s number unless `PARTNO` is set explicitly:
+
+```bash
+# One btrfs partition: @ -> /, @home -> /home
+PARTITIONS+=("::8304:btrfs:/:OMVROOT:::@")
+PARTITIONS+=("::::/home::::@home")
+```
+
+(Empty `LABEL`/`ALIGNMENT`/`PARTNO` need enough colons so `@home` lands in the
+`SUBVOL` field — see comments in `helpers/partitions`.)
+
+The same helpers are used by the optional text installer
+(`helpers/install-openmandriva.in`).
 
 You can also add a `write2sd.in` or `write2device.in` script that will be sent to
 the output directory, containing the instructions needed to write the generated image
@@ -206,5 +285,5 @@ before A, try renaming the files to e.g. 00-B.patch and 01-A.patch.
 Please submit any additional boards you're adding to the OpenMandriva project.
 
 ---
-(c) 2020-2025 [Bernhard "bero" Rosenkränzer](mailto:bero@lindev.ch)
+(c) 2020-2026 [Bernhard "bero" Rosenkränzer](mailto:bero@lindev.ch)
 Released under the GPLv3.

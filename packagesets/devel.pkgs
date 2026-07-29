@@ -2,16 +2,15 @@ clang
 glibc-devel
 LIB(stdc++-devel)
 LIB(gcc-devel)
-LIB(qt5core-devel)
-LIB(qt5gui-devel)
-LIB(qt5dbus-devel)
-LIB(qt5widgets-devel)
-LIB(qt5quick-devel)
-LIB(qt5xml-devel)
+LIB(Qt6Core-devel)
+LIB(Qt6Gui-devel)
+LIB(Qt6DBus-devel)
+LIB(Qt6OpenGL-devel)
+LIB(Qt6Widgets-devel)
+LIB(Qt6Quick-devel)
+LIB(Qt6Xml-devel)
 make
 ninja
 cmake
+meson
 git-core
-// For working on the PinePhone dialer
-LIB(phonenumber-devel)
-protobuf-devel

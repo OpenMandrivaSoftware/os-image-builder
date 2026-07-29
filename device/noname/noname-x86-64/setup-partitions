@@ -1,0 +1,10 @@
+IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
+dd if=/dev/zero of=${IMAGE} bs=1M count=15000
+
+PARTITIONS=("34:2047:ef02:::BIOSBOOT:1")
+PARTITIONS+=(":+512M:ef00:vfat:/boot/efi:UEFIBOOT")
+PARTITIONS+=(":+2G:8200")
+PARTITIONS+=(":+10G:8304:${FSTYPE}:/:/")
+# /home is always on btrfs (subvolume @home) so we can
+# "btrfs device add" additional storage later
+PARTITIONS+=("::8300:btrfs:/home:/home:::@home")

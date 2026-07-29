@@ -1,0 +1,10 @@
+chroot "${OURDIR}/${ROOTDIR}" grub2-install --target=i386-pc ${LOOPDEV}
+
+cd "${OURDIR}/${ROOTDIR}"
+if test -L "etc/resolv.conf"; then
+	rm -f "etc/resolv.conf"
+	echo 'nameserver 1.1.1.1' >etc/resolv.conf
+fi
+
+# Just to make sure we actually have the right image
+echo "IMAGE_BUILDTIME=$(date +%Y%m%d%H%M%S)" >>"${OURDIR}/${ROOTDIR}/etc/os-release"

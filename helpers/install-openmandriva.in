@@ -201,18 +201,25 @@ echo "Setting up system files..."
 
 # Set up fstab for the target filesystem rather than the current boot device
 rm -f /mnt/destination/etc/fstab
+resolvePartitionNumbers PARTITIONS
 for i in $MOUNTS; do
-	PARTNO="$(echo ${PARTITIONS[$i]} |cut -d: -f8)"
-	[ -z "$PARTNO" ] && PARTNO=$((i+1))
-	FS="$(echo ${PARTITIONS[$i]} |cut -d: -f4)"
-	MP="$(echo ${PARTITIONS[$i]} |cut -d: -f5)"
+	PARTNO="${RESOLVED_PARTNOS[$i]}"
+	FS="$(resolveFilesystem "${PARTITIONS[$i]}")"
+	MP="$(partitionEntryField "${PARTITIONS[$i]}" 5)"
+	OPTS="$(resolveMountOptions "${PARTITIONS[$i]}" "$FS" "$MP")"
+	# Prefer noatime for installed systems; keep subvol= / extra opts from the entry
+	if [ "$OPTS" = "defaults" ]; then
+		OPTS="defaults,noatime"
+	else
+		OPTS="${OPTS},noatime"
+	fi
 	UUID="$(blkid ${DESTINATION}${P}${PARTNO} |sed -e 's,.* UUID=",,;s,".*,,')"
 	if [ "$MP" = "/" ]; then
 		ROOTUUID="${UUID}"
 		ROOTPUUID="$(blkid ${DESTINATION}${P}${PARTNO} |sed -e 's,.* PARTUUID=",,;s,".*,,')"
-		echo "PARTUUID=${ROOTPUUID} ${MP} ${FS} defaults,noatime 0 1" >>/mnt/destination/etc/fstab
+		echo "PARTUUID=${ROOTPUUID} ${MP} ${FS} ${OPTS} 0 1" >>/mnt/destination/etc/fstab
 	elif [ -n "$MP" ]; then
-		echo "UUID=${UUID} ${MP} ${FS} defaults,noatime 0 2" >>/mnt/destination/etc/fstab
+		echo "UUID=${UUID} ${MP} ${FS} ${OPTS} 0 2" >>/mnt/destination/etc/fstab
 	elif [ "$FS" = "swap" ]; then
 		echo "UUID=${UUID} swap swap defaults,noatime 0 1" >>/mnt/destination/etc/fstab
 	fi

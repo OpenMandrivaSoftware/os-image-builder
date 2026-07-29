@@ -1,0 +1,2 @@
+chroot $OURDIR/$ROOTDIR /usr/sbin/dracut --zstd --no-hostonly --add-drivers "virtio virtio_pci virtio_blk virtio_scsi ext4 btrfs" -o ifcfg -o mdraid -o aufs-mount -o network -o cifs -o crypt -o dmraid -o multipath -o multipath-hostonly -o systemd-cryptsetup -o plymouth -o lvm -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
+chmod 0644 $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img
