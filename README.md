@@ -64,6 +64,28 @@ For example, to build an image that has x264 included, use
 
 `./build -P kde -r restricted -p x264 rockpi4c`
 
+To add third-party (non-OpenMandriva) repositories, use _-R URL_. The argument
+may be either:
+
+* the URL (or local path) of a `.repo` configuration file, or
+* a repository baseurl (for example `https://example.com/repo/` or
+  `file:///path/to/local/repo/`), for which a simple enabled repository entry
+  is created (gpgcheck disabled).
+
+For each _-R_ entry, os-image-builder builds a small
+`distro-release-repo-_name_` package on the fly (version `0-1`) that owns the
+`.repo` file under `/etc/yum.repos.d/`, and installs it into the image. That
+way the repository configuration has a clear package owner and can be updated
+later with dnf — for example if the third party ships a newer
+`distro-release-repo-_name_` package after a repository moves.
+
+_-R_ may be given multiple times. The _name_ is taken from the `.repo`
+basename, or from the host part of a baseurl. Example:
+
+`./build -R https://example.com/myproject.repo -p myproject-package x86-64`
+
+`./build -R https://example.com/rpm/ -p some-extra-pkg noname-x86-64`
+
 Selecting a desktop
 ===================
 If you want to use a custom desktop, add _-d desktop_ to the command line, where
