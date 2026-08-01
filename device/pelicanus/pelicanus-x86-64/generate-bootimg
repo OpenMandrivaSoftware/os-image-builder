@@ -6,3 +6,4 @@ sed -i -E 's| quiet| console=tty0 console=ttyS0 earlyprintk=ttyS0,115200n1 i8042
 cp -f $OURDIR/$ROOTDIR/boot/grub2/grub.cfg $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
 # Currently BIOS grub has echo, but UEFI grub doesn't
 sed -i -e '/echo/d' $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+grub2-editenv $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grubenv create

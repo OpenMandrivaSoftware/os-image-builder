@@ -1,6 +1,6 @@
 chroot "${OURDIR}/${ROOTDIR}" grub2-install --target=i386-pc ${LOOPDEV}
 
-# Federated specific bits...
+# Pelicanus specific bits...
 cd "${OURDIR}/${ROOTDIR}"
 sed -i -e '/root/d' etc/ssh/denyusers
 sed -i -e 's,^#PermitRootLogin,PermitRootLogin,' etc/ssh/sshd_config
