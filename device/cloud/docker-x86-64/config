@@ -1,3 +1,6 @@
+# Always use
+# ./build -W docker-x86-64
+# to generate the normal openmandriva/minimal:cooker image
 ARCH="x86_64"
 OMIT_TEXTINSTALLER=1
 CREATE_DEFAULT_USER=no

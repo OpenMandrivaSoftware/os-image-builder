@@ -1,3 +1,6 @@
+# Always use                            
+# ./build -W docker-aarch64
+# to generate the normal openmandriva/minimal:cooker images
 ARCH="aarch64"
 OMIT_TEXTINSTALLER=1
 CREATE_DEFAULT_USER=no
