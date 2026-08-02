@@ -1,0 +1,37 @@
+echo "Creating docker image"
+
+case "$ARCH" in
+x86_64|znver1)
+	DOCKERARCH=amd64
+	;;
+aarch64)
+	DOCKERARCH=aarch64
+	;;
+*)
+	DOCKERARCH="$ARCH"
+	;;
+esac
+
+docker buildx prune -a -f
+docker buildx build -f "${OURDIR}/helpers/Dockerfile" -t openmandriva/minimal:${OMV_VERSION}.${DOCKERARCH} --load "${OURDIR}/${ROOTDIR}"
+
+cat <<EOF
+======= DOCKER IMAGE BUILT =======
+After testing, push the image using:
+	docker push openmandriva/minimal:${OMV_VERSION}.${DOCKERARCH}
+
+When you have tested and pushed images for all platforms, do:
+	docker manifest rm openmandriva/minimal:cooker
+	docker manifest create openmandriva/minimal:cooker \
+		--amend openmandriva/minimal:cooker.amd64 \
+		--amend openmandriva/minimal:cooker.arm64
+	docker manifest annotate openmandriva/minimal:cooker \
+		openmandriva/minimal:cooker.amd64 --os linux --arch amd64
+	docker manifest annotate openmandriva/minimal:cooker \
+		openmandriva/minimal:cooker.arm64 --os linux --arch arm64
+	docker manifest push --purge openmandriva/minimal:cooker
+or
+	docker buildx imagetools create -t openmandriva/minimal:cooker \
+		openmandriva/minimal:cooker.amd64 \
+		openmandriva/minimal:cooker.arm64
+EOF
