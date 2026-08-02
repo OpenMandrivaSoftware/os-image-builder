@@ -5,7 +5,7 @@ x86_64|znver1)
 	DOCKERARCH=amd64
 	;;
 aarch64)
-	DOCKERARCH=aarch64
+	DOCKERARCH=arm64
 	;;
 *)
 	DOCKERARCH="$ARCH"
