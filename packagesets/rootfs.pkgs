@@ -13,3 +13,5 @@ timezone
 locales-en
 dnf
 sudo
+// For "clear" and the terminfo db
+ncurses
