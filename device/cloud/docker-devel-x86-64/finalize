@@ -1,0 +1,27 @@
+echo "Creating docker image"
+
+case "$ARCH" in
+x86_64|znver1)
+	DOCKERARCH=amd64
+	;;
+aarch64)
+	DOCKERARCH=arm64
+	;;
+*)
+	DOCKERARCH="$ARCH"
+	;;
+esac
+
+docker buildx prune -a -f
+docker buildx build -f "${OURDIR}/helpers/Dockerfile" -t openmandriva/devel:${OMV_VERSION}.${DOCKERARCH} --load "${OURDIR}/${ROOTDIR}"
+
+cat <<EOF
+======= DOCKER IMAGE BUILT =======
+After testing, push the image using:
+	docker push openmandriva/devel:${OMV_VERSION}.${DOCKERARCH}
+
+When you have tested and pushed images for all platforms, do:
+	docker buildx imagetools create -t openmandriva/devel:cooker \
+		openmandriva/devel:cooker.amd64 \
+		openmandriva/devel:cooker.arm64
+EOF

@@ -2,13 +2,6 @@ clang
 glibc-devel
 LIB(stdc++-devel)
 LIB(gcc-devel)
-LIB(Qt6Core-devel)
-LIB(Qt6Gui-devel)
-LIB(Qt6DBus-devel)
-LIB(Qt6OpenGL-devel)
-LIB(Qt6Widgets-devel)
-LIB(Qt6Quick-devel)
-LIB(Qt6Xml-devel)
 make
 ninja
 cmake

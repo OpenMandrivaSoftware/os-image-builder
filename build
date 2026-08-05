@@ -245,6 +245,7 @@ SHORTTARGET="$(basename $TARGET)"
 echo "Building ${BASE_DISTRO} $OMV_VERSION image for $TARGET"
 run config
 [ -n "$HWPACKAGESETS" ] && PACKAGESETS="$PACKAGESETS $HWPACKAGESETS"
+[ -n "$EXCLUDE" ] && WEAKDEPS="$WEAKDEPS --setopt=exclude_from_weak=${EXCLUDE// /,}"
 
 # ===================================================================
 # Prepare host system
@@ -384,7 +385,13 @@ for ps in $PACKAGESETS; do
 		PACKAGES="$PACKAGES $p"
 	done < <($CPP $OURDIR/packagesets/${ps}.pkgs)
 done
-
+if [ -n "$EXCLUDE" ]; then
+	for p in ${EXCLUDE}; do
+		PACKAGES="${PACKAGES// $p / }"
+		PACKAGES="${PACKAGES#$p }"
+		PACKAGES="${PACKAGES% $p}"
+	done
+fi
 
 # ===================================================================
 # Build kernel if necessary
@@ -1124,19 +1131,43 @@ fi
 
 # Initialize the random seed to something, systemd might hang forever on
 # e.g. an embedded board that doesn't get entropy
-dd if=/dev/random of="$OURDIR/$ROOTDIR"/var/lib/systemd/random-seed bs=512 count=1
-chmod 0600 "$OURDIR/$ROOTDIR"/var/lib/systemd/random-seed
+# (only if systemd is there -- not needed when just building a rootfs/docker container
+if [ -d "$OURDIR/$ROOTDIR"/var/lib/systemd ]; then
+	dd if=/dev/random of="$OURDIR/$ROOTDIR"/var/lib/systemd/random-seed bs=512 count=1
+	chmod 0600 "$OURDIR/$ROOTDIR"/var/lib/systemd/random-seed
+fi
 
-# Make sure default services are started
-for i in "$OURDIR/$ROOTDIR"/lib/systemd/system-preset/*.preset; do
-	while read r; do
-		TYPE="$(echo $r |awk '{ print $1; }')"
-		if [ "$TYPE" = "enable" ] || [ "$TYPE" = "disable" ]; then
-			[ "$(echo "$r" |awk '{ print $2; }')" = '*' ] && continue
-			chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl $r || :
+if [ -x "$OURDIR/$ROOTDIR/usr/bin/systemctl" ]; then
+	# Make sure default services are started
+	for i in "$OURDIR/$ROOTDIR"/lib/systemd/system-preset/*.preset; do
+		while read r; do
+			TYPE="$(echo $r |awk '{ print $1; }')"
+			if [ "$TYPE" = "enable" ] || [ "$TYPE" = "disable" ]; then
+				[ "$(echo "$r" |awk '{ print $2; }')" = '*' ] && continue
+				chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl $r || :
+			fi
+		done < $i
+	done
+
+	# Make sure key services are started even if they're omitted
+	# in the preset files
+	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
+	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/simplelogin.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable simplelogin
+	[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/sddm.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
+	if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ] || [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/simplelogin.service" ]; then
+		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
+	else
+		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default multi-user.target
+	fi
+
+	for i in $SERVICES; do
+		if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/${i/@*/@}.service" ]; then
+			chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable $i
+		else
+			echo "WARNING: Service $i requested, but not installed" >&2
 		fi
-	done < $i
-done
+	done
+fi
 
 # Some devices require special alsa configs to initialize
 # (e.g. unmuted DAC).
@@ -1148,26 +1179,6 @@ if [ -e "$OURDIR"/device/$TARGET/asound.state ]; then
 	mkdir -p "$OURDIR/$ROOTDIR"/var/lib/alsa
 	install -c -m 644 "$OURDIR"/device/$TARGET/asound.state "$OURDIR/$ROOTDIR"/var/lib/alsa/asound.state
 fi
-
-# Make sure key services are started even if they're omitted
-# in the preset files
-chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable getty@tty1.service
-[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/simplelogin.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable simplelogin
-[ -e "$OURDIR/$ROOTDIR"/lib/systemd/system/sddm.service ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sddm
-if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sddm.service" ] || [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/simplelogin.service" ]; then
-	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default graphical.target
-else
-	chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl set-default multi-user.target
-fi
-# At least while we're mostly dealing with headless boards
-[ -e "$OURDIR/$ROOTDIR/lib/systemd/system/sshd.service" ] && chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable sshd
-for i in $SERVICES; do
-	if [ -e "$OURDIR/$ROOTDIR/lib/systemd/system/${i/@*/@}.service" ]; then
-		chroot "$OURDIR/$ROOTDIR" /usr/bin/systemctl enable $i
-	else
-		echo "WARNING: Service $i requested, but not installed" >&2
-	fi
-done
 
 if [ -x "$OURDIR/$ROOTDIR"/usr/bin/fc-cache ]; then
 	# set the timestamp on the directories to be a whole second

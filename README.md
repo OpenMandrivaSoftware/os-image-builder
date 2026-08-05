@@ -206,6 +206,8 @@ as cloud-init)
 
 `HWPACKAGES_packageset="package1 package2 ..."` Define packages that are added to builds for this target that include the `packageset` package set (this is useful, for example, for adding a graphics driver if and only if the gui packageset is installed - `HWPACKAGES_gui="my-gpu-driver"`)
 
+`EXCLUDE="package1 package2 ..."` Exclude packages from the image even if they're in a packageset or recommended by another package (with weak dependencies turned on) -- useful for e.g. excluding kernels and init systems from docker images
+
 In addition to the `config` file, you can override the default behavior by creating
 scriptlets called `generate-initrd`, `generate-rootfs`, `generate-bootimg`,
 `setup-partitions`, `setup-system-files`, `download_kernel_extras` and `postprocess`.

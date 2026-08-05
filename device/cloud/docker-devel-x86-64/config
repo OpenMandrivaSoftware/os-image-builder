@@ -1,0 +1,7 @@
+# Always use
+# ./build docker-devel-x86-64
+# to generate the normal openmandriva/devel:cooker image
+
+. ${OURDIR}/device/cloud/docker-x86-64/config
+
+HWPACKAGESETS=devel

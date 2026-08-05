@@ -1,9 +1,8 @@
 # Always use                            
 # ./build -W docker-aarch64
 # to generate the normal openmandriva/minimal:cooker images
+
+# Inherit settings like excluded packages from x86
+. ${OURDIR}/device/cloud/docker-x86-64/config
+
 ARCH="aarch64"
-OMIT_TEXTINSTALLER=1
-CREATE_DEFAULT_USER=no
-NEED_INITRD=no
-USE_UEFI=no
-USE_SYSTEMD_UEFI=no

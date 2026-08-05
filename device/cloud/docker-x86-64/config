@@ -7,3 +7,5 @@ CREATE_DEFAULT_USER=no
 NEED_INITRD=no
 USE_UEFI=no
 USE_SYSTEMD_UEFI=no
+# Docker images don't need booting
+EXCLUDE="kernel-desktop kernel-server kernel-desktop-gcc kernel-server-gcc kernel-rc-desktop kernel-rc-server kernel-rc-desktop-gcc kernel-rc-server-gcc kernel-firmware grub2 grub2-efi systemd-boot plymouth dracut dracut-modules-growroot systemd systemd-polkit systemd-hwdb systemd-cryptsetup systemd-coredump systemd-analyze systemd-console systemd-locale udev usbutils dbus-broker"

@@ -1,0 +1,6 @@
+cd "${OURDIR}/${ROOTDIR}"
+if [ -L "etc/resolv.conf" -o ! -e "etc/resolv.conf" ]; then
+        rm -f "etc/resolv.conf"
+        echo 'nameserver 1.1.1.1' >etc/resolv.conf
+fi
+cd -
