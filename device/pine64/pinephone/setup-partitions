@@ -1,0 +1,7 @@
+IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
+dd if=/dev/zero of=${IMAGE} bs=1M count=$((PADDED_EXPECTED_SIZE/1048576))
+
+# Allwinner: SPL+u-boot at 8 KiB (raw, not a partition). FAT boot starts
+# at sector 16384 (8 MiB); root follows. Default FS is f2fs on this board.
+PARTITIONS=("16384:+256M:0700:vfat:/boot:OMVBOOT")
+PARTITIONS+=("::8305:f2fs:/:OMVROOT")

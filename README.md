@@ -209,9 +209,14 @@ as cloud-init)
 `EXCLUDE="package1 package2 ..."` Exclude packages from the image even if they're in a packageset or recommended by another package (with weak dependencies turned on) -- useful for e.g. excluding kernels and init systems from docker images
 
 In addition to the `config` file, you can override the default behavior by creating
-scriptlets called `generate-initrd`, `generate-rootfs`, `generate-bootimg`,
-`setup-partitions`, `setup-system-files`, `download_kernel_extras` and `postprocess`.
+scriptlets called `generate-initrd`, `generate-bootimg`, `setup-partitions`,
+`setup-system-files`, `download_kernel_extras`, `postprocess` and `finalize`.
 Please refer to existing target devices to see what goes into those scripts.
+
+`setup-partitions` creates the empty disk image (if any) and defines the
+`PARTITIONS` array. `generate-bootimg` installs bootloader files into the
+already-mounted image. `finalize` runs after the image is unmounted and is
+the place for conversions (qcow2, VHD) or extra artifacts (rootfs tarballs).
 
 Partition layout (`setup-partitions`)
 -------------------------------------
@@ -226,7 +231,7 @@ in `helpers/partitions` (`partitionDisk`, `mountAll`, and fstab generation in
 | `START` | Partition start (blank = start of free space) |
 | `END` | End, or size if prefixed with `+` (blank = rest of disk) |
 | `TYPE` | GPT type code (`ef00` EFI, `8200` swap, `8300`/`8304`/… Linux, …) |
-| `FILESYSTEM` | Filesystem to create (blank = default from type / `-f` `FSTYPE`; `-` = do not format) |
+| `FILESYSTEM` | Filesystem to create (blank = default from type / `-f` `FSTYPE`; `-` = do not format; `iso9660` / `udf` / `iso9660+udf` = Live ISO) |
 | `MOUNTPOINT` | Where to mount in the target root (blank = not mounted, e.g. swap) |
 | `LABEL` | Partition / filesystem label |
 | `ALIGNMENT` | `sgdisk -a` value (use `1` for non-standard starts) |
@@ -288,6 +293,23 @@ PARTITIONS+=("::::/home::::@home")
 
 (Empty `LABEL`/`ALIGNMENT`/`PARTNO` need enough colons so `@home` lands in the
 `SUBVOL` field — see comments in `helpers/partitions`.)
+
+### Live DVD / ISO images (iso9660 + UDF)
+
+A `FILESYSTEM` of `iso9660`, `udf` or `iso9660+udf` builds a Live DVD-style
+image instead of a GPT disk. The root filesystem is assembled in a directory
+and packed with `xorriso` after packages and the bootloader are installed.
+Typical Live images also install an overlayfs dracut module so the read-only
+ISO can be used as a writable system:
+
+```bash
+# Do not create a .img -- the ISO is produced from the directory tree
+PARTITIONS=(":::iso9660+udf:/:OMVLIVE")
+```
+
+`generate-bootimg` should drop BIOS El Torito (`/boot/grub/i386-pc/eltorito.img`)
+and/or a UEFI FAT image (`/boot/grub/efiboot.img`) into the tree; the ISO helper
+picks them up automatically.
 
 The same helpers are used by the optional text installer
 (`helpers/install-openmandriva.in`).

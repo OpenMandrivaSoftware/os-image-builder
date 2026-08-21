@@ -1,5 +1,15 @@
+# Milk-V Pioneer (Sophgo SG2042) -- 64-core RISC-V workstation
+# Boots via the board's EDK2 firmware: ESP -> GRUB EFI -> Linux.
 ARCH=riscv64
 KERNEL=https://github.com/sophgo/linux-riscv#sg2042-dev
 KERNEL_CONFIG=sophgo_mango_ubuntu_defconfig
 KERNEL_GCC=yes
+KERNELTARGET=Image
 DTB=sophgo/mango-milkv-pioneer
+USE_UEFI=yes
+NEED_INITRD=yes
+# dosfstools is needed to generate the UEFI boot partition
+# when using install-openmandriva
+HWPACKAGES="dosfstools"
+# Serial is on the micro-USB debug console; also keep the HDMI/EFI console.
+CMDLINE="earlycon=sbi console=ttyS0,115200 console=tty0"

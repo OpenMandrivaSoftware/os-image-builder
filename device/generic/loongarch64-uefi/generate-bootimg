@@ -1,0 +1,12 @@
+mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva
+sed -e "s,@KVERSION@,${KERNELVERSION},g;s|@CMDLINE@|${CMDLINE}|g" $OURDIR/device/generic/loongarch64-uefi/grub.cfg.in >$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+if echo $PACKAGESETS |grep -q gui; then
+	sed -i -e 's,^@IF_GUI@,,' $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+else
+	sed -i -e '/^@IF_GUI@/d' $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+fi
+# Removable-media name used by some Loongson firmware
+if [ -e $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/$BOOTEFI ]; then
+	cp -a $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/$BOOTEFI \
+		$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/BOOTLOONGARCH64.EFI
+fi

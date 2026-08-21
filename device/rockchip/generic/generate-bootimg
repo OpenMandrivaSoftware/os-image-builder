@@ -5,8 +5,28 @@ rm -rf arm-trusted-firmware
 sed -i -e '/^TF_LDFLAGS/aTF_LDFLAGS += --no-warn-rwx-segment' arm-trusted-firmware/Makefile
 make -C arm-trusted-firmware CROSS_COMPILE=aarch64-linux-gnu- M0_CROSS_COMPILE=armv7hnl-linux-gnueabihf- PLAT=rk3399 DEBUG=1 bl31
 
-BL31=${OURDIR}/u-boot/arm-trusted-firmware/build/rk3399/debug/bl31/bl31.elf
+BL31=${OURDIR}/arm-trusted-firmware/build/rk3399/debug/bl31/bl31.elf
+export BL31
 . ${OURDIR}/helpers/build-uboot
 
 cp u-boot/idbloader.img "$OURDIR/$ROOTDIR"/boot/
 cp u-boot/u-boot.itb "$OURDIR/$ROOTDIR"/boot/
+
+# p3 = idbloader, p4 = u-boot (see setup-partitions)
+dd if=u-boot/idbloader.img of=${LOOPDEV}p3 conv=notrunc
+dd if=u-boot/u-boot.itb of=${LOOPDEV}p4 conv=notrunc
+
+cp -a ${OURDIR}/${ROOTDIR}/boot/vmlinuz-${KERNELVERSION} ${OURDIR}/${ROOTDIR}/boot/Image
+[ -n "$KERNELVERSION" ] && [ -e ${OURDIR}/${ROOTDIR}/boot/initrd-${KERNELVERSION}.img ] && \
+	cp -a ${OURDIR}/${ROOTDIR}/boot/initrd-${KERNELVERSION}.img ${OURDIR}/${ROOTDIR}/boot/initrd.img
+
+PSEP="$(partitionSeparator ${LOOPDEV})"
+ROOTPUUID=$(/sbin/blkid ${LOOPDEV}${PSEP}2 |sed -e 's,.*PARTUUID=",,;s,".*,,')
+mkdir -p ${OURDIR}/${ROOTDIR}/boot/extlinux
+{
+	echo "label OpenMandriva"
+	echo "	kernel /Image"
+	[ -e ${OURDIR}/${ROOTDIR}/boot/initrd.img ] && echo "	initrd /initrd.img"
+	echo "	fdt /${DTB}.dtb"
+	echo "	append root=PARTUUID=${ROOTPUUID} ${CMDLINE}"
+} >${OURDIR}/${ROOTDIR}/boot/extlinux/extlinux.conf

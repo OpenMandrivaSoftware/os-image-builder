@@ -1,0 +1,20 @@
+mkdir -p $OURDIR/$ROOTDIR/boot/grub $OURDIR/$ROOTDIR/EFI/BOOT \
+	$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
+# Reuse the ISO grub template if present, otherwise the disk one
+GRUBIN=$OURDIR/device/generic/aarch64-uefi-iso/grub.cfg.in
+sed -e "s,@KVERSION@,${KERNELVERSION},g;s|@CMDLINE@|${CMDLINE}|g" \
+	$GRUBIN >$OURDIR/$ROOTDIR/boot/grub/grub.cfg
+cp -f $OURDIR/$ROOTDIR/boot/grub/grub.cfg $OURDIR/$ROOTDIR/EFI/BOOT/grub.cfg
+cp -f $OURDIR/$ROOTDIR/boot/grub/grub.cfg $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+
+if [ -e $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/$BOOTEFI ]; then
+	cp -a $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/$BOOTEFI $OURDIR/$ROOTDIR/EFI/BOOT/$BOOTEFI
+fi
+
+EFIBOOT=$OURDIR/$ROOTDIR/boot/grub/efiboot.img
+rm -f "$EFIBOOT"
+dd if=/dev/zero of="$EFIBOOT" bs=1M count=8 status=none
+mkfs.vfat -n OMVEFI "$EFIBOOT"
+mmd -i "$EFIBOOT" ::/EFI ::/EFI/BOOT
+mcopy -Q -i "$EFIBOOT" $OURDIR/$ROOTDIR/EFI/BOOT/$BOOTEFI ::/EFI/BOOT/
+mcopy -Q -i "$EFIBOOT" $OURDIR/$ROOTDIR/boot/grub/grub.cfg ::/EFI/BOOT/

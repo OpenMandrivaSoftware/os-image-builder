@@ -35,38 +35,5 @@ cd ..
 sed -e "s,@DTB@,$DTB,g" $OURDIR/device/${TARGET}/boot.script.in >$OURDIR/device/${TARGET}/boot.script
 u-boot/tools/mkimage -A arm64 -O linux -T script -d $OURDIR/device/${TARGET}/boot.script $OURDIR/$ROOTDIR/boot/boot.scr
 
-pushd $OURDIR/$ROOTDIR
-MINSIZE=$(du -s --block-size=1048576 |awk '{ print $1; }')
-cd ..
-dd if=/dev/zero of=${SHORTTARGET}.img bs=1M count=$((MINSIZE+256))
-losetup -fP ${SHORTTARGET}.img
-LOOPDEV=$(losetup -j ${SHORTTARGET}.img |cut -d: -f1)
-# The data fed to gdisk below (blank lines are important! Don't remove them!)
-# creates a root partition at sector 8192, leaving space for the bootloader
-# where it needs to be put.
-gdisk $LOOPDEV <<'EOF'
-o
-y
-n
-1
-8192
-
-8305
-w
-y
-EOF
-set -x
-rescanPartitions ${LOOPDEV}
-mkfs.ext4 -L OMVAA64 ${LOOPDEV}p1
-ROOTUUID=$(/sbin/blkid ${LOOPDEV}p1 |sed -e 's,.* UUID=",,;s,".*,,')
-rm -rf mnt
-mkdir mnt
-mount ${LOOPDEV}p1 mnt
-tar c -C ${ROOTDIR} --one-file-system -f - . | tar x -C mnt -f -
-cat >mnt/etc/fstab <<EOF
-UUID=${ROOTUUID}	/	ext4	defaults,noatime	0	1
-EOF
-umount mnt
-dd if=flash.bin of=${LOOPDEV} bs=1024 seek=33
-losetup -d ${LOOPDEV}
-popd
+# SPL+u-boot lives in the gap before the first partition
+dd if=flash.bin of=${LOOPDEV} bs=1024 seek=33 conv=notrunc

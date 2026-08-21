@@ -1,0 +1,45 @@
+# Install a dracut module that wraps the (read-only) root in overlayfs
+# with a tmpfs upper layer. Used by Live DVD / ISO targets.
+#
+# Source this from a target's generate-initrd.
+
+installOverlayfsDracut() {
+	local MODDIR="$OURDIR/$ROOTDIR/usr/lib/dracut/modules.d/99overlayfs"
+	mkdir -p "$MODDIR"
+	cat >"$MODDIR/module-setup.sh" <<'EOF'
+#!/bin/sh
+check() {
+	require_binaries /bin/mount
+}
+depends() {
+	return 0
+}
+installkernel() {
+	instmods overlay isofs udf
+}
+install() {
+	dracut_install /bin/mount
+	inst_hook pre-pivot 10 "$moddir/mount-overlayfs.sh"
+}
+EOF
+	cat >"$MODDIR/mount-overlayfs.sh" <<'EOF'
+#!/bin/sh
+. /lib/dracut-lib.sh
+# NEWROOT is the ISO/iso9660 (or UDF) already mounted read-only.
+# Put a tmpfs overlay on top so the live system is writable.
+mkdir -p /run/sysroot
+mkdir -p /run/root-rw
+mount -t tmpfs none /run/root-rw
+mkdir -p /run/root-rw/root /run/root-rw/work
+mount --make-private $NEWROOT
+mount --make-private /
+mount --make-private /run
+mount --move $NEWROOT /run/sysroot
+mount -t overlay -o lowerdir=/run/sysroot,upperdir=/run/root-rw/root,workdir=/run/root-rw/work overlay $NEWROOT
+mkdir -p /sysroot/run/sysroot
+mkdir -p /sysroot/run/root-rw
+mount --move /run/sysroot /sysroot/run/sysroot
+mount --move /run/root-rw /sysroot/run/root-rw
+EOF
+	chmod +x "$MODDIR"/*.sh
+}

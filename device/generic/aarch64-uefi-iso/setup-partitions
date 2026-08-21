@@ -1,0 +1,2 @@
+# Live ISO: no GPT disk image. Packed as iso9660+UDF after generate-bootimg.
+PARTITIONS=(":::iso9660+udf:/:OMVAA64")

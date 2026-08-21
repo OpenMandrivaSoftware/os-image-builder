@@ -60,7 +60,9 @@ rescanPartitions () {
 #		(blank = remainder of the disk)
 #	TYPE	GPT type (e.g. 8200 = swap, 8300 = Linux, ef00 = EFI boot, ...)
 #	FILESYSTEM	Filesystem (blank = reasonable default from TYPE/FSTYPE;
-#			"-" = do not format)
+#			"-" = do not format;
+#			iso9660 / udf / iso9660+udf = Live ISO, packed by
+#			createIsoImage after the rootfs is populated)
 #	MOUNTPOINT	Where to mount in the target hierarchy
 #	LABEL	Partition / filesystem label
 #	ALIGNMENT	sgdisk -a value (use 1 for non-standard starts)
@@ -76,6 +78,9 @@ rescanPartitions () {
 #	partition number or omit it to reuse the previous real partition, e.g.:
 #	  PARTITIONS+=("::8304:btrfs:/:OMVROOT:::@")
 #	  PARTITIONS+=("::::/home::::@home")
+#
+# Live DVD / ISO (no GPT disk; packed by createIsoImage):
+#	  PARTITIONS=(":::iso9660+udf:/:OMVLIVE")
 #
 # btrfs subvolumes:
 #	If FILESYSTEM resolves to btrfs (or the entry is subvolume-only) and
@@ -95,8 +100,12 @@ partitionEntryField() {
 }
 
 # True if this entry only adds a mount/subvolume on an existing partition
-# (START, END and TYPE are all empty).
+# (START, END and TYPE are all empty). ISO-family entries use the same
+# empty geometry fields but are not subvolumes.
 isSubvolumeOnlyEntry() {
+	local fs
+	fs="$(partitionEntryField "$1" 4)"
+	isIsoFilesystem "$fs" && return 1
 	[ -z "$(partitionEntryField "$1" 1)" ] && \
 	[ -z "$(partitionEntryField "$1" 2)" ] && \
 	[ -z "$(partitionEntryField "$1" 3)" ]
@@ -136,6 +145,35 @@ resolveFilesystem() {
 		echo "${FSTYPE}"
 		;;
 	esac
+}
+
+# True if FILESYSTEM is an ISO-family image (iso9660, udf, or both).
+# Those are packed with xorriso after the rootfs is populated -- they
+# are not GPT partitions created by partitionDisk.
+isIsoFilesystem() {
+	local fs
+	fs="$(echo "$1" |tr 'A-Z' 'a-z')"
+	case "$fs" in
+	iso9660*|udf*|iso9660+udf|udf+iso9660|*iso9660*|*udf*)
+		return 0
+		;;
+	esac
+	return 1
+}
+
+# True if any entry in the named PARTITIONS array is an ISO-family image.
+isIsoImage() {
+	local PARRAY=$1[@]
+	local PARTITIONS=("${!PARRAY}")
+	local i fs
+	[ "${#PARTITIONS[@]}" -gt 0 ] || return 1
+	for i in "${!PARTITIONS[@]}"; do
+		fs="$(resolveFilesystem "${PARTITIONS[$i]}")"
+		if isIsoFilesystem "$fs"; then
+			return 0
+		fi
+	done
+	return 1
 }
 
 # Default subvolume name for a mount point (@, @home, @var/log, ...)
@@ -256,6 +294,9 @@ partitionDisk() {
 		if isSubvolumeOnlyEntry "${PARTITIONS[$i]}"; then
 			continue
 		fi
+		if isIsoFilesystem "$(resolveFilesystem "${PARTITIONS[$i]}")"; then
+			continue
+		fi
 		PARTNO="${RESOLVED_PARTNOS[$i]}"
 		TYPE="$(partitionEntryField "${PARTITIONS[$i]}" 3)"
 		LABEL="$(partitionEntryField "${PARTITIONS[$i]}" 6)"
@@ -277,6 +318,9 @@ partitionDisk() {
 	rescanPartitions $DESTINATION
 	for i in ${!PARTITIONS[@]}; do
 		if isSubvolumeOnlyEntry "${PARTITIONS[$i]}"; then
+			continue
+		fi
+		if isIsoFilesystem "$(resolveFilesystem "${PARTITIONS[$i]}")"; then
 			continue
 		fi
 		PARTNO="${RESOLVED_PARTNOS[$i]}"
@@ -440,4 +484,93 @@ umountAll() {
 	while cat /proc/mounts |grep -q "$1"; do
 		umount -Rq $(cat /proc/mounts |grep "$1" |head -n1 |awk '{print $2;}')
 	done
+}
+
+# Pack a populated root directory into an iso9660 and/or UDF image.
+#
+# Usage:
+#	createIsoImage OUTPUT.iso PARTITIONS ROOTDIR
+#
+# FILESYSTEM on the first ISO-family entry selects the on-disc formats:
+#	iso9660		Rock Ridge + Joliet ISO 9660
+#	udf		UDF only
+#	iso9660+udf	both (traditional Live DVD)
+# LABEL becomes the volume id.
+#
+# Optional boot files, if present under ROOTDIR, are wired up:
+#	/boot/grub/i386-pc/eltorito.img	BIOS El Torito (GRUB)
+#	/boot/grub/efiboot.img		UEFI El Torito FAT image
+#	/usr/lib/grub/i386-pc/boot_hybrid.img
+#		used as a hybrid MBR so the ISO is also USB-bootable
+#
+createIsoImage() {
+	local OUTPUT="$1"
+	local PARRAY=$2[@]
+	local PARTITIONS=("${!PARRAY}")
+	local ROOTDIR="$3"
+	local i fs label formats
+	local XORRISO_ARGS
+	local EFIBOOT=""
+	local ELTORITO=""
+	local HYBRIDMBR=""
+
+	formats=""
+	label="OMVLIVE"
+	for i in "${!PARTITIONS[@]}"; do
+		fs="$(resolveFilesystem "${PARTITIONS[$i]}")"
+		if isIsoFilesystem "$fs"; then
+			formats="$(echo "$fs" |tr 'A-Z' 'a-z')"
+			label="$(partitionEntryField "${PARTITIONS[$i]}" 6)"
+			[ -z "$label" ] && label="OMVLIVE"
+			break
+		fi
+	done
+	if [ -z "$formats" ]; then
+		echo "ERROR: createIsoImage called but no iso9660/udf partition entry" >&2
+		return 1
+	fi
+
+	# xorriso writes the ISO from the populated root tree.
+	XORRISO_ARGS="-as mkisofs -r -l -iso-level 3 -full-iso9660-filenames"
+	XORRISO_ARGS="$XORRISO_ARGS -V ${label} -A OpenMandriva -p os-image-builder"
+	case "$formats" in
+	udf)
+		XORRISO_ARGS="$XORRISO_ARGS -udf"
+		;;
+	*udf*)
+		XORRISO_ARGS="$XORRISO_ARGS -J -joliet-long -R -udf"
+		;;
+	*)
+		XORRISO_ARGS="$XORRISO_ARGS -J -joliet-long -R"
+		;;
+	esac
+
+	if [ -e "${ROOTDIR}/boot/grub/i386-pc/eltorito.img" ]; then
+		ELTORITO="boot/grub/i386-pc/eltorito.img"
+	fi
+	if [ -e "${ROOTDIR}/boot/grub/efiboot.img" ]; then
+		EFIBOOT="boot/grub/efiboot.img"
+	fi
+	if [ -e "${ROOTDIR}/usr/lib/grub/i386-pc/boot_hybrid.img" ]; then
+		HYBRIDMBR="${ROOTDIR}/usr/lib/grub/i386-pc/boot_hybrid.img"
+	elif [ -e /usr/lib/grub/i386-pc/boot_hybrid.img ]; then
+		HYBRIDMBR=/usr/lib/grub/i386-pc/boot_hybrid.img
+	fi
+
+	if [ -n "$ELTORITO" ]; then
+		XORRISO_ARGS="$XORRISO_ARGS -b ${ELTORITO} -no-emul-boot -boot-load-size 4 -boot-info-table"
+		if [ -n "$HYBRIDMBR" ]; then
+			XORRISO_ARGS="$XORRISO_ARGS --grub2-boot-info --grub2-mbr ${HYBRIDMBR}"
+		fi
+	fi
+	if [ -n "$EFIBOOT" ]; then
+		if [ -n "$ELTORITO" ]; then
+			XORRISO_ARGS="$XORRISO_ARGS -eltorito-alt-boot"
+		fi
+		XORRISO_ARGS="$XORRISO_ARGS -e ${EFIBOOT} -no-emul-boot -isohybrid-gpt-basdat"
+	fi
+
+	echo "Creating ISO image ${OUTPUT} (${formats}, label ${label})"
+	# shellcheck disable=SC2086
+	xorriso $XORRISO_ARGS -o "$OUTPUT" "$ROOTDIR"
 }

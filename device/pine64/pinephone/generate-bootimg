@@ -26,5 +26,9 @@ make -C u-boot CROSS_COMPILE=aarch64-linux-gnu- BL31=$(pwd)/arm-trusted-firmware
 
 #mkimage -A arm -O linux -T ramdisk -C gzip -d $OURDIR/$ROOTDIR/boot/initrd-$KERNELVERSION.img $OURDIR/$ROOTDIR/boot/uInitrd.img
 #ln -sf initrd-$KERNELVERSION.img $OURDIR/$ROOTDIR/boot/initrd.img
-ln -sf vmlinuz-$KERNELVERSION $OURDIR/$ROOTDIR/boot/vmlinuz
+# FAT does not support symlinks -- copy the kernel as vmlinuz
+cp -f $OURDIR/$ROOTDIR/boot/vmlinuz-$KERNELVERSION $OURDIR/$ROOTDIR/boot/vmlinuz
 mkimage -A arm64 -O linux -T script -C none -n "U-Boot boot script" -d $OURDIR/device/pine64/pinephone/boot.cmd $OURDIR/$ROOTDIR/boot/boot.scr
+
+# SPL+u-boot lives in the gap before the first partition
+dd if=u-boot/u-boot-sunxi-with-spl.bin of=${LOOPDEV} bs=1024 seek=8 conv=notrunc

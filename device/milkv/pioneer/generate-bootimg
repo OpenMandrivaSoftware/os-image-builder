@@ -1,0 +1,26 @@
+mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva
+mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
+sed -e "s,@KVERSION@,${KERNELVERSION},g;s|@CMDLINE@|${CMDLINE}|g;s|@DTB@|${DTB}|g" \
+	$OURDIR/device/milkv/pioneer/grub.cfg.in \
+	>$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+if [ -n "$DTB" ]; then
+	sed -i -e 's,^@IF_DTB@,,' $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+	# dtbs_install puts the blob at /boot/<DTB>.dtb
+	if [ -e $OURDIR/$ROOTDIR/boot/${DTB}.dtb ]; then
+		:
+	elif [ -e $OURDIR/$ROOTDIR/boot/dtb-${KERNELVERSION}/${DTB}.dtb ]; then
+		mkdir -p $OURDIR/$ROOTDIR/boot/$(dirname ${DTB})
+		cp -a $OURDIR/$ROOTDIR/boot/dtb-${KERNELVERSION}/${DTB}.dtb \
+			$OURDIR/$ROOTDIR/boot/${DTB}.dtb
+	fi
+else
+	sed -i -e '/^@IF_DTB@/d' $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+fi
+# FAT is case-insensitive; some Pioneer firmware builds look for the
+# removable-media name in all caps.
+if [ -e $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/$BOOTEFI ]; then
+	cp -a $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/$BOOTEFI \
+		$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/BOOTRISCV64.EFI
+fi
+[ -d $OURDIR/$ROOTDIR/boot/grub2 ] && \
+	cp -f $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg $OURDIR/$ROOTDIR/boot/grub2/grub.cfg

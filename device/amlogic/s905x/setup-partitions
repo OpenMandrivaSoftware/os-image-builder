@@ -1,0 +1,6 @@
+IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
+dd if=/dev/zero of=${IMAGE} bs=1M count=$((PADDED_EXPECTED_SIZE/1048576))
+
+# Boot partition offset 32768 keeps the Amlogic bootloader happy.
+PARTITIONS=("32768:+512M:0700:vfat:/boot:OMVBOOT")
+PARTITIONS+=("::8305:${FSTYPE}:/:OMVROOT")

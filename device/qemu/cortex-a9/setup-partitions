@@ -1,0 +1,4 @@
+IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
+dd if=/dev/zero of=${IMAGE} bs=1M count=$((PADDED_EXPECTED_SIZE/1048576))
+
+PARTITIONS=("::8300:${FSTYPE}:/:OMVROOT")

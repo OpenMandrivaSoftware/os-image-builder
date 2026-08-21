@@ -1,0 +1,5 @@
+# Convert the raw disk image produced by setup-partitions into a
+# compressed qcow2 (the usual cloud upload format).
+qemu-img convert -f raw "${OURDIR}/${RESULTDIR}/${BASENAME}.img" \
+	-O qcow2 -c "${OURDIR}/${RESULTDIR}/${BASENAME}.qcow2"
+rm -f "${OURDIR}/${RESULTDIR}/${BASENAME}.img"

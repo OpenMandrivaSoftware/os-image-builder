@@ -2,17 +2,19 @@ insmod search
 insmod part_gpt
 insmod iso9660
 search --no-floppy --label OMVAA64 --set=root
+insmod iso9660
+insmod udf
 
 set timeout_style=menu
 set timeout=10
 
-menuentry 'OpenMandriva Lx' --class openmandriva --class gnu-linux --class gnu --class os {
-	linux /boot/vmlinuz-@KVERSION@ root=LABEL=OMVAA64 rw rootwait rd.timeout=120 @CMDLINE@
+menuentry 'OpenMandriva Lx (Live)' --class openmandriva --class gnu-linux --class gnu --class os {
+	linux /boot/vmlinuz-@KVERSION@ root=LABEL=OMVAA64 ro rd.live.overlay.overlayfs=1 rootwait rd.timeout=120 @CMDLINE@
 	initrd /boot/initrd-@KVERSION@.img
 }
 
-menuentry 'OpenMandriva Lx (text mode)' --class openmandriva --class gnu-linux --class gnu --class os {
-	linux /boot/vmlinuz-@KVERSION@ root=LABEL=OMVAA64 rw rootwait rd.timeout=120 @CMDLINE@ systemd.unit=multi-user.target
+menuentry 'OpenMandriva Lx (Live, text mode)' --class openmandriva --class gnu-linux --class gnu --class os {
+	linux /boot/vmlinuz-@KVERSION@ root=LABEL=OMVAA64 ro rd.live.overlay.overlayfs=1 rootwait rd.timeout=120 @CMDLINE@ systemd.unit=multi-user.target
 	initrd /boot/initrd-@KVERSION@.img
 }
 

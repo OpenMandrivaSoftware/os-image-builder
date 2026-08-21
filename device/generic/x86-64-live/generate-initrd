@@ -1,0 +1,18 @@
+. ${OURDIR}/helpers/overlayfs-dracut
+installOverlayfsDracut
+
+if echo ${PACKAGESETS} |grep -q gui; then
+	chroot $OURDIR/$ROOTDIR /usr/sbin/dracut --zstd --add overlayfs \
+		-o ifcfg -o lvm -o mdraid -o aufs-mount -o network -o cifs \
+		-o dm -o crypt -o dmraid -o multipath -o multipath-hostonly -o squash \
+		--add-drivers "overlay isofs udf" \
+		-f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
+else
+	chroot $OURDIR/$ROOTDIR /usr/sbin/dracut --zstd --add overlayfs \
+		-o ifcfg -o lvm -o mdraid -o aufs-mount -o network -o cifs \
+		-o dm -o crypt -o dmraid -o multipath -o multipath-hostonly \
+		-o drm -o simpledrm -o plymouth -o squash \
+		--add-drivers "overlay isofs udf" \
+		-f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
+fi
+chmod 0644 $OURDIR/$ROOTDIR/boot/initrd-${KERNELVERSION}.img

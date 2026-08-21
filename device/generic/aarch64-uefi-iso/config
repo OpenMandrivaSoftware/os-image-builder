@@ -1,5 +1,6 @@
-# Generic aarch64 board with UEFI support
+# Generic aarch64 board with UEFI support -- Live ISO
 ARCH="aarch64"
+HOSTDEPS="$HOSTDEPS xorriso mtools"
 # Let's use a current kernel, it usually has more hardware support
 HWPACKAGES="kernel-release"
 # Most boards have a PCIE-slot that may take a graphics card (so we

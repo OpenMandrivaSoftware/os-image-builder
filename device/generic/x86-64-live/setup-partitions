@@ -1,0 +1,4 @@
+# Live DVD: no GPT disk image. The populated root tree is packed into
+# an iso9660+UDF hybrid ISO after generate-bootimg.
+# START:END:TYPE:FILESYSTEM:MOUNTPOINT:LABEL
+PARTITIONS=(":::iso9660+udf:/:OMVLIVE")

@@ -1,3 +1,5 @@
+# Rootfs-only targets now produce the tarball from finalize.
+# Kept as a helper so older scripts can still `.` this file.
 cd $OURDIR/$ROOTDIR
-tar cJf ../${RESULTDIR}/${BASENAME}-rootfs.tar.xz .
+tar cJf ${OURDIR}/${RESULTDIR}/${BASENAME}-rootfs.tar.xz .
 cd ..

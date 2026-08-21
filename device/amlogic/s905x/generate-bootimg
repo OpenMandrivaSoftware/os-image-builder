@@ -19,3 +19,15 @@ CONFIG_CMD_UNZIP=y
 EOF
 make CROSS_COMPILE=aarch64-linux-gnu- EXTRAVERSION="-OpenMandriva" LDFLAGS="-fuse-ld=bfd" KBUILD_LDFLAGS="-fuse-ld=bfd" HOSTLDFLAGS="-fuse-ld=bfd"
 cd ..
+
+cp ${OURDIR}/${ROOTDIR}/boot/vmlinuz-${KERNELVERSION} ${OURDIR}/${ROOTDIR}/boot/zImage
+[ -e ${OURDIR}/u-boot/u-boot.bin ] && cp ${OURDIR}/u-boot/u-boot.bin ${OURDIR}/${ROOTDIR}/boot/u-boot.ext
+PSEP="$(partitionSeparator ${LOOPDEV})"
+ROOTPUUID=$(/sbin/blkid ${LOOPDEV}${PSEP}2 |sed -e 's,.*PARTUUID=",,;s,".*,,')
+mkdir -p ${OURDIR}/${ROOTDIR}/boot/extlinux
+cat >${OURDIR}/${ROOTDIR}/boot/extlinux/extlinux.conf <<EOF
+label OpenMandriva
+	kernel /zImage
+	fdt /${DTB}.dtb
+	append root=PARTUUID=${ROOTPUUID} ${CMDLINE}
+EOF

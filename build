@@ -295,10 +295,20 @@ i686)
 riscv64)
 	KERNELARCH=riscv
 	QEMUARCH=$ARCH
-	KERNELTARGET=vmlinux
-	BOOTEFI=boot${ARCH}.efi
-	EFIARCH=${ARCH}-efi
+	# Image is the usual EFI/u-boot payload; vmlinux is the ELF
+	# at the kernel tree root (set KERNELTARGET=vmlinux to use it).
+	[ -z "$KERNELTARGET" ] && KERNELTARGET=Image
+	BOOTEFI=bootriscv64.efi
+	EFIARCH=riscv64-efi
 	DTBS="dtbs"
+	;;
+loongarch64)
+	KERNELARCH=loongarch
+	QEMUARCH=loongarch64
+	[ -z "$KERNELTARGET" ] && KERNELTARGET=vmlinuz.efi
+	BOOTEFI=bootloongarch64.efi
+	EFIARCH=loongarch64-efi
+	DTBS=""
 	;;
 *)
 	# Anything here is possibly wrong...
@@ -588,7 +598,9 @@ make $SMPFLAGS V=1 INSTALL_MOD_STRIP=1 modules_install ARCH=$KERNELARCH $CCOMP I
 make $SMPFLAGS INSTALL_MOD_STRIP=1 dtbs_install ARCH=$KERNELARCH $CCOMP INSTALL_MOD_PATH=%{buildroot} INSTALL_DTBS_PATH=%{buildroot}/boot CROSS_COMPILE_ARM32=armv7hnl-linux-gnueabihf- $KERNEL_LD || :
 mkdir -p %{buildroot}/boot
 EOF
-	if [ "$ARCH" = "x86_64" -o "$ARCH" = "znver1" -o "$ARCH" = "riscv64" ]; then
+	# vmlinux lives at the kernel tree root; Image / zImage / vmlinuz.efi
+	# are under arch/$ARCH/boot/.
+	if [ "$KERNELTARGET" = "vmlinux" ]; then
 		cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
 cp $KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
 EOF
@@ -895,7 +907,12 @@ run setup-partitions
 
 rm -rf "$OURDIR/$ROOTDIR"
 mkdir -p "$OURDIR/$ROOTDIR"
-if [ -e "${IMAGE}" ]; then
+if isIsoImage PARTITIONS; then
+	# iso9660/udf live images are packed from the directory tree after
+	# packages are installed -- no GPT disk to partition/mount.
+	unset IMAGE
+	unset LOOPDEV
+elif [ -e "${IMAGE}" ]; then
 	losetup -D
 	losetup -fP ${IMAGE}
 	LOOPDEV=$(losetup -j ${IMAGE} |tail -n1 |cut -d: -f1)
@@ -1045,8 +1062,8 @@ for PACKAGESET in $PACKAGESETS; do
 	fi
 done
 
-# Generate fstab
-if [ "${#PARTITIONS[@]}" -gt 0 ]; then
+# Generate fstab (skip for iso9660/udf live images -- overlayfs is the writable layer)
+if [ "${#PARTITIONS[@]}" -gt 0 ] && [ -n "${LOOPDEV}" ] && ! isIsoImage PARTITIONS; then
 	resolvePartitionNumbers PARTITIONS
 	PSEP="$(partitionSeparator ${LOOPDEV})"
 	for i in "${!PARTITIONS[@]}"; do
@@ -1082,10 +1099,11 @@ if [ "$NEED_INITRD" != "no" ] || [ "$USE_UEFI" = "yes" ] || [ "$USE_SYSTEMD_UEFI
 	if [ "$USE_UEFI" = "yes" ]; then
 		echo "Creating ESP for GRUB."
 		mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
+		# iso9660/udf are needed so the same EFI binary can boot a Live ISO
 		if echo $PACKAGESETS |grep -q gui; then
-			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -d /usr/lib/grub/$EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxmenu test all_video loadenv exfat ext2 part_msdos part_gpt loadenv ls chain btrfs xfs ntfs all_video efifwsetup efinet font probe video loopback gzio xzio zstd
+			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -d /usr/lib/grub/$EFIARCH -p /EFI/BOOT fat iso9660 udf part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file gfxterm gfxterm_background gfxmenu test all_video loadenv exfat ext2 part_msdos part_gpt loadenv ls chain btrfs xfs ntfs all_video efifwsetup efinet font probe video loopback gzio xzio zstd
 		else
-			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -d /usr/lib/grub/$EFIARCH -p /EFI/BOOT fat part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file test loadenv exfat ext2 part_msdos part_gpt loadenv ls chain btrfs xfs ntfs all_video efifwsetup efinet font probe loopback gzio xzio zstd
+			chroot "$OURDIR/$ROOTDIR" /usr/bin/grub2-mkimage -o /boot/efi/EFI/BOOT/$BOOTEFI -O $EFIARCH -d /usr/lib/grub/$EFIARCH -p /EFI/BOOT fat iso9660 udf part_gpt part_msdos normal boot linux configfile loopback chain efifwsetup efi_gop ls search search_label search_fs_uuid search_fs_file test loadenv exfat ext2 part_msdos part_gpt loadenv ls chain btrfs xfs ntfs all_video efifwsetup efinet font probe loopback gzio xzio zstd
 		fi
 	fi
 
@@ -1241,7 +1259,23 @@ fi
 # root filesystems...
 cleanup
 
+if isIsoImage PARTITIONS; then
+	# After cleanup so /proc /sys /dev bind mounts are gone.
+	createIsoImage "${OURDIR}/${RESULTDIR}/${BASENAME}.iso" PARTITIONS "${OURDIR}/${ROOTDIR}"
+fi
+
 run finalize
+
+# Optional helper copied next to the image so users can write it to a
+# physical device without reading the README.
+for helper in write2sd write2device; do
+	if [ -e "${OURDIR}/device/${TARGET}/${helper}.in" ]; then
+		sed -e "s,@BASENAME@,${BASENAME},g" \
+			"${OURDIR}/device/${TARGET}/${helper}.in" \
+			>"${OURDIR}/${RESULTDIR}/${helper}"
+		chmod +x "${OURDIR}/${RESULTDIR}/${helper}"
+	fi
+done
 
 if [ "$ABF" = "1" ]; then
 	# Make sure the remaining scripts have sufficient access

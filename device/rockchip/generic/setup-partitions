@@ -1,0 +1,10 @@
+IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
+dd if=/dev/zero of=${IMAGE} bs=1M count=$((PADDED_EXPECTED_SIZE/1048576))
+
+# rk3399: idbloader at sector 64, u-boot.itb at 16384, FAT boot at 62500.
+# Reserved loader partitions use alignment 1 so they can start at those
+# raw offsets (same idea as rock5b).
+PARTITIONS=("62500:+256M:0700:vfat:/boot:OMVBOOT")
+PARTITIONS+=("::8305:${FSTYPE}:/:OMVROOT")
+PARTITIONS+=("64:16383:8300:-::idbloader:1")
+PARTITIONS+=("16384:62499:8300:-::uboot:1")

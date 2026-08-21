@@ -1,10 +1,26 @@
-if [ "$USE_SYSTEMD_UEFI" = 'yes' ]; then
-    cd $OURDIR/$ROOTDIR/boot/efi
-	tar cJf $OURDIR/boot-${SHORTTARGET}.tar.xz *
-    cd ..
+[ ! -e "$OURDIR/$ROOTDIR"/boot/idbloader.img ] && cp "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/idbloader.img "$OURDIR/$ROOTDIR"/boot/ || :
+[ ! -e "$OURDIR/$ROOTDIR"/boot/u-boot.itb ] && cp "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb "$OURDIR/$ROOTDIR"/boot/ || :
+# do not bloat the image
+[ -f "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb ] && chroot "$OURDIR/$ROOTDIR" /bin/sh -c 'dnf --assumeyes remove $(rpm -qf /usr/share/uboot/rockpro64-rk3399/u-boot.itb)' || :
+
+if [ -e "$OURDIR/$ROOTDIR"/boot/idbloader.img ]; then
+	dd if="$OURDIR/$ROOTDIR"/boot/idbloader.img of=${LOOPDEV}p3 conv=notrunc
+fi
+if [ -e "$OURDIR/$ROOTDIR"/boot/u-boot.itb ]; then
+	dd if="$OURDIR/$ROOTDIR"/boot/u-boot.itb of=${LOOPDEV}p4 conv=notrunc
 fi
 
-[ ! -e "$OURDIR/$ROOTDIR"/boot//idbloader.img ] && cp "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/idbloader.img "$OURDIR/$ROOTDIR"/boot/
-[ ! -e "$OURDIR/$ROOTDIR"/boot/u-boot.itb ] && cp "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb "$OURDIR/$ROOTDIR"/boot/
-# do not bloat the image
-[ -f "$OURDIR/$ROOTDIR"/usr/share/uboot/rockpro64-rk3399/u-boot.itb ] && chroot "$OURDIR/$ROOTDIR" /bin/sh -c 'dnf --assumeyes remove $(rpm -qf /usr/share/uboot/rockpro64-rk3399/u-boot.itb)' ||:
+cp -a ${OURDIR}/${ROOTDIR}/boot/vmlinuz-${KERNELVERSION} ${OURDIR}/${ROOTDIR}/boot/Image || :
+[ -e ${OURDIR}/${ROOTDIR}/boot/initrd-${KERNELVERSION}.img ] && \
+	cp -a ${OURDIR}/${ROOTDIR}/boot/initrd-${KERNELVERSION}.img ${OURDIR}/${ROOTDIR}/boot/initrd.img
+
+PSEP="$(partitionSeparator ${LOOPDEV})"
+ROOTPUUID=$(/sbin/blkid ${LOOPDEV}${PSEP}2 |sed -e 's,.*PARTUUID=",,;s,".*,,')
+mkdir -p ${OURDIR}/${ROOTDIR}/boot/extlinux
+{
+	echo "label OpenMandriva"
+	echo "	kernel /Image"
+	[ -e ${OURDIR}/${ROOTDIR}/boot/initrd.img ] && echo "	initrd /initrd.img"
+	echo "	fdt /${DTB}.dtb"
+	echo "	append root=PARTUUID=${ROOTPUUID} ${CMDLINE}"
+} >${OURDIR}/${ROOTDIR}/boot/extlinux/extlinux.conf

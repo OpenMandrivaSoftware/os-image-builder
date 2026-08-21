@@ -1,0 +1,38 @@
+# GRUB config used from both the ISO9660 tree and the EFI FAT image
+mkdir -p $OURDIR/$ROOTDIR/boot/grub $OURDIR/$ROOTDIR/boot/grub/i386-pc \
+	$OURDIR/$ROOTDIR/EFI/BOOT $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
+sed -e "s,@KVERSION@,${KERNELVERSION},g;s|@CMDLINE@|${CMDLINE}|g" \
+	$OURDIR/device/generic/x86-64-live/grub.cfg.in \
+	>$OURDIR/$ROOTDIR/boot/grub/grub.cfg
+if echo $PACKAGESETS |grep -q gui; then
+	sed -i -e 's,^@IF_GUI@,,' $OURDIR/$ROOTDIR/boot/grub/grub.cfg
+else
+	sed -i -e '/^@IF_GUI@/d' $OURDIR/$ROOTDIR/boot/grub/grub.cfg
+fi
+cp -f $OURDIR/$ROOTDIR/boot/grub/grub.cfg $OURDIR/$ROOTDIR/EFI/BOOT/grub.cfg
+cp -f $OURDIR/$ROOTDIR/boot/grub/grub.cfg $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+[ -d $OURDIR/$ROOTDIR/boot/grub2 ] && \
+	cp -f $OURDIR/$ROOTDIR/boot/grub/grub.cfg $OURDIR/$ROOTDIR/boot/grub2/grub.cfg
+
+# BIOS El Torito (optical + hybrid USB)
+GRUB_ISO_MODULES="biosdisk iso9660 udf ext2 fat part_gpt part_msdos normal boot linux configfile loopback chain ls search search_label search_fs_uuid search_fs_file echo test minicmd cat gzio xzio zstd all_video gfxterm"
+if [ -d $OURDIR/$ROOTDIR/usr/lib/grub/i386-pc ]; then
+	chroot $OURDIR/$ROOTDIR /usr/bin/grub2-mkimage -O i386-pc-eltorito \
+		-d /usr/lib/grub/i386-pc -p /boot/grub \
+		-o /boot/grub/i386-pc/eltorito.img $GRUB_ISO_MODULES
+fi
+
+# Removable-media EFI binary at the ISO root (in addition to /boot/efi)
+if [ -e $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/$BOOTEFI ]; then
+	cp -a $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/$BOOTEFI $OURDIR/$ROOTDIR/EFI/BOOT/$BOOTEFI
+fi
+
+# El Torito EFI FAT image
+EFIBOOT=$OURDIR/$ROOTDIR/boot/grub/efiboot.img
+rm -f "$EFIBOOT"
+# 8 MiB is plenty for the EFI binary + grub.cfg
+dd if=/dev/zero of="$EFIBOOT" bs=1M count=8 status=none
+mkfs.vfat -n OMVEFI "$EFIBOOT"
+mmd -i "$EFIBOOT" ::/EFI ::/EFI/BOOT
+mcopy -Q -i "$EFIBOOT" $OURDIR/$ROOTDIR/EFI/BOOT/$BOOTEFI ::/EFI/BOOT/
+mcopy -Q -i "$EFIBOOT" $OURDIR/$ROOTDIR/boot/grub/grub.cfg ::/EFI/BOOT/

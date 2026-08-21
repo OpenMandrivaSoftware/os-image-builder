@@ -1,0 +1,10 @@
+# Traditional desktop Live DVD: iso9660+UDF with overlayfs
+ARCH="x86_64"
+HOSTDEPS="$HOSTDEPS xorriso mtools"
+# grub2 provides the i386-pc El Torito payload for BIOS optical/USB boot
+HWPACKAGES="kernel-desktop dosfstools grub2"
+HWPACKAGES_gui="$HWPACKAGES_gui lib64dri-drivers-radeon lib64dri-drivers-nouveau lib64dri-drivers-intel"
+HWPACKAGES="$HWPACKAGES pciutils"
+USE_UEFI=yes
+NEED_INITRD=yes
+CMDLINE="quiet splash rd.live.overlay.overlayfs=1"

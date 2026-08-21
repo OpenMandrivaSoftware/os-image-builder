@@ -1,0 +1,14 @@
+# Raspberry Pi firmware looks for these files on the FAT boot partition
+# (already mounted at /boot).
+cp -f ${OURDIR}/device/raspberry/generic/firmware/*.{bin,txt,dat,elf} ${OURDIR}/${ROOTDIR}/boot/ || :
+[ -e ${OURDIR}/device/${TARGET}/config.txt ] && \
+	cp -f ${OURDIR}/device/${TARGET}/config.txt ${OURDIR}/${ROOTDIR}/boot/
+cp -f ${OURDIR}/${ROOTDIR}/boot/vmlinuz-${KERNELVERSION} ${OURDIR}/${ROOTDIR}/boot/kernel8.img
+if [ -d ${OURDIR}/${ROOTDIR}/boot/broadcom ]; then
+	cp -f ${OURDIR}/${ROOTDIR}/boot/broadcom/*.dtb ${OURDIR}/${ROOTDIR}/boot/ || :
+fi
+# Prefer a filesystem label so the same image works on SD or USB.
+cat >${OURDIR}/${ROOTDIR}/boot/cmdline.txt <<EOF
+${CMDLINE}
+EOF
+sed -i -e 's,root=/dev/mmcblk0p2,root=LABEL=OMVROOT,g' ${OURDIR}/${ROOTDIR}/boot/cmdline.txt

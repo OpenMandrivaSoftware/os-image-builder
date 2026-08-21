@@ -1,0 +1,10 @@
+# Generic loongarch64 board
+ARCH="loongarch64"
+# dosfstools is needed to generate the UEFI boot partition
+# when using install-openmandriva
+HWPACKAGES="kernel-server dosfstools"
+# Commonly needed, but shouldn't be in a base image
+#HWPACKAGES="$HWPACKAGES pciutils kernel-firmware kernel-firmware-extra"
+# (this is the default anyway)
+# NEED_INITRD=yes
+USE_UEFI=yes
