@@ -5,3 +5,6 @@ if echo $PACKAGESETS |grep -q gui; then
 else
 	sed -i -e '/^@IF_GUI@/d' $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
 fi
+if [[ "$FSTYPE" = "btrfs" ]]; then
+	sed -i -e 's|/boot|/@/boot|g' $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+fi
