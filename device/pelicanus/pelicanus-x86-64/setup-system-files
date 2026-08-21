@@ -1,4 +1,6 @@
-chroot "${OURDIR}/${ROOTDIR}" grub2-install --target=i386-pc ${LOOPDEV}
+if echo $arch |grep -q 86; then
+	chroot "${OURDIR}/${ROOTDIR}" grub2-install --target=i386-pc ${LOOPDEV}
+fi
 
 # Pelicanus specific bits...
 cd "${OURDIR}/${ROOTDIR}"
