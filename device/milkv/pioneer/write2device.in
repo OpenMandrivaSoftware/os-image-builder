@@ -1,0 +1,53 @@
+#!/bin/sh
+DEV="$1"
+if ! [ -b "$DEV" ]; then
+	echo "Usage: $0 DEVICE"
+	echo "Where DEVICE is the USB stick, NVMe or SD card to write to,"
+	echo "typically /dev/sdb or /dev/nvme0n1"
+	exit 1
+fi
+if [ "$(id -u)" != 0 ]; then
+	echo "This script needs root access to write to the target device"
+	echo "directly, reload partition tables, etc."
+	exec sudo $0 "$@"
+	exit 1
+fi
+MISSING=""
+for tool in partx dd resize2fs; do
+	if ! command -v $tool >/dev/null 2>&1; then
+		MISSING="$MISSING $tool"
+	fi
+done
+if [ -n "$MISSING" ]; then
+	echo "You're missing some tools needed by this script:"
+	echo "	$MISSING"
+	echo "Please install the tools (or run the script from a live image that has them,"
+	echo "such as OpenMandriva Cooker)."
+	exit 1
+fi
+
+echo "WARNING: All data on $DEV will be overwritten. If you"
+echo "aren't sure this is what you want to do, press Ctrl-C"
+echo "now. Otherwise, press enter to continue."
+read
+
+dd if=@BASENAME@.img of=$DEV bs=1M status=progress conv=fdatasync
+udevadm settle -t 5
+
+# Grow the root partition (p2) to fill the rest of the disk.
+if command -v parted >/dev/null 2>&1; then
+	parted -s -f $DEV resizepart 2 100%
+elif command -v growpart >/dev/null 2>&1; then
+	growpart $DEV 2
+fi
+udevadm settle -t 5
+partx -u $DEV || :
+udevadm settle -t 5
+
+SEP=""
+echo "$DEV" | grep -qE 'nvme|mmcblk|loop' && SEP="p"
+ROOT="${DEV}${SEP}2"
+if [ -b "$ROOT" ]; then
+	fsck -f "$ROOT" || :
+	resize2fs "$ROOT" || :
+fi

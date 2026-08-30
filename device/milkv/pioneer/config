@@ -1,15 +1,32 @@
 # Milk-V Pioneer (Sophgo SG2042) -- 64-core RISC-V workstation
-# Boots via the board's EDK2 firmware: ESP -> GRUB EFI -> Linux.
 ARCH=riscv64
-KERNEL=https://github.com/sophgo/linux-riscv#sg2042-dev
+#
+# Mainline can get as far as a serial console (DTB sophgo/sg2042-milkv-pioneer
+# exists since 6.7), but the upstream Cadence/SG2042 PCIe host still hangs or
+# mis-enumerates on Pioneer, so NVMe, the GPU and other endpoints are not
+# usable. Stay on Sophgo's vendor tree until that is fixed.
+#
+# sophgo/linux-riscv no longer has a branch named sg2042-dev (that name is
+# what this file used to request). Current vendor branches:
+#   sg2042-dev-6.6      -- full mango DTS + sophgo_mango_ubuntu_defconfig (this)
+#   sg2042-revyos-6.12  -- 6.12 + pcie-cadence-sophgo, different defconfig
+#   sg2042-dev-6.12     -- 6.12 without the vendor PCIe/DTS extras
+#KERNEL=https://github.com/sophgo/linux-riscv#sg2042-revyos-6.12
+#KERNEL_CONFIG=sophgo_mango_normal_defconfig
+KERNEL=https://github.com/sophgo/linux-riscv#sg2042-dev-6.6
 KERNEL_CONFIG=sophgo_mango_ubuntu_defconfig
 KERNEL_GCC=yes
 KERNELTARGET=Image
 DTB=sophgo/mango-milkv-pioneer
-USE_UEFI=yes
+# Early boards (and many still in the field) boot ZSBL -> OpenSBI -> a
+# Sophgo U-Boot or LinuxBoot that reads extlinux.conf. They are not UEFI.
+# EDK2 exists as an optional later firmware; this target does not assume it.
+USE_UEFI=no
 NEED_INITRD=yes
-# dosfstools is needed to generate the UEFI boot partition
-# when using install-openmandriva
-HWPACKAGES="dosfstools"
-# Serial is on the micro-USB debug console; also keep the HDMI/EFI console.
-CMDLINE="earlycon=sbi console=ttyS0,115200 console=tty0"
+# dracut-modules-growroot is a noarch package from cloud-initramfs-tools,
+# not a dracut subpackage. It (and cloud-utils) has not been published
+# into cooker/riscv64 yet. write2device already grows the root partition.
+EXCLUDE="dracut-modules-growroot"
+# ttyS0 is the micro-USB debug console. NVMe timeouts/CMA/swiotlb match
+# Sophgo's published Pioneer extlinux command line.
+CMDLINE="earlycon=sbi console=ttyS0,115200 console=tty0 nvme_core.io_timeout=600 nvme_core.admin_timeout=600 cma=512M swiotlb=65536"

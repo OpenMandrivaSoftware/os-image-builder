@@ -1,0 +1,24 @@
+From: OpenMandriva os-image-builder <bero@lindev.ch>
+Subject: [PATCH] scripts: sign-file: include time.h for OpenSSL 4
+
+OpenSSL 4.0 headers use time_t in public APIs without including <time.h>.
+Host-tool builds of sign-file then fail with gcc 16 / -std=gnu11.
+
+---
+ scripts/sign-file.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/scripts/sign-file.c b/scripts/sign-file.c
+index 1111111..2222222 100644
+--- a/scripts/sign-file.c
++++ b/scripts/sign-file.c
+@@ -22,6 +22,7 @@
+ #include <getopt.h>
+ #include <err.h>
+ #include <arpa/inet.h>
++#include <time.h>
+ #include <openssl/opensslv.h>
+ #include <openssl/bio.h>
+ #include <openssl/evp.h>
+ #include <openssl/pem.h>
+ #include <openssl/err.h>

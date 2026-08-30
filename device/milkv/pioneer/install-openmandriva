@@ -1,0 +1,169 @@
+#!/bin/bash
+if [ "$(id -u)" != "0" ]; then
+	echo "This script needs root access."
+	echo "The default root password of the live image is \"omv\"."
+	exec sudo $0 "$@"
+	exit 1
+fi
+
+. /usr/share/om-text-installer/partitions
+
+TOOLOUTPUT=/dev/null
+VERBOSE=""
+
+while getopts "f:r:s:Sv" opt; do
+	case $opt in
+	f)
+		FSTYPE="$OPTARG"
+		;;
+	r)
+		ROOTSIZE="$OPTARG"
+		;;
+	s)
+		SWAPSIZE="$OPTARG"
+		;;
+	S)
+		SKIP_PROMPT=true
+		;;
+	v)
+		TOOLOUTPUT=/dev/stderr
+		VERBOSE=-v
+		;;
+	*)
+		echo "Unknown option $opt"
+		exit 1
+		;;
+	esac
+done
+shift $((OPTIND-1))
+
+[ -z "$FSTYPE" ] && FSTYPE="$(head -n1 /proc/mounts |cut -d' ' -f3)"
+[ -z "$FSTYPE" ] && FSTYPE="ext4"
+
+DESTINATION=/dev/nvme0n1
+[ -n "$1" ] && DESTINATION="$1"
+
+if ! [ -b "$DESTINATION" ]; then
+	echo "Invalid destination device $DESTINATION"
+	exit 1
+fi
+
+if [ "$SKIP_PROMPT" != "true" ]; then
+	cat <<EOF
+	WARNING: This script will wipe and overwrite the entire disk $DESTINATION
+	Press Ctrl-C if you don't want this to happen. Use $0 /dev/whatever to
+	select a different target device.
+
+On a Milk-V Pioneer:
+	/dev/nvme0n1  is the internal NVMe (default)
+	/dev/sda      is typically a USB stick
+	/dev/mmcblk0  is the microSD slot
+
+The installed system is booted by the U-Boot (or LinuxBoot) already in
+SPI flash via extlinux on a FAT /boot partition. This installer does not
+flash firmware and does not install GRUB/UEFI.
+
+If you wish to use partition sizes other than this installer's defaults, pass
+	-s X   swap size (0 to omit, e.g. 8G)
+	-r X   root size when splitting / and /home (0 = no split)
+	-f FSTYPE
+
+Press Enter to continue or Ctrl-C to abort.
+EOF
+	read
+fi
+
+DISKSIZE="$(echo 1 |gdisk -l $DESTINATION |grep "^Disk /" |awk '{ print $3; }')"
+DISKSIZE=$((DISKSIZE*512))
+
+echo "Setting up partition table..."
+PARTITIONS=()
+if [ -e /etc/om-text-installer/partitions ]; then
+	. /etc/om-text-installer/partitions
+else
+	if [ "$DISKSIZE" -gt 100000000000 ]; then
+		[ -z "$SWAPSIZE" ] && SWAPSIZE=8G
+		[ -z "$ROOTSIZE" ] && ROOTSIZE=60G
+	else
+		[ -z "$SWAPSIZE" ] && SWAPSIZE=0
+		[ -z "$ROOTSIZE" ] && ROOTSIZE=0
+	fi
+	PARTITIONS=(":+256M:0700:vfat:/boot:OMVBOOT")
+	if [ "$SWAPSIZE" != 0 ]; then
+		PARTITIONS+=(":+${SWAPSIZE}:8200:swap")
+	fi
+	if [ "$ROOTSIZE" != 0 ]; then
+		PARTITIONS+=(":+${ROOTSIZE}:8306:${FSTYPE}:/:/")
+		PARTITIONS+=("::8302:${FSTYPE}:/home:/home")
+	else
+		PARTITIONS+=("::8306:${FSTYPE}:/:/")
+	fi
+fi
+
+partitionDisk ${DESTINATION} PARTITIONS
+
+mkdir -p /mnt/destination
+mountAll ${DESTINATION} PARTITIONS /mnt/destination
+for i in /dev /proc /sys; do
+	mkdir -p /mnt/destination$i || :
+	mount --bind $i /mnt/destination$i || :
+done
+
+echo "Copying OS..."
+P=$(partitionSeparator ${DESTINATION})
+MOUNTS=$(for i in "${!PARTITIONS[@]}"; do
+	MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+	MPLEN="$(echo $MP |wc -c)"
+	echo $MPLEN.$i
+done |sort -V |cut -d. -f2)
+for i in $MOUNTS; do
+	MP="$(echo ${PARTITIONS[$i]}|cut -d: -f5)"
+	if [ -n "$MP" -a -d "$MP" ]; then
+		(cd ${MP} && tar c --one-file-system -f - .) | (cd /mnt/destination${MP} && tar x $VERBOSE -f -)
+	fi
+done
+
+echo "Setting up system files..."
+rm -f /mnt/destination/etc/fstab
+resolvePartitionNumbers PARTITIONS
+for i in $MOUNTS; do
+	PARTNO="${RESOLVED_PARTNOS[$i]}"
+	FS="$(resolveFilesystem "${PARTITIONS[$i]}")"
+	MP="$(partitionEntryField "${PARTITIONS[$i]}" 5)"
+	OPTS="$(resolveMountOptions "${PARTITIONS[$i]}" "$FS" "$MP")"
+	if [ "$OPTS" = "defaults" ]; then
+		OPTS="defaults,noatime"
+	else
+		OPTS="${OPTS},noatime"
+	fi
+	UUID="$(blkid ${DESTINATION}${P}${PARTNO} |sed -e 's,.* UUID=",,;s,".*,,')"
+	if [ "$MP" = "/" ]; then
+		ROOTPUUID="$(blkid ${DESTINATION}${P}${PARTNO} |sed -e 's,.*PARTUUID=",,;s,".*,,')"
+		echo "PARTUUID=${ROOTPUUID} ${MP} ${FS} ${OPTS} 0 1" >>/mnt/destination/etc/fstab
+	elif [ -n "$MP" ]; then
+		echo "UUID=${UUID} ${MP} ${FS} ${OPTS} 0 2" >>/mnt/destination/etc/fstab
+	elif [ "$FS" = "swap" ]; then
+		echo "UUID=${UUID} swap swap defaults,noatime 0 1" >>/mnt/destination/etc/fstab
+	fi
+done
+
+# Rebuild the initramfs against the installed root
+for i in /mnt/destination/boot/vmlinuz-*; do
+	[ -e "$i" ] || continue
+	KERNELVERSION=$(echo $i |sed -e 's,.*vmlinuz-,,')
+	chroot /mnt/destination dracut --zstd -f /boot/initrd-${KERNELVERSION}.img ${KERNELVERSION}
+	cp -a /mnt/destination/boot/vmlinuz-${KERNELVERSION} /mnt/destination/boot/Image
+	cp -a /mnt/destination/boot/initrd-${KERNELVERSION}.img /mnt/destination/boot/initrd.img
+done
+
+if [ -e /mnt/destination/boot/extlinux/extlinux.conf ]; then
+	echo "Updating extlinux for the installed root"
+	sed -i -E "s,root=PARTUUID=[^ ]+,root=PARTUUID=${ROOTPUUID},g;s,root=LABEL=[^ ]+,root=PARTUUID=${ROOTPUUID},g;s,rootfstype=[^ ]+,rootfstype=${FSTYPE},g" \
+		/mnt/destination/boot/extlinux/extlinux.conf
+fi
+
+rm -f /mnt/destination/home/omv/install-openmandriva
+
+umountAll /mnt/destination
+
+echo "DONE! OpenMandriva should now be installed."

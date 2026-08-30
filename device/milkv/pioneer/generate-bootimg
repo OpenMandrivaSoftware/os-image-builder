@@ -1,26 +1,52 @@
-mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/openmandriva
-mkdir -p $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT
-sed -e "s,@KVERSION@,${KERNELVERSION},g;s|@CMDLINE@|${CMDLINE}|g;s|@DTB@|${DTB}|g" \
-	$OURDIR/device/milkv/pioneer/grub.cfg.in \
-	>$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+# Pioneer U-Boot / LinuxBoot: extlinux on the FAT /boot partition.
+# Keep short, stable names -- some of these U-Boot builds are picky about
+# VFAT long filenames.
+cp -a ${OURDIR}/${ROOTDIR}/boot/vmlinuz-${KERNELVERSION} \
+	${OURDIR}/${ROOTDIR}/boot/Image
+if [ -e ${OURDIR}/${ROOTDIR}/boot/initrd-${KERNELVERSION}.img ]; then
+	cp -a ${OURDIR}/${ROOTDIR}/boot/initrd-${KERNELVERSION}.img \
+		${OURDIR}/${ROOTDIR}/boot/initrd.img
+fi
+
+FDT=""
 if [ -n "$DTB" ]; then
-	sed -i -e 's,^@IF_DTB@,,' $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
-	# dtbs_install puts the blob at /boot/<DTB>.dtb
-	if [ -e $OURDIR/$ROOTDIR/boot/${DTB}.dtb ]; then
-		:
-	elif [ -e $OURDIR/$ROOTDIR/boot/dtb-${KERNELVERSION}/${DTB}.dtb ]; then
-		mkdir -p $OURDIR/$ROOTDIR/boot/$(dirname ${DTB})
-		cp -a $OURDIR/$ROOTDIR/boot/dtb-${KERNELVERSION}/${DTB}.dtb \
-			$OURDIR/$ROOTDIR/boot/${DTB}.dtb
+	DTBBASE="$(basename ${DTB}).dtb"
+	if [ -e ${OURDIR}/${ROOTDIR}/boot/${DTB}.dtb ]; then
+		cp -a ${OURDIR}/${ROOTDIR}/boot/${DTB}.dtb \
+			${OURDIR}/${ROOTDIR}/boot/${DTBBASE}
+	elif [ -e ${OURDIR}/${ROOTDIR}/boot/dtb-${KERNELVERSION}/${DTB}.dtb ]; then
+		cp -a ${OURDIR}/${ROOTDIR}/boot/dtb-${KERNELVERSION}/${DTB}.dtb \
+			${OURDIR}/${ROOTDIR}/boot/${DTBBASE}
 	fi
+	[ -e ${OURDIR}/${ROOTDIR}/boot/${DTBBASE} ] && FDT="/${DTBBASE}"
+fi
+
+PSEP="$(partitionSeparator ${LOOPDEV})"
+ROOTPUUID=$(/sbin/blkid ${LOOPDEV}${PSEP}2 |sed -e 's,.*PARTUUID=",,;s,".*,,')
+if [ -n "$ROOTPUUID" ]; then
+	ROOTARG="root=PARTUUID=${ROOTPUUID}"
 else
-	sed -i -e '/^@IF_DTB@/d' $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg
+	ROOTARG="root=LABEL=OMVROOT"
 fi
-# FAT is case-insensitive; some Pioneer firmware builds look for the
-# removable-media name in all caps.
-if [ -e $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/$BOOTEFI ]; then
-	cp -a $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/$BOOTEFI \
-		$OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/BOOTRISCV64.EFI
-fi
-[ -d $OURDIR/$ROOTDIR/boot/grub2 ] && \
-	cp -f $OURDIR/$ROOTDIR/boot/efi/EFI/BOOT/grub.cfg $OURDIR/$ROOTDIR/boot/grub2/grub.cfg
+
+mkdir -p ${OURDIR}/${ROOTDIR}/boot/extlinux
+{
+	echo "default omv"
+	echo "menu title OpenMandriva"
+	echo "prompt 0"
+	echo "timeout 50"
+	echo
+	echo "label omv"
+	echo "	menu label OpenMandriva Lx"
+	echo "	linux /Image"
+	[ -e ${OURDIR}/${ROOTDIR}/boot/initrd.img ] && echo "	initrd /initrd.img"
+	[ -n "$FDT" ] && echo "	fdt ${FDT}"
+	echo "	append ${ROOTARG} rw rootwait rootfstype=${FSTYPE} ${CMDLINE}"
+	echo
+	echo "label omv-text"
+	echo "	menu label OpenMandriva Lx (text mode)"
+	echo "	linux /Image"
+	[ -e ${OURDIR}/${ROOTDIR}/boot/initrd.img ] && echo "	initrd /initrd.img"
+	[ -n "$FDT" ] && echo "	fdt ${FDT}"
+	echo "	append ${ROOTARG} rw rootwait rootfstype=${FSTYPE} ${CMDLINE} systemd.unit=multi-user.target"
+} >${OURDIR}/${ROOTDIR}/boot/extlinux/extlinux.conf

@@ -547,7 +547,18 @@ grep -Irl /lib/modules | xargs sed -i -e 's,/lib/modules,%{_modulesdir},g'
 
 %build
 export PATH=%{_libexecdir}/gnutar:${PATH}
+# Host tools (sign-file, resolve_btfids) must see the build host's
+# pkg-config, not the target sysroot that rpm --target exports.
+unset PKG_CONFIG_SYSROOT_DIR
+export PKG_CONFIG_PATH=/usr/lib64/pkgconfig:/usr/share/pkgconfig
 EOF
+	if [ "$KERNEL_GCC" = "yes" ]; then
+		# rpm --target $ARCH exports CC=clang --sysroot=...; that would
+		# override CROSS_COMPILE gcc and also feed target headers to HOSTCC.
+		cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
+unset CC CXX
+EOF
+	fi
 
 	# CROSS_COMPILE_ARM32 is a Sony-ism, but doesn't hurt anywhere else, so we can specify it unconditionally
 	# FIXME we have to use LD=/usr/bin/$TRIPLET-ld.bfd, for some reason yet to be debugged, aarch64
@@ -600,13 +611,17 @@ mkdir -p %{buildroot}/boot
 EOF
 	# vmlinux lives at the kernel tree root; Image / zImage / vmlinuz.efi
 	# are under arch/$ARCH/boot/.
+	# Name vmlinuz after the kernel's own release so it matches
+	# modules_install's /lib/modules/<release> (the $KERNELVERSION
+	# captured from a git checkout can include a -g<hash> that the
+	# tarball build does not).
 	if [ "$KERNELTARGET" = "vmlinux" ]; then
 		cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
-cp $KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
+cp $KERNELTARGET %{buildroot}/boot/vmlinuz-\$(cat include/config/kernel.release)
 EOF
 	else
 		cat >>kernel-rpm/kernel-$SHORTTARGET.spec <<EOF
-cp arch/$KERNELARCH/boot/$KERNELTARGET %{buildroot}/boot/vmlinuz-$KERNELVERSION
+cp arch/$KERNELARCH/boot/$KERNELTARGET %{buildroot}/boot/vmlinuz-\$(cat include/config/kernel.release)
 EOF
 	fi
 
@@ -1045,11 +1060,22 @@ if [ "$CREATE_DEFAULT_USER" != "no" ]; then
 		sed -i -e "s,^Session=,Session=$SDDMSESSION," $OURDIR/$ROOTDIR/etc/sddm.conf
 	fi
 fi
-if [ -z "$KERNEL" ]; then
-	# Using packaged kernel -- let's determine KERNELVERSION
-	# nevertheless so we can run dracut and possibly configure
-	# bootloaders
+if [ -z "$KERNELVERSION" ]; then
+	# Packaged kernel, or -K reusing a previously built kernel rpm:
+	# pick the installed vmlinuz so dracut and the bootloader can run.
 	KERNELVERSION=$(ls --sort=time $OURDIR/$ROOTDIR/boot/vmlinuz-* 2>/dev/null|head -n1 |sed -e 's,.*vmlinuz-,,')
+fi
+# modules_install may have used a different release than the vmlinuz
+# filename (git -g<hash> vs tarball). Prefer the modules directory.
+if [ -n "$KERNELVERSION" ] && [ ! -d "$OURDIR/$ROOTDIR/lib/modules/$KERNELVERSION" ]; then
+	MODVER=$(ls -1d "$OURDIR/$ROOTDIR/lib/modules"/[0-9]* 2>/dev/null |sed -e 's,.*/,,' |head -n1)
+	if [ -n "$MODVER" ]; then
+		if [ -e "$OURDIR/$ROOTDIR/boot/vmlinuz-$KERNELVERSION" ]; then
+			cp -a "$OURDIR/$ROOTDIR/boot/vmlinuz-$KERNELVERSION" \
+				"$OURDIR/$ROOTDIR/boot/vmlinuz-$MODVER"
+		fi
+		KERNELVERSION="$MODVER"
+	fi
 fi
 # Handle post-processing scripts needed by packagesets
 for PACKAGESET in $PACKAGESETS; do
@@ -1087,7 +1113,18 @@ fi
 run setup-system-files
 
 if ! [[ "$OMIT_TEXTINSTALLER" =~ (yes|true|1) ]]; then
-	sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BOOTEFI@,${BOOTEFI},g" "${OURDIR}"/helpers/install-openmandriva.in >"$OURDIR/$ROOTDIR/home/omv/install-openmandriva"
+	if [ -e "$OURDIR/device/$TARGET/install-openmandriva.in" ]; then
+		sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BOOTEFI@,${BOOTEFI},g" \
+			"$OURDIR/device/$TARGET/install-openmandriva.in" \
+			>"$OURDIR/$ROOTDIR/home/omv/install-openmandriva"
+	elif [ -e "$OURDIR/device/$TARGET/install-openmandriva" ]; then
+		cp -a "$OURDIR/device/$TARGET/install-openmandriva" \
+			"$OURDIR/$ROOTDIR/home/omv/install-openmandriva"
+	else
+		sed -e "s,@OS_VERSION@,${OS_VERSION},g;s,@OMV_VERSION@,${OMV_VERSION},g;s,@BOOTEFI@,${BOOTEFI},g" \
+			"${OURDIR}"/helpers/install-openmandriva.in \
+			>"$OURDIR/$ROOTDIR/home/omv/install-openmandriva"
+	fi
 	mkdir -p "$OURDIR/$ROOTDIR/usr/share/om-text-installer"
 	cp "${OURDIR}"/helpers/partitions "$OURDIR/$ROOTDIR/usr/share/om-text-installer/"
 	chmod +x "$OURDIR/$ROOTDIR/home/omv/install-openmandriva"
@@ -1237,7 +1274,7 @@ done
 cd ..
 
 # Reinstall distro-release-repos to get mirrors back
-dnf5 -y reinstall --installroot="$OURDIR/$ROOTDIR" --releasever=$OMV_VERSION --forcearch=$ARCH ${PRE_PACKAGES}
+dnf5 -y reinstall --nogpgcheck --installroot="$OURDIR/$ROOTDIR" --releasever=$OMV_VERSION --forcearch=$ARCH ${PRE_PACKAGES}
 [ -d "$OURDIR/$ROOTDIR/var/cache/dnf" ] && rm -rf "$OURDIR/$ROOTDIR/var/cache/dnf/*"
 
 run generate-bootimg

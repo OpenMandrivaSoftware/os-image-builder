@@ -1,7 +1,10 @@
 IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
-dd if=/dev/zero of=${IMAGE} bs=1M count=$((PADDED_EXPECTED_SIZE/1048576))
+# sophgo_mango_ubuntu_defconfig ships thousands of modules (~700 MiB).
+# dnf's "extra will be used" underestimates ext4 overhead for that tree.
+dd if=/dev/zero of=${IMAGE} bs=1M count=$((PADDED_EXPECTED_SIZE/1048576 + 1024))
 
-# Pioneer firmware (EDK2) looks for EFI/BOOT/BOOTRISCV64.EFI on the ESP.
-# Mount the ESP at /boot/efi so grub2-mkimage lands in the right place.
-PARTITIONS=(":+256M:ef00:vfat:/boot/efi:OMVUEFI")
+# First partition is a regular FAT boot volume (not an ESP). Pioneer U-Boot
+# and LinuxBoot look here for extlinux/extlinux.conf, the kernel, initrd and
+# DTB. Type 0700 rather than ef00 -- this firmware is not UEFI.
+PARTITIONS=(":+256M:0700:vfat:/boot:OMVBOOT")
 PARTITIONS+=("::8306:${FSTYPE}:/:OMVROOT")

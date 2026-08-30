@@ -1,0 +1,27 @@
+From: OpenMandriva os-image-builder <bero@lindev.ch>
+Subject: [PATCH] libbpf: do not discard const in resolve_full_path
+
+gcc 16 with -Werror=discarded-qualifiers fails tools/bpf/resolve_btfids
+on this 6.6 vendor tree:
+
+  next_path = strchr(s, ':');
+
+s is const char *; next_path does not need to be mutable.
+
+---
+ tools/lib/bpf/libbpf.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/tools/lib/bpf/libbpf.c b/tools/lib/bpf/libbpf.c
+index 1111111..2222222 100644
+--- a/tools/lib/bpf/libbpf.c
++++ b/tools/lib/bpf/libbpf.c
+@@ -11247,7 +11247,7 @@
+ 		if (!search_paths[i])
+ 			continue;
+ 		for (s = search_paths[i]; s != NULL; s = strchr(s, ':')) {
+-			char *next_path;
++			const char *next_path;
+ 			int seg_len;
+ 
+ 			if (s[0] == ':')
