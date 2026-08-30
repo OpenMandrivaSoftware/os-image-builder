@@ -99,6 +99,313 @@ partitionEntryField() {
 	echo "$1" | cut -d: -f"$2"
 }
 
+# Replace field N (1-based) in a colon-separated partition entry
+replacePartitionEntryField() {
+	local entry="$1"
+	local field="$2"
+	local value="$3"
+	local -a f
+	local i out
+	IFS=: read -ra f <<< "$entry"
+	while [ ${#f[@]} -lt "$field" ]; do
+		f+=("")
+	done
+	f[$((field-1))]="$value"
+	out="${f[0]}"
+	for ((i=1; i<${#f[@]}; i++)); do
+		out="${out}:${f[$i]}"
+	done
+	printf '%s\n' "$out"
+}
+
+# Parse a size (10G, 512M, 20GiB, 20480, +10G) to bytes.
+# Units are binary (1024) to match sgdisk. A bare number is GiB.
+parseSizeToBytes() {
+	local s n unit
+	s="${1#+}"
+	s="${s// /}"
+	if [[ "$s" =~ ^([0-9]+)([KkMmGgTt])([iI][bB])?$ ]]; then
+		n="${BASH_REMATCH[1]}"
+		unit="${BASH_REMATCH[2]}"
+	elif [[ "$s" =~ ^([0-9]+)([KkMmGgTt])[bB]$ ]]; then
+		n="${BASH_REMATCH[1]}"
+		unit="${BASH_REMATCH[2]}"
+	elif [[ "$s" =~ ^([0-9]+)$ ]]; then
+		n="${BASH_REMATCH[1]}"
+		unit="G"
+	else
+		echo "Invalid size '$1' (examples: 20G, 20480M)" >&2
+		return 1
+	fi
+	case "$unit" in
+	K|k) echo $((n * 1024)) ;;
+	M|m) echo $((n * 1024 * 1024)) ;;
+	G|g) echo $((n * 1024 * 1024 * 1024)) ;;
+	T|t) echo $((n * 1024 * 1024 * 1024 * 1024)) ;;
+	esac
+}
+
+# sgdisk-style +SIZE for a byte count (rounds up to the next MiB if needed)
+formatSizeForSgdisk() {
+	local b="$1"
+	if [ $((b % (1024*1024*1024))) -eq 0 ]; then
+		echo "+$((b / 1024 / 1024 / 1024))G"
+	elif [ $((b % (1024*1024))) -eq 0 ]; then
+		echo "+$((b / 1024 / 1024))M"
+	else
+		echo "+$(( (b + 1048575) / 1048576 ))M"
+	fi
+}
+
+# Bytes consumed by a START:END spec. Empty if END is blank (remainder of disk).
+partitionSpecSizeBytes() {
+	local start="$1"
+	local end="$2"
+	if [ -z "$end" ]; then
+		echo ""
+		return 0
+	fi
+	if [[ "$end" == +* ]]; then
+		parseSizeToBytes "$end"
+		return
+	fi
+	if [[ "$end" =~ ^[0-9]+$ ]] && [[ "$start" =~ ^[0-9]+$ ]]; then
+		echo $(( (end - start + 1) * 512 ))
+		return 0
+	fi
+	echo ""
+}
+
+# Print the index of the first entry mounted at MP.
+# With "real" as $3, skip subvolume-only entries. Returns 1 if not found.
+findMountIndex() {
+	local PARRAY=$1[@]
+	local PARTS=("${!PARRAY}")
+	local mp="$2"
+	local i
+	for i in "${!PARTS[@]}"; do
+		[ "$(partitionEntryField "${PARTS[$i]}" 5)" = "$mp" ] || continue
+		if [ "$3" = "real" ] && isSubvolumeOnlyEntry "${PARTS[$i]}"; then
+			continue
+		fi
+		echo "$i"
+		return 0
+	done
+	return 1
+}
+
+# Approximate bytes left for a remainder partition (skip_idx) on IMAGE.
+remainderBytes() {
+	local PARRAY=$1[@]
+	local PARTS=("${!PARRAY}")
+	local image="$2"
+	local skip_idx="$3"
+	local slack=67108864
+	local img_sz reserved i s e psz rem
+	img_sz="$(stat -c%s "$image")"
+	reserved=$slack
+	for i in "${!PARTS[@]}"; do
+		[ "$i" = "$skip_idx" ] && continue
+		isSubvolumeOnlyEntry "${PARTS[$i]}" && continue
+		s="$(partitionEntryField "${PARTS[$i]}" 1)"
+		e="$(partitionEntryField "${PARTS[$i]}" 2)"
+		psz="$(partitionSpecSizeBytes "$s" "$e")"
+		[ -n "$psz" ] && reserved=$((reserved + psz))
+	done
+	rem=$((img_sz - reserved))
+	[ "$rem" -lt 0 ] && rem=0
+	echo "$rem"
+}
+
+growImageBy() {
+	local image="$1"
+	local delta="$2"
+	local why="$3"
+	local img_sz newsz
+	[ "$delta" -ge 1048576 ] || return 0
+	img_sz="$(stat -c%s "$image")"
+	newsz=$((img_sz + delta))
+	echo "Growing image by $((delta / 1024 / 1024)) MiB${why:+ so ${why}}"
+	truncate -s "$newsz" "$image"
+}
+
+# Index of the real partition that owns this entry (walks back from a
+# subvolume-only line to the underlying partition).
+owningPartitionIndex() {
+	local PARRAY=$1[@]
+	local PARTS=("${!PARRAY}")
+	local idx="$2"
+	local i
+	if ! isSubvolumeOnlyEntry "${PARTS[$idx]}"; then
+		echo "$idx"
+		return 0
+	fi
+	for ((i=idx; i>=0; i--)); do
+		if ! isSubvolumeOnlyEntry "${PARTS[$i]}"; then
+			echo "$i"
+			return 0
+		fi
+	done
+	echo "$idx"
+}
+
+# A PARTITIONS entry for a dedicated /home (START blank).
+# $1 = END spec: +20G for a fixed size, empty for remainder of disk.
+homePartitionEntry() {
+	local end="$1"
+	local fs="${FSTYPE:-ext4}"
+	if [ "$fs" = "btrfs" ]; then
+		echo ":${end}:8302:btrfs:/home:HOME:::@home"
+	else
+		echo ":${end}:8302:${fs}:/home:HOME"
+	fi
+}
+
+# Grow the partition mounted at MP (and the image) so it is at least MINSIZE.
+# MP must already exist as a real partition (not only a subvolume of another FS).
+#
+# Usage: applyMountMinSize ARRAYNAME IMAGE MOUNTPOINT MINSIZE
+applyMountMinSize() {
+	local aname="$1"
+	local image="$2"
+	local mp="$3"
+	local minsize="$4"
+	local -n _MP="$aname"
+	local min_bytes current delta
+	local idx="" parent start end newend
+
+	[ -z "$minsize" ] && return 0
+	[ "${#_MP[@]}" -gt 0 ] || return 0
+	isIsoImage "$aname" && return 0
+	[ -n "$image" ] && [ -e "$image" ] || return 0
+
+	min_bytes="$(parseSizeToBytes "$minsize")" || return 1
+
+	idx="$(findMountIndex "$aname" "$mp")" || idx=""
+	if [ -z "$idx" ]; then
+		echo "WARNING: minimum ${mp} size ${minsize} ignored (no ${mp} partition)" >&2
+		return 0
+	fi
+
+	parent="$(owningPartitionIndex "$aname" "$idx")"
+	start="$(partitionEntryField "${_MP[$parent]}" 1)"
+	end="$(partitionEntryField "${_MP[$parent]}" 2)"
+
+	if [[ "$end" == +* ]]; then
+		current="$(parseSizeToBytes "$end")"
+		if [ "$current" -ge "$min_bytes" ]; then
+			echo "${mp} partition already ${end#+} (>= ${minsize}); leaving as-is"
+			return 0
+		fi
+		newend="$(formatSizeForSgdisk "$min_bytes")"
+		echo "Raising ${mp} from ${end} to ${newend} (minimum ${minsize})"
+		_MP[$parent]="$(replacePartitionEntryField "${_MP[$parent]}" 2 "$newend")"
+		growImageBy "$image" $((min_bytes - current)) "the last partition keeps its free space"
+		return 0
+	fi
+
+	if [ -z "$end" ]; then
+		current="$(remainderBytes "$aname" "$image" "$parent")"
+		if [ "$current" -ge "$min_bytes" ]; then
+			echo "${mp} (last partition) already has room (>= ${minsize}); leaving image size as-is"
+			return 0
+		fi
+		growImageBy "$image" $((min_bytes - current)) "${mp} is at least ${minsize}"
+		return 0
+	fi
+
+	current="$(partitionSpecSizeBytes "$start" "$end")"
+	if [ -n "$current" ] && [ "$current" -lt "$min_bytes" ]; then
+		echo "ERROR: ${mp} is a fixed sector range (${start}:${end}) smaller than ${minsize}; cannot resize automatically" >&2
+		return 1
+	fi
+}
+
+# Grow / (and the image file) so the root filesystem is at least MINSIZE.
+# The last partition still consumes any remaining disk (typically /home or /srv).
+#
+# Usage: applyRootMinSize ARRAYNAME IMAGE MINSIZE
+applyRootMinSize() {
+	applyMountMinSize "$1" "$2" / "$3"
+}
+
+# Make sure a real /home partition exists, then apply the minimum size.
+# Layouts that only have / (or /home as a btrfs subvolume of /) get a new
+# /home partition: if / currently takes the rest of the disk it is given a
+# fixed size and /home becomes the growable last partition; if something
+# else (e.g. /srv) is already last, /home is inserted as a fixed-size
+# partition so that last partition still grows.
+#
+# Usage: applyHomeMinSize ARRAYNAME IMAGE MINSIZE
+applyHomeMinSize() {
+	local aname="$1"
+	local image="$2"
+	local minsize="$3"
+	local -n _HP="$aname"
+	local min_bytes idx parent end current newend insert_at
+	local home_entry
+
+	[ -z "$minsize" ] && return 0
+	[ "${#_HP[@]}" -gt 0 ] || return 0
+	isIsoImage "$aname" && return 0
+	[ -n "$image" ] && [ -e "$image" ] || return 0
+
+	min_bytes="$(parseSizeToBytes "$minsize")" || return 1
+
+	# A subvolume-only /home shares / — drop it so we can add a real partition.
+	idx="$(findMountIndex "$aname" /home)" || idx=""
+	if [ -n "$idx" ] && isSubvolumeOnlyEntry "${_HP[$idx]}"; then
+		echo "Replacing /home subvolume with a dedicated /home partition"
+		_HP=("${_HP[@]:0:idx}" "${_HP[@]:idx+1}")
+		idx=""
+	fi
+
+	if [ -z "$idx" ]; then
+		idx="$(findMountIndex "$aname" /home real)" || idx=""
+	fi
+
+	if [ -z "$idx" ]; then
+		idx="$(findMountIndex "$aname" /)" || idx=""
+		if [ -z "$idx" ]; then
+			echo "WARNING: -H ${minsize} ignored (no / partition to place /home after)" >&2
+			return 0
+		fi
+		parent="$(owningPartitionIndex "$aname" "$idx")"
+		end="$(partitionEntryField "${_HP[$parent]}" 2)"
+
+		insert_at=$((parent + 1))
+		while [ "$insert_at" -lt "${#_HP[@]}" ] && isSubvolumeOnlyEntry "${_HP[$insert_at]}"; do
+			insert_at=$((insert_at + 1))
+		done
+
+		if [ -z "$end" ]; then
+			# / is the growable last partition — freeze its current size
+			# and let the new /home take the remainder.
+			current="$(remainderBytes "$aname" "$image" "$parent")"
+			[ "$current" -lt 1048576 ] && current=1048576
+			newend="$(formatSizeForSgdisk "$current")"
+			echo "Giving / a fixed size of ${newend} so /home can take the rest of the disk"
+			_HP[$parent]="$(replacePartitionEntryField "${_HP[$parent]}" 2 "$newend")"
+			home_entry="$(homePartitionEntry "")"
+			echo "Adding /home as last partition (${minsize}, ${FSTYPE:-ext4})"
+		else
+			# Something else already grows to fill the disk; insert a
+			# fixed-size /home so we do not steal that leftover.
+			home_entry="$(homePartitionEntry "$(formatSizeForSgdisk "$min_bytes")")"
+			echo "Adding /home partition (${minsize}, ${FSTYPE:-ext4})"
+		fi
+
+		_HP=("${_HP[@]:0:insert_at}" "$home_entry" "${_HP[@]:insert_at}")
+		if [ -z "$end" ]; then
+			growImageBy "$image" "$min_bytes" "/home is at least ${minsize}"
+		else
+			growImageBy "$image" "$min_bytes" "the last partition keeps its free space"
+		fi
+	fi
+
+	applyMountMinSize "$aname" "$image" /home "$minsize"
+}
+
 # True if this entry only adds a mount/subvolume on an existing partition
 # (START, END and TYPE are all empty). ISO-family entries use the same
 # empty geometry fields but are not subvolumes.

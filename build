@@ -8,10 +8,12 @@ listTargets() {
 	done
 }
 usage() {
-	echo "Usage: $0 [ -v VERSION ] [ -r REPO ] [ -R URL ] ... target"
+	echo "Usage: $0 [ -v VERSION ] [ -r REPO ] [ -R URL ] [ -m SIZE ] [ -H SIZE ] ... target"
 	echo "	-v: Use ${BASE_DISTRO} VERSION (default: cooker)"
 	echo "	-r: Enable an extra ${BASE_DISTRO} repository (e.g. restricted, unsupported, non-free)"
 	echo "	-R: Add a 3rd-party repository by URL (.repo file or baseurl); may be repeated"
+	echo "	-m: Minimum size of / (e.g. 20G); the last partition still takes the rest of the disk"
+	echo "	-H: Minimum size of /home (e.g. 20G); adds a /home partition if the layout has none"
 	echo "	-K: Keep already existing build root (default: no)"
 	echo "Available targets:"
 	listTargets
@@ -52,6 +54,76 @@ isnative() {
 	else
 		return 1
 	fi
+}
+
+# Fill unused blocks with zeros so remnants of deleted files compress well.
+# ENOSPC is the expected end condition (the filesystem is full of zeros);
+# any other dd failure is a real error and is not swallowed.
+zeroFreeSpace() {
+	local dest="$1"
+	local label="$2"
+	local dest_dir errfile stopfile progress_pid rc
+	local avail written interval fmt
+
+	echo "=== Zeroing free space on ${label} for better compression ==="
+	echo "    Unused blocks are filled with zeros so leftover file fragments compress well."
+	echo "    This can take a while on large filesystems."
+
+	dest_dir="$(dirname "$dest")"
+	errfile="$(mktemp)"
+	stopfile="$(mktemp)"
+
+	avail="$(df -B1 --output=avail "$dest_dir" 2>/dev/null | tail -n1 | tr -d '[:space:]')"
+	echo "    Starting fill: $(numfmt --to=iec-i --suffix=B "${avail:-0}" 2>/dev/null || echo "${avail:-0}") free"
+
+	if [ -t 1 ]; then
+		interval=1
+		fmt='\r    Zeroed %s, %s remaining    '
+	else
+		# Newlines so progress is visible in ABF / redirected logs
+		interval=5
+		fmt='    Zeroed %s, %s remaining\n'
+	fi
+
+	(
+		set +e
+		while [ -e "$stopfile" ]; do
+			avail=0
+			written=0
+			avail="$(df -B1 --output=avail "$dest_dir" 2>/dev/null | tail -n1 | tr -d '[:space:]')"
+			[ -f "$dest" ] && written="$(stat -c%s "$dest" 2>/dev/null)"
+			printf "$fmt" \
+				"$(numfmt --to=iec-i --suffix=B "${written:-0}" 2>/dev/null || echo "${written:-0}")" \
+				"$(numfmt --to=iec-i --suffix=B "${avail:-0}" 2>/dev/null || echo "${avail:-0}")"
+			sleep "$interval"
+		done
+	) &
+	progress_pid=$!
+
+	set +e
+	LC_ALL=C dd if=/dev/zero of="$dest" bs=1M 2>"$errfile"
+	rc=$?
+	set -e
+
+	rm -f "$stopfile"
+	kill "$progress_pid" 2>/dev/null || :
+	wait "$progress_pid" 2>/dev/null || :
+	[ -t 1 ] && printf '\n'
+
+	if grep -q 'No space left on device' "$errfile"; then
+		grep 'copied,' "$errfile" || :
+	elif [ "$rc" -ne 0 ]; then
+		cat "$errfile" >&2
+		echo "ERROR: Failed to zero free space on ${label}" >&2
+		rm -f "$dest" "$errfile"
+		return 1
+	else
+		grep 'copied,' "$errfile" || :
+	fi
+
+	sync
+	rm -f "$dest" "$errfile"
+	echo "    Done zeroing free space on ${label}."
 }
 
 if [ "$(id -u)" != "0" ]; then
@@ -116,10 +188,18 @@ PRE_PACKAGES="${PRE_PACKAGES:-distro-release-repos}"
 [ -z "$FINAL" ] && FINAL=false
 OS_VERSION=""
 IDENTIFIER=""
-while getopts "d:f:Fi:Kn:o:p:P:r:R:s:S:u:v:w:W" opt; do
+ROOT_MIN_SIZE_CLI=""
+HOME_MIN_SIZE_CLI=""
+while getopts "d:f:Fi:H:Km:n:o:p:P:r:R:s:S:u:v:w:W" opt; do
 	case $opt in
 	d)
 		SDDMSESSION="$OPTARG"
+		;;
+	m)
+		ROOT_MIN_SIZE_CLI="$OPTARG"
+		;;
+	H)
+		HOME_MIN_SIZE_CLI="$OPTARG"
 		;;
 	f)
 		FSTYPE="$OPTARG"
@@ -244,6 +324,11 @@ SHORTTARGET="$(basename $TARGET)"
 
 echo "Building ${BASE_DISTRO} $OMV_VERSION image for $TARGET"
 run config
+# CLI -m / -H override sizes set in the board config
+[ -n "$ROOT_MIN_SIZE_CLI" ] && ROOT_MIN_SIZE="$ROOT_MIN_SIZE_CLI"
+[ -n "$HOME_MIN_SIZE_CLI" ] && HOME_MIN_SIZE="$HOME_MIN_SIZE_CLI"
+[ -n "$ROOT_MIN_SIZE" ] && echo "Minimum / size: $ROOT_MIN_SIZE"
+[ -n "$HOME_MIN_SIZE" ] && echo "Minimum /home size: $HOME_MIN_SIZE"
 [ -n "$HWPACKAGESETS" ] && PACKAGESETS="$PACKAGESETS $HWPACKAGESETS"
 [ -n "$EXCLUDE" ] && WEAKDEPS="$WEAKDEPS --setopt=exclude_from_weak=${EXCLUDE// /,}"
 
@@ -919,6 +1004,12 @@ rm -rf ${RESULTDIR} ; mkdir -p ${RESULTDIR}
 BASENAME="${BASE_DISTRO}-${SHORTTARGET}-${OS_VERSION}"
 IMAGE=${OURDIR}/${RESULTDIR}/${BASENAME}.img
 run setup-partitions
+if [ -n "$ROOT_MIN_SIZE" ]; then
+	applyRootMinSize PARTITIONS "$IMAGE" "$ROOT_MIN_SIZE"
+fi
+if [ -n "$HOME_MIN_SIZE" ]; then
+	applyHomeMinSize PARTITIONS "$IMAGE" "$HOME_MIN_SIZE"
+fi
 
 rm -rf "$OURDIR/$ROOTDIR"
 mkdir -p "$OURDIR/$ROOTDIR"
@@ -1282,14 +1373,32 @@ run generate-bootimg
 if [[ -n "${LOOPDEV}" ]]; then
 	# Since we may be generating an image file that is supposed to be compressed,
 	# overwrite remnants of deleted temporary files etc. with something more
-	# compression friendly
-        for i in "${!PARTITIONS[@]}"; do
-                MP="$(partitionEntryField "${PARTITIONS[$i]}" 5)"
+	# compression friendly. ENOSPC is expected and not an error.
+	ZEROED_SOURCES=""
+	for i in "${!PARTITIONS[@]}"; do
+		MP="$(partitionEntryField "${PARTITIONS[$i]}" 5)"
 		[[ -z "$MP" ]] && continue
-		echo "=== Cleaning up $MP ==="
-		dd if=/dev/zero of=${OURDIR}/${ROOTDIR}${MP}/temp-cleanup || :
-		rm -f ${OURDIR}/${ROOTDIR}${MP}/temp-cleanup
-        done
+		DEST="${OURDIR}/${ROOTDIR}${MP}/temp-cleanup"
+		DESTDIR="$(dirname "$DEST")"
+		if ! [ -d "$DESTDIR" ]; then
+			echo "WARNING: ${MP} is not mounted; skipping zero-fill" >&2
+			continue
+		fi
+		SRC="$(findmnt -n -o SOURCE --target "$DESTDIR" 2>/dev/null || :)"
+		if [ -z "$SRC" ] || [[ "$SRC" != "${LOOPDEV}"* ]]; then
+			echo "WARNING: ${MP} is not on the image (${SRC:-unknown source}); skipping zero-fill" >&2
+			continue
+		fi
+		# btrfs subvolumes share a free-space pool; one fill is enough
+		case " ${ZEROED_SOURCES} " in
+		*" ${SRC} "*)
+			echo "=== Skipping ${MP} (free space on ${SRC} already zeroed) ==="
+			continue
+			;;
+		esac
+		zeroFreeSpace "$DEST" "$MP"
+		ZEROED_SOURCES="${ZEROED_SOURCES} ${SRC}"
+	done
 fi
 
 # Stuff in virtual filesystems should not make it to

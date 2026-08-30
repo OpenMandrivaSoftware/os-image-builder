@@ -120,6 +120,49 @@ Using the right version
 By default, _os-image-builder_ builds from _cooker_, the development repositories.
 If you wish to use the _rolling_ repository or a released version, add `-v _version_`
 
+Minimum size of `/`
+===================
+By default the last partition on the disk (often `/` itself, or `/home` /
+`/srv` on split layouts) consumes the remainder of the image so it can grow
+when the image is written to a larger device.
+
+`/` on split layouts is a fixed size (currently 10G on Pelicanus and Noname).
+To leave more room for `/` to grow — package updates, containers on `/var`,
+etc. — pass `-m SIZE`:
+
+`./build -m 20G -P kde noname-x86-64`
+
+`SIZE` is a number with a unit (`20G`, `20480M`, `20GiB`); a bare number is
+taken as GiB. The last partition still takes whatever is left of the image.
+The image file is grown when needed so that leftover space is not stolen from
+`/home` or `/srv`.
+
+A board `config` can set a default with `ROOT_MIN_SIZE=20G`; `-m` overrides it.
+
+Minimum size of `/home`
+=======================
+`-H SIZE` is the same idea for `/home`. If the layout already has a `/home`
+partition (Noname, or `/` last after a previous split), it is raised to at
+least `SIZE` and the image grown so leftover space on `/` or `/srv` is kept.
+
+If the layout has no dedicated `/home` (generic UEFI images, Pelicanus, …),
+one is added:
+
+* When `/` currently takes the rest of the disk, `/` is given a fixed size
+  (whatever it already occupies) and `/home` becomes the growable last
+  partition.
+* When something else is already last (`/srv` on Pelicanus), `/home` is
+  inserted as a fixed `SIZE` partition so that last filesystem still grows.
+
+The new partition uses the image filesystem (`-f`, default ext4) and GPT type
+`8302`. For btrfs it also gets an `@home` subvolume.
+
+`./build -H 30G x86-64`
+
+`./build -m 20G -H 50G pelicanus-x86-64`
+
+A board `config` can set `HOME_MIN_SIZE=30G`; `-H` overrides it.
+
 Output
 ======
 Generated images are put into the `results` directory.
