@@ -426,7 +426,7 @@ if [ -n "$KERNEL" ]; then
 fi
 $NATIVEBUILD || HOSTDEPS="$HOSTDEPS qemu-static-$QEMUARCH"
 # vim-common is for xxd, used to decode EDID information for pinebookpro
-HOSTDEPS="$HOSTDEPS bc curl make pahole clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build kpartx util-linux gptfdisk e2fsprogs f2fs-tools btrfs-progs"
+HOSTDEPS="$HOSTDEPS bc curl make pahole clang gcc dtc glibc-devel bison flex lib64openssl-devel hostname patch vim-common rpm-build kpartx util-linux gptfdisk e2fsprogs f2fs-tools btrfs-progs atomic-devel"
 
 if [ -n "$UBOOT_CONFIG" ]; then
 	HOSTDEPS="$HOSTDEPS u-boot-tools"
