@@ -1,6 +1,11 @@
-if echo $arch |grep -q 86; then
+# BIOS (SeaBIOS / Contabo). $ARCH is "znver1" for the znver1 image, so a
+# match on "86" skips grub2-install and the disk has no MBR boot code.
+# $QEMUARCH is x86_64 for both x86_64 and znver1.
+case "$QEMUARCH" in
+x86_64|i386)
 	chroot "${OURDIR}/${ROOTDIR}" grub2-install --target=i386-pc ${LOOPDEV}
-fi
+	;;
+esac
 
 # Pelicanus specific bits...
 cd "${OURDIR}/${ROOTDIR}"
